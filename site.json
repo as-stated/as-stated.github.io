@@ -1,0 +1,21 @@
+{
+  "name": "As Stated",
+  "descriptor": "Independent scrutiny of published mathematical and theoretical claims.",
+  "tagline": "What was claimed. What was tested. What survived.",
+  "channel": "sample",
+  "out_dir": "dist",
+  "id_prefix": "DEMO",
+  "owner": "Sergey Alexeev",
+  "owner_bio": "Publications and contact details: <a href=\"https://www.alexeev.pw/\">alexeev.pw</a>.",
+  "base_url": "https://as-stated.github.io/",
+  "repository_url": "https://github.com/as-stated/as-stated.github.io",
+  "contact_html": "For a response to a published record, a challenge or a replication, use the contact details on <a href=\"https://www.alexeev.pw/\">alexeev.pw</a>. Please do not send allegations about papers that are not on this site through public channels.",
+  "demo_notice": "<strong>Demonstration.</strong> Every case, paper, author, date and statistic shown here is fictional. No real findings have been published. The project description, methodology and policies are real.",
+  "methodology_version": "1.0",
+  "metrics_version": "1.1",
+  "home": {
+    "intro": [
+      "As Stated investigates whether published theoretical claims follow from the assumptions stated with them: theorems, propositions, lemmas, corollaries, equilibrium characterizations, algorithmic guarantees and other mathematical results in economics and related fields. Some claims are false as printed, some have proof gaps or missing assumptions that can be repaired, and many survive serious attempts to break them. Each case records the exact claim, the evidence and what happened afterwards."
+    ]
+  }
+}

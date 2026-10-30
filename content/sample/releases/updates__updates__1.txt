@@ -1,0 +1,5 @@
+as-stated-release v1
+kind: updates
+id: updates
+version: 1
+sha256: cc61bad63b596d5e53d45ba3e7b8a490a245aaec0c04f88b00096db9c504d39c

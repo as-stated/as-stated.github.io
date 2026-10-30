@@ -1,0 +1,117 @@
+{
+  "public_id": "DEMO-2027-005",
+  "version": "1.1",
+  "released": "2027-05-02",
+  "status": "published",
+  "sample": true,
+  "kind": "negative",
+  "track": "mechanism_design",
+  "title": "Proposition 2 in Specimen (2023)",
+  "headline": "No defect found in Proposition 2 within the stated scope (deep audit). This is not a proof that the result is correct.",
+  "work": {
+    "authors": [
+      "Riley Specimen"
+    ],
+    "title": "Revenue Equivalence with Budget-Constrained Bidders",
+    "venue": "Journal of Hypothetical Economic Theory (fictional)",
+    "year": 2023,
+    "volume": "36",
+    "pages": "104812",
+    "doi": "10.5555/sample.0005"
+  },
+  "claims": [
+    {
+      "label": "Proposition 2",
+      "page": "12",
+      "kind": "proposition",
+      "role": "main",
+      "statement": "With symmetric, independent budgets, the first-price and second-price auctions yield the same expected revenue.",
+      "conditions": [
+        "symmetric independent private values",
+        "symmetric independent budgets",
+        "risk-neutral bidders"
+      ],
+      "quantifiers": "for every number of bidders and every symmetric budget distribution",
+      "result": {
+        "outcome": "no_defect_found",
+        "depth": "deep_audit",
+        "search_scope": "Discretised value and budget distributions for up to four bidders; the proof read line by line.",
+        "limits": "The online supplement was not obtained and was not examined."
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "10–14",
+        "detail": "Main text checked on rendered pages; the online supplement was not obtained."
+      },
+      "checks": [],
+      "reproduction": {
+        "result": "pass",
+        "detail": "Search code rerun by the researcher."
+      },
+      "novelty": null
+    }
+  ],
+  "author_position": {
+    "position": "courtesy_notice",
+    "summary": null
+  },
+  "correction": null,
+  "evidence": {
+    "package_doi": "10.5555/sample-evidence.0005",
+    "package_sha256": "bb5a5993c4abb6df615b02a4c9c8638ffe63759ba1d5d12f7b9fcf037be984e1",
+    "licence": "CC BY 4.0 (text); MIT (code)",
+    "files": [
+      {
+        "name": "README.md",
+        "sha256": "268d3f8e814e1b66190e0a5aee1e3a6535e2b3a59d6b6bbf62a95d38c4ea1b3f"
+      },
+      {
+        "name": "auction_search.py",
+        "sha256": "dd2280deda4ee8daae93934a128e26db82cb3d3ee155ec2def56e6b15a249105"
+      },
+      {
+        "name": "results.csv",
+        "sha256": "416f4a13573870d1ff655039c3775b07122692f66d9e2cb4129570a4c30f0449"
+      }
+    ]
+  },
+  "history": [
+    {
+      "date": "2027-03",
+      "type": "audit",
+      "label": "Deep audit completed: no defect found"
+    },
+    {
+      "date": "2027-04",
+      "type": "authors",
+      "label": "Courtesy notice sent to the author"
+    },
+    {
+      "date": "2027-04-20",
+      "type": "release",
+      "label": "Record version 1.0 released"
+    },
+    {
+      "date": "2027-05-02",
+      "type": "release",
+      "label": "Record version 1.1 released (our correction to the scope statement)"
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2027-04-20",
+      "change": "First release."
+    },
+    {
+      "version": "1.1",
+      "date": "2027-05-02",
+      "our_correction": true,
+      "change": "Corrected our error: the search covered up to four bidders, not five as version 1.0 stated."
+    }
+  ],
+  "statements": {
+    "ai_use": "The search was run with AI assistance and rerun by the researcher; the version-of-record check and the editorial decision were done by the researcher."
+  }
+}

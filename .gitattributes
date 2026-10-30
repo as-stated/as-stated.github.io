@@ -1,0 +1,4 @@
+# LF line endings everywhere. Signed content must keep its exact bytes: no conversion at all.
+* text=auto eol=lf
+content/** -text
+trust/** -text

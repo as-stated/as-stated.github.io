@@ -1,0 +1,98 @@
+{
+  "sample": true,
+  "updated": "2027-07-05",
+  "items": [
+    {
+      "date": "2027-07-05",
+      "type": "snapshot",
+      "title": "Statistics snapshot for June 2027",
+      "body": "Quarterly figures on author positions were refreshed. Six records are now public.",
+      "links": [
+        "statistics"
+      ]
+    },
+    {
+      "date": "2027-06-28",
+      "type": "release",
+      "title": "DEMO-2027-006 released: proof incomplete",
+      "body": "Released 90 days after the authors were notified, without a substantive reply. The corollary is not claimed to be false.",
+      "links": [
+        "DEMO-2027-006"
+      ]
+    },
+    {
+      "date": "2027-06-24",
+      "type": "release",
+      "title": "DEMO-2027-004 released: the authors disagree",
+      "body": "Released after an additional check by the researcher. The authors' position is summarised in the record.",
+      "links": [
+        "DEMO-2027-004"
+      ]
+    },
+    {
+      "date": "2027-06-12",
+      "type": "revision",
+      "title": "DEMO-2027-001 version 1.2: external replication",
+      "body": "An outside researcher reproduced the counterexample independently.",
+      "links": [
+        "DEMO-2027-001"
+      ]
+    },
+    {
+      "date": "2027-05-28",
+      "type": "release",
+      "title": "DEMO-2027-003 released after a published erratum",
+      "body": "The erratum does not mention this audit; the record says so.",
+      "links": [
+        "DEMO-2027-003"
+      ]
+    },
+    {
+      "date": "2027-05-10",
+      "type": "revision",
+      "title": "DEMO-2027-001 version 1.1: corrigendum published",
+      "body": "The journal published a corrigendum that credits this audit.",
+      "links": [
+        "DEMO-2027-001"
+      ]
+    },
+    {
+      "date": "2027-05-02",
+      "type": "correction",
+      "title": "Our correction to DEMO-2027-005",
+      "body": "Version 1.0 overstated the search scope (five bidders instead of four). Version 1.1 corrects it.",
+      "links": [
+        "DEMO-2027-005"
+      ]
+    },
+    {
+      "date": "2027-04-20",
+      "type": "release",
+      "title": "DEMO-2027-005 released: a negative deep audit",
+      "body": "No defect found within the stated scope.",
+      "links": [
+        "DEMO-2027-005"
+      ]
+    },
+    {
+      "date": "2027-04-05",
+      "type": "snapshot",
+      "title": "First statistics snapshot (March 2027)",
+      "body": "Programme-wide counts under metric definitions version 1.1.",
+      "links": [
+        "statistics"
+      ]
+    },
+    {
+      "date": "2027-03-15",
+      "type": "release",
+      "title": "First records released",
+      "body": "DEMO-2027-001 (a confirmed defect in an application) and DEMO-2027-002 (a negative deep audit). Methodology version 1.0 published.",
+      "links": [
+        "DEMO-2027-001",
+        "DEMO-2027-002",
+        "methodology"
+      ]
+    }
+  ]
+}

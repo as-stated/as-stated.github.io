@@ -1,0 +1,52 @@
+# Builds the site and deploys it to GitHub Pages.
+# Every build verifies the signed release statements against the trusted keys, and --expect-trust fails
+# the build unless those keys are exactly the fingerprints in the TRUST_FINGERPRINTS repository variable
+# (only repository admins can change it). Deployment waits for the owner's approval in the github-pages
+# environment. The site currently shows the fictional demonstration channel; switch SITE_CHANNEL to
+# "published" only when owner-signed records exist (see README).
+name: Build and deploy
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pages
+  cancel-in-progress: false
+env:
+  SITE_CHANNEL: sample
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Tests (release gate, statistics checks, links, leak scan, layout)
+        run: python -m unittest discover -s tests -v
+      - name: Build (verifies every release signature and the pinned trusted keys)
+        env:
+          TRUST_FINGERPRINTS: ${{ vars.TRUST_FINGERPRINTS }}
+        run: python build.py build --channel "$SITE_CHANNEL" --pretty-urls --out _site --expect-trust "$TRUST_FINGERPRINTS"
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
+        if: github.event_name != 'pull_request'
+        with:
+          path: _site
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages  # protected: the owner must approve each deployment
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346  # v5.0.1

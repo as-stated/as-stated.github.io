@@ -1,0 +1,111 @@
+{
+  "public_id": "DEMO-2027-002",
+  "version": "1.0",
+  "released": "2027-03-15",
+  "status": "published",
+  "sample": true,
+  "kind": "negative",
+  "track": "game_theory",
+  "title": "Theorem 1 in Sample (2024)",
+  "headline": "No defect found in Theorem 1 within the stated scope (deep audit). This is not a proof that the theorem is correct.",
+  "work": {
+    "authors": [
+      "Ada Sample"
+    ],
+    "title": "Equilibrium Uniqueness in Linear-Quadratic Network Games",
+    "venue": "Journal of Hypothetical Economic Theory (fictional)",
+    "year": 2024,
+    "volume": "38",
+    "pages": "105233",
+    "doi": "10.5555/sample.0002"
+  },
+  "claims": [
+    {
+      "label": "Theorem 1",
+      "page": "7",
+      "kind": "theorem",
+      "role": "main",
+      "statement": "If the spectral radius of the interaction matrix is below the stated bound, the network game has a unique Nash equilibrium, and it is interior.",
+      "conditions": [
+        "linear-quadratic payoffs",
+        "symmetric interaction matrix",
+        "spectral radius below the stated bound"
+      ],
+      "quantifiers": "for every network satisfying the spectral condition",
+      "result": {
+        "outcome": "no_defect_found",
+        "depth": "deep_audit",
+        "search_scope": "All networks with up to six players on a grid of interaction weights, with boundary cases of the spectral condition; the proof read line by line.",
+        "limits": "Networks with more than six players are covered by the proof reading only."
+      },
+      "vor_check": {
+        "level": "full",
+        "pages": "6–9",
+        "detail": "Statement, assumptions and proof checked on rendered pages of the published version."
+      },
+      "checks": [],
+      "reproduction": {
+        "result": "pass",
+        "detail": "Search code rerun by the researcher from the archived package."
+      },
+      "novelty": null
+    }
+  ],
+  "author_position": {
+    "position": "courtesy_notice",
+    "summary": null
+  },
+  "correction": null,
+  "evidence": {
+    "package_doi": "10.5555/sample-evidence.0002",
+    "package_sha256": "63af974058dd76e37ddc679302fcd0cc283464180258fd1f0af9efd25cddd455",
+    "licence": "CC BY 4.0 (text); MIT (code)",
+    "files": [
+      {
+        "name": "README.md",
+        "sha256": "593559677b559de866b4b5debb316b1787163b9568ac494c8651e5f26eda8749"
+      },
+      {
+        "name": "search_networks.py",
+        "sha256": "700542699dea4ca0e6067e1aae3b8324990dde3b7965870249c8a2a42743fa1c"
+      },
+      {
+        "name": "results.json",
+        "sha256": "c1c7cce590afa591eb284be1b4b3d50c86fa4ac1acbefaae64d62a8e30e9ede2"
+      }
+    ]
+  },
+  "history": [
+    {
+      "date": "2027-01",
+      "type": "audit",
+      "label": "Deep audit completed: no defect found"
+    },
+    {
+      "date": "2027-02",
+      "type": "reproduction",
+      "label": "Evidence package rerun: pass"
+    },
+    {
+      "date": "2027-03",
+      "type": "authors",
+      "label": "Courtesy notice sent to the author"
+    },
+    {
+      "date": "2027-03-15",
+      "type": "release",
+      "label": "Record version 1.0 released"
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2027-03-15",
+      "change": "First release."
+    }
+  ],
+  "statements": {
+    "ai_use": "The search was run with AI assistance and rerun by the researcher; the version-of-record check and the editorial decision were done by the researcher."
+  }
+}

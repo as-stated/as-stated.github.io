@@ -1,0 +1,160 @@
+{
+  "public_id": "DEMO-2027-003",
+  "version": "1.0",
+  "released": "2027-05-28",
+  "status": "published",
+  "sample": true,
+  "kind": "defect",
+  "track": "optimization",
+  "title": "Lemma 3 in Placeholder and Fictive (2023)",
+  "headline": "A step in the proof of Lemma 3 needs an extra condition (a repairable proof gap). Theorem 1 is not refuted. An erratum was published after the authors were notified.",
+  "work": {
+    "authors": [
+      "Kim Placeholder",
+      "Lee Fictive"
+    ],
+    "title": "Optimal Base-Stock Policies under Lost Sales with Random Yield",
+    "venue": "Review of Hypothetical Operations (fictional)",
+    "year": 2023,
+    "volume": "17",
+    "pages": "211–240",
+    "doi": "10.5555/sample.0003"
+  },
+  "claims": [
+    {
+      "label": "Lemma 3",
+      "page": "222",
+      "kind": "lemma",
+      "role": "auxiliary",
+      "statement": "The expected one-period cost is convex in the order-up-to level for every yield distribution with finite mean.",
+      "conditions": [
+        "lost sales",
+        "yield distribution with finite mean"
+      ],
+      "quantifiers": "for every yield distribution with finite mean",
+      "result": {
+        "outcome": "defect_found",
+        "candidate_status": "confirmed",
+        "defect_class": "proof_gap_repairable",
+        "affects": "lemma_or_proof_step",
+        "depth": "deep_audit",
+        "witness": "The interchange of differentiation and expectation in the proof needs a bounded density, which the lemma does not assume. A two-point yield distribution shows the step fails.",
+        "repair": "repair_checked",
+        "repair_note": "Adding a bounded-density assumption restores the step; the conclusion holds in all cases checked.",
+        "not_claimed": [
+          "Theorem 1 (optimality of base-stock policies) is not refuted.",
+          "The convexity conclusion is not claimed to be false; only the proof step is incomplete."
+        ]
+      },
+      "vor_check": {
+        "level": "full",
+        "pages": "221–223",
+        "detail": "Statement, assumptions and the proof step checked on rendered pages of the published version."
+      },
+      "checks": [
+        {
+          "kind": "ai_recheck",
+          "session": "informed",
+          "date": "2027-03",
+          "result": "confirms",
+          "detail": "A separate AI session, given the earlier report, rechecked the proof step."
+        },
+        {
+          "kind": "independent_reproduction",
+          "date": "2027-03",
+          "result": "confirms",
+          "detail": "The researcher checked the step by hand and reproduced the two-point example."
+        }
+      ],
+      "reproduction": {
+        "result": "pass",
+        "detail": "Example computation rerun from the archived package."
+      },
+      "novelty": "No earlier report found in the searched record as of March 2027."
+    }
+  ],
+  "author_position": {
+    "position": "partly_agrees",
+    "summary": "The authors accept that the step needs an extra condition and consider the main result unaffected, which this record also states."
+  },
+  "correction": {
+    "type": "erratum",
+    "doi": "10.5555/sample.0003e",
+    "date": "2027-05-20",
+    "relation": "after_notification",
+    "attribution": "none_stated",
+    "note": "The erratum does not mention this audit. We do not claim that it resulted from our work."
+  },
+  "evidence": {
+    "package_doi": "10.5555/sample-evidence.0003",
+    "package_sha256": "55f9f8cd2e317770b8a0f60aec1a8ffdb65660176e181f2f091de81afdacb64b",
+    "licence": "CC BY 4.0 (text); MIT (code)",
+    "files": [
+      {
+        "name": "README.md",
+        "sha256": "d4fbd189a3918069dc05634e7da640d75337475c9b3cd0c229bb68b26ef908b8"
+      },
+      {
+        "name": "two_point_example.py",
+        "sha256": "dc94cad0b53809b9eb354c7893e614e9abbf1a8bbf517a018c762887c9547639"
+      },
+      {
+        "name": "proof_step_note.pdf",
+        "sha256": "5186a63b00319f4058cb10e7a1557b20defc8f75f0499620a221bf112335dc69"
+      }
+    ]
+  },
+  "history": [
+    {
+      "date": "2027-02",
+      "type": "audit",
+      "label": "Discovery audit completed"
+    },
+    {
+      "date": "2027-03",
+      "type": "check",
+      "label": "Rechecked by a separate AI session: confirms"
+    },
+    {
+      "date": "2027-03",
+      "type": "check",
+      "label": "Independently reproduced by the researcher: confirms"
+    },
+    {
+      "date": "2027-03",
+      "type": "source",
+      "label": "Checked against the version of record: full"
+    },
+    {
+      "date": "2027-03",
+      "type": "authors",
+      "label": "Authors notified and offered the opportunity to respond"
+    },
+    {
+      "date": "2027-04",
+      "type": "authors",
+      "label": "Authors partly agreed"
+    },
+    {
+      "date": "2027-05-20",
+      "type": "correction",
+      "label": "Erratum published (no attribution stated)"
+    },
+    {
+      "date": "2027-05-28",
+      "type": "release",
+      "label": "Record version 1.0 released"
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2027-05-28",
+      "change": "First release."
+    }
+  ],
+  "statements": {
+    "ai_use": "Discovery and one separate recheck used AI models in separate sessions. The independent reproduction, the version-of-record check and the editorial decision were done by the researcher."
+  }
+}

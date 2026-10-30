@@ -1,0 +1,155 @@
+{
+  "public_id": "DEMO-2027-004",
+  "version": "1.0",
+  "released": "2027-06-24",
+  "status": "published",
+  "sample": true,
+  "kind": "defect",
+  "track": "probability",
+  "title": "Theorem 2 in Sample (2026)",
+  "headline": "The upper bound in Theorem 2 fails for claim-size distributions that the stated assumptions allow (a missing assumption). The authors disagree; their reply is summarised below.",
+  "work": {
+    "authors": [
+      "Morgan Sample"
+    ],
+    "title": "Bounds on Ruin Probabilities for Compound Renewal Processes",
+    "venue": "Journal of Hypothetical Probability (fictional)",
+    "year": 2026,
+    "volume": "12",
+    "pages": "1–29",
+    "doi": "10.5555/sample.0004"
+  },
+  "claims": [
+    {
+      "label": "Theorem 2",
+      "page": "9",
+      "kind": "theorem",
+      "role": "main",
+      "statement": "For every claim-size distribution with a finite second moment, the ruin probability is bounded above by the stated exponential expression.",
+      "conditions": [
+        "compound renewal process",
+        "claim sizes with finite second moment",
+        "positive safety loading"
+      ],
+      "quantifiers": "for every claim-size distribution with a finite second moment",
+      "result": {
+        "outcome": "defect_found",
+        "candidate_status": "confirmed",
+        "defect_class": "missing_or_hidden_assumption",
+        "affects": "main_result",
+        "depth": "deep_audit",
+        "witness": "A claim-size distribution with a finite second moment but an infinite third moment violates the bound; the calculation is in the evidence package.",
+        "repair": "local_repair_proposed",
+        "repair_note": "Assuming a finite third moment restores the bound in all cases checked.",
+        "not_claimed": [
+          "The bound is not claimed to fail for distributions with a finite third moment.",
+          "The paper's other results are not examined here."
+        ]
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "8–10",
+        "detail": "Statement and assumptions checked on rendered pages; the decisive step compared in extracted text only."
+      },
+      "checks": [
+        {
+          "kind": "ai_recheck",
+          "session": "blind",
+          "date": "2027-03",
+          "result": "confirms",
+          "detail": "A separate AI session, not given the earlier result, found the same failure."
+        },
+        {
+          "kind": "independent_reproduction",
+          "date": "2027-03",
+          "result": "confirms",
+          "detail": "The researcher reproduced the calculation with separately written code."
+        },
+        {
+          "kind": "independent_reproduction",
+          "date": "2027-06",
+          "result": "confirms",
+          "detail": "After the authors disagreed, the researcher checked their argument by hand; the counterexample stands."
+        }
+      ],
+      "reproduction": {
+        "result": "pass",
+        "detail": "Calculation rerun from the archived package."
+      },
+      "novelty": "No earlier report found in the searched record as of March 2027."
+    }
+  ],
+  "author_position": {
+    "position": "disagrees",
+    "summary": "The authors hold that a convention in Section 2 excludes such distributions. This record quotes that convention and explains why, as printed, it does not exclude them. The authors were offered space for a full reply.",
+    "reply_link": null
+  },
+  "correction": null,
+  "evidence": {
+    "package_doi": "10.5555/sample-evidence.0004",
+    "package_sha256": "7394f507205f06a9d0a498a6866d2dbb9577506362a542ae52f1f52ac8548bbe",
+    "licence": "CC BY 4.0 (text); MIT (code)",
+    "files": [
+      {
+        "name": "README.md",
+        "sha256": "d41d118a8406ccea0295c7f6b0f6b83fcd58dfd66f1754d43e2885a5ef2baa34"
+      },
+      {
+        "name": "counterexample.py",
+        "sha256": "af3af95bda823446bea6f46bfc97f32e121098ed860dcc242f0978f5c6ab4dd8"
+      },
+      {
+        "name": "convention_note.md",
+        "sha256": "8e23b5092cb459dda9da54d21c3d7989b61ef8650c70a2cc7dc8296095e81a83"
+      }
+    ]
+  },
+  "history": [
+    {
+      "date": "2027-02",
+      "type": "audit",
+      "label": "Discovery audit completed"
+    },
+    {
+      "date": "2027-03",
+      "type": "check",
+      "label": "Rechecked by a separate AI session: confirms"
+    },
+    {
+      "date": "2027-03",
+      "type": "check",
+      "label": "Independently reproduced by the researcher: confirms"
+    },
+    {
+      "date": "2027-03",
+      "type": "authors",
+      "label": "Authors notified and offered the opportunity to respond"
+    },
+    {
+      "date": "2027-05",
+      "type": "authors",
+      "label": "Authors disagreed"
+    },
+    {
+      "date": "2027-06",
+      "type": "check",
+      "label": "Additional check by the researcher after the dispute: confirms"
+    },
+    {
+      "date": "2027-06-24",
+      "type": "release",
+      "label": "Record version 1.0 released"
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2027-06-24",
+      "change": "First release, after the additional check."
+    }
+  ],
+  "statements": {
+    "ai_use": "Discovery and one separate recheck used AI models in separate sessions. The independent reproduction, the version-of-record check and the editorial decision were done by the researcher."
+  }
+}

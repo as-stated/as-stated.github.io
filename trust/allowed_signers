@@ -1,0 +1,5 @@
+# Release approver key for the PUBLISHED channel.
+# Empty on purpose: the published build refuses to run until the owner adds their own public key here.
+# Format (one line, from the owner's release key .pub file; a security-key type is preferred):
+# release-approver namespaces="as-stated-release" sk-ssh-ed25519@openssh.com AAAA...
+# Never add the demonstration key from trust/sample_allowed_signers.
