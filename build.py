@@ -297,8 +297,8 @@ def validate_record(rec, rid, version, is_sample):
         res = c["result"]
         _require(c.get("vor_check", {}).get("level") in VOR_LEVELS, f"{where}: {c['label']}: bad VOR level")
         if res["outcome"] == "unresolved":
-            # Proposed rule (not yet approved): an unresolved question may be shown only inside a record that is
-            # released for its settled claims, never as the reason for naming a paper, and never as a defect.
+            # Rule approved by the owner on 31 October 2026: an unresolved question may be shown only inside a record
+            # that is released for its settled claims, never as the reason for naming a paper, and never as a defect.
             _require(settled, f"{where}: {c['label']}: an unresolved claim cannot be the only claim in a record")
             _require(res.get("unresolved_reason") in UNRESOLVED_REASONS and res.get("detail") and res.get("limits"),
                      f"{where}: {c['label']}: an unresolved claim needs a reason, a description and its limits")
@@ -1061,7 +1061,9 @@ several different findings; there is no verdict on a paper as a whole.</p><dl cl
 <div class="def"><dt id="candidate">Candidate</dt><dd>Any possible defect reported by any check. Most candidates come from AI-assisted discovery runs and are never published by name.</dd></div>
 <div class="def"><dt>Open</dt><dd>Not yet settled. A candidate supported only by AI rechecks stays open until a human has checked it.</dd></div>
 <div class="def"><dt id="confirmed">Confirmed</dt><dd>At least two confirming checks of different kinds, at least one by a human, and no refuting check left unaddressed. Only confirmed defects are published as defects.</dd></div>
-<div class="def"><dt>Unresolved</dt><dd>Checks were completed but could not settle the question. Never counted as a defect or as rejected.</dd></div>
+<div class="def"><dt>Unresolved</dt><dd>Checks were completed but could not settle the question. Never counted as a defect or as rejected. An unresolved
+question appears by name only inside a record that is released for other, settled claims in the same paper; a paper is
+never named because of an unresolved question alone.</dd></div>
 <div class="def"><dt>Rejected</dt><dd>A check showed the suspected defect does not exist. Counted, never named.</dd></div>
 <div class="def"><dt id="withdrawn">Withdrawn</dt><dd>A released record we no longer stand behind. The page stays online with the reason.</dd></div></dl></section>
 <section id="checks"><h2>Kinds of check</h2><p>Verification is shown as four kinds of check. Only the last three are human checks.</p>
@@ -1115,7 +1117,8 @@ tested and its limits. Only deep audits are published by name; lighter screens a
 <section id="source"><h2>Source check</h2><p>Findings are checked against the version of record. Each claim states whether every
 decisive element was checked on rendered pages of the published version (full), only partly (partial), or whether the
 needed version could not be obtained. A question that depends on an unobtainable version is reported as unresolved, not as
-a defect.</p></section>
+a defect. It is shown only inside a record released for other, settled claims in the same paper, and the record is
+revised if the missing version becomes available.</p></section>
 <section id="authors"><h2>Authors first</h2><p>Authors are contacted privately before anything about their paper is published.
 A finding becomes eligible for publication after a published correction, after the authors agree to a public record, or
 90 days after contact without a substantive reply. Eligibility is not a deadline: each release also needs the
