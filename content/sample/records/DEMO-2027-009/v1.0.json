@@ -1,0 +1,135 @@
+{
+  "public_id": "DEMO-2027-009",
+  "version": "1.0",
+  "released": "2027-03-17",
+  "status": "published",
+  "sample": true,
+  "kind": "negative",
+  "track": "game_theory",
+  "title": "Token (2021)",
+  "headline": "No defect was found in Propositions 3 and 6 within the stated scope. Parts of the proofs rely on a supplement that was checked only in its working-paper form.",
+  "work": {
+    "authors": [
+      "Mina Token"
+    ],
+    "title": "Persuading Receivers One at a Time",
+    "venue": "Journal of Strategic Analysis",
+    "year": 2021,
+    "volume": "89(2)",
+    "pages": "640–679",
+    "doi": "10.5555/sample.0009"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Proposition 3",
+      "kind": "proposition",
+      "role": "main",
+      "page": "11",
+      "gist": "Public signals are optimal for sequential receivers with aligned payoffs.",
+      "statement": "When receivers act in sequence and their payoffs are aligned, a public signal achieves the sender's optimal value among all private signal structures.",
+      "conditions": [
+        "receivers act in a fixed order",
+        "aligned receiver payoffs"
+      ],
+      "quantifiers": "for every finite state space",
+      "result": {
+        "outcome": "no_defect_found",
+        "depth": "deep_audit",
+        "summary": "The optimality argument checked step by step; no defect found.",
+        "search_scope": "The construction in Appendix A, checked on games with two receivers, three states and binary actions.",
+        "limits": "Does not cover misaligned receivers. Supplement steps checked in the working-paper version only."
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "11–13",
+        "detail": "Statement and definitions checked on rendered pages; the proof compared in extracted text only."
+      },
+      "checks": [],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": null
+    },
+    {
+      "id": "c2",
+      "label": "Proposition 6",
+      "kind": "proposition",
+      "role": "supporting",
+      "page": "19",
+      "gist": "The optimal public signal needs at most as many messages as actions.",
+      "statement": "Some optimal public signal uses no more messages than the number of action profiles.",
+      "conditions": [
+        "as Proposition 3"
+      ],
+      "quantifiers": "as Proposition 3",
+      "result": {
+        "outcome": "no_defect_found",
+        "depth": "deep_audit",
+        "summary": "No instance required more messages among those checked.",
+        "search_scope": "Two receivers, up to four states and binary actions; optimal signals computed by linear programming.",
+        "limits": "The general argument relies on Supplement S1, checked in the working-paper version only."
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "19–20",
+        "detail": "Statement and definitions checked on rendered pages; the proof compared in extracted text only."
+      },
+      "checks": [],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": null
+    }
+  ],
+  "author_position": {
+    "position": "courtesy_notice",
+    "summary": null
+  },
+  "correction": null,
+  "evidence": {
+    "package_doi": "10.5555/sample-evidence.0009",
+    "package_sha256": "76b02cdbf603352f840d7a10ead9e7e6b87d5542806693b35242fc215acf90a5",
+    "licence": "CC BY 4.0 (text); MIT (code)",
+    "files": [
+      {
+        "name": "README.md",
+        "sha256": "76dc8d3f8204a8984f211faf528f8f09edd2b9d3413cc1014fde3ee8206be614"
+      },
+      {
+        "name": "signals_lp.py",
+        "sha256": "dbc0e62526fb8f287f340005441a39fcad72aee338b119bda4c8a558f5528791"
+      }
+    ]
+  },
+  "history": [
+    {
+      "date": "2027-02",
+      "type": "audit",
+      "label": "Deep audit completed: no defect found"
+    },
+    {
+      "date": "2027-03",
+      "type": "authors",
+      "label": "Courtesy notice sent"
+    },
+    {
+      "date": "2027-03-17",
+      "type": "release",
+      "label": "Record version 1.0 released"
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2027-03-17",
+      "change": "First release."
+    }
+  ],
+  "statements": {
+    "ai_use": "The search was designed with AI assistance and rerun by the researcher; the version-of-record check and every editorial decision were done by the researcher."
+  }
+}

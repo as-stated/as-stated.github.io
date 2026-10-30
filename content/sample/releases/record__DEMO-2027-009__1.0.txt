@@ -1,0 +1,5 @@
+as-stated-release v1
+kind: record
+id: DEMO-2027-009
+version: 1.0
+sha256: 57af408b44247101995dc9f83701f1d9f4493703d0583436d49c00d827786522

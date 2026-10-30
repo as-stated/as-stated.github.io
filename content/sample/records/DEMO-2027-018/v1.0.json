@@ -1,0 +1,104 @@
+{
+  "public_id": "DEMO-2027-018",
+  "version": "1.0",
+  "released": "2027-03-10",
+  "status": "published",
+  "sample": true,
+  "kind": "negative",
+  "track": "game_theory",
+  "title": "Specimen (2025)",
+  "headline": "No defect was found in Theorem 5 within the stated scope. This is not a proof that it is correct.",
+  "work": {
+    "authors": [
+      "Felix Specimen"
+    ],
+    "title": "Price of Anarchy in Congestion Games with Priorities",
+    "venue": "Proceedings of the Conference on Algorithmic Choice (ACAC 2025)",
+    "year": 2025,
+    "volume": "",
+    "pages": "1141–1149",
+    "doi": "10.5555/sample.0018"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Theorem 5",
+      "kind": "theorem",
+      "role": "main",
+      "page": "7",
+      "gist": "The price of anarchy is at most 5/2 with priorities.",
+      "statement": "For congestion games with affine costs and priority classes, the pure price of anarchy is at most 5/2.",
+      "conditions": [
+        "affine costs",
+        "priority classes"
+      ],
+      "quantifiers": "for every such game",
+      "result": {
+        "outcome": "no_defect_found",
+        "depth": "deep_audit",
+        "summary": "No instance above 5/2 among those checked; the proof read line by line.",
+        "search_scope": "Games with up to four players and three resources, affine costs with integer coefficients up to 4.",
+        "limits": "Tightness of the bound was not examined."
+      },
+      "vor_check": {
+        "level": "full",
+        "pages": "7–8",
+        "detail": "Statement, definitions and the decisive step checked on rendered pages of the published version."
+      },
+      "checks": [],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": null
+    }
+  ],
+  "author_position": {
+    "position": "courtesy_notice",
+    "summary": null
+  },
+  "correction": null,
+  "evidence": {
+    "package_doi": "10.5555/sample-evidence.0018",
+    "package_sha256": "00ccb78bc942414347261103e241eef55b608d3d1f610ee745162c9554f3b526",
+    "licence": "CC BY 4.0 (text); MIT (code)",
+    "files": [
+      {
+        "name": "README.md",
+        "sha256": "225a7de1ad2b48af22065fb21840fda0fe694ab9f8ef456beb579db0b915cd7c"
+      },
+      {
+        "name": "poa_search.py",
+        "sha256": "841d297a46e2ccfddbefd92a3e6b09d88ea23fac0b8de491043c058e7f11c0f3"
+      }
+    ]
+  },
+  "history": [
+    {
+      "date": "2027-02",
+      "type": "audit",
+      "label": "Deep audit completed: no defect found"
+    },
+    {
+      "date": "2027-03",
+      "type": "authors",
+      "label": "Courtesy notice sent"
+    },
+    {
+      "date": "2027-03-10",
+      "type": "release",
+      "label": "Record version 1.0 released"
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2027-03-10",
+      "change": "First release."
+    }
+  ],
+  "statements": {
+    "ai_use": "The search was designed with AI assistance and rerun by the researcher; the version-of-record check and every editorial decision were done by the researcher."
+  }
+}

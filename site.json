@@ -15,7 +15,7 @@
   "metrics_version": "1.1",
   "home": {
     "intro": [
-      "As Stated investigates whether published theoretical claims follow from the assumptions stated with them: theorems, propositions, lemmas, corollaries, equilibrium characterizations, algorithmic guarantees and other mathematical results in economics and related fields. Some claims are false as printed, some have proof gaps or missing assumptions that can be repaired, and many survive serious attempts to break them. Each case records the exact claim, the evidence and what happened afterwards."
+      "As Stated examines published theoretical claims one at a time: theorems, lemmas, propositions, algorithms and constructions in game theory, mechanism design, and matching and social choice. Each record gives the exact claim, what was tested, what was found, how the finding was verified and what it does not establish."
     ]
   }
 }

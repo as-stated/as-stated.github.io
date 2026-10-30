@@ -1,0 +1,136 @@
+{
+  "public_id": "DEMO-2027-017",
+  "version": "1.0",
+  "released": "2027-04-15",
+  "status": "published",
+  "sample": true,
+  "kind": "defect",
+  "track": "game_theory",
+  "title": "Example and Instance (2025)",
+  "headline": "Algorithm 1 does not always meet its stated approximation guarantee. The authors agreed.",
+  "work": {
+    "authors": [
+      "Daniel Example",
+      "Hanna Instance"
+    ],
+    "title": "Greedy Scheduling with Machine Preferences",
+    "venue": "Proceedings of the Conference on Algorithmic Choice (ACAC 2025)",
+    "year": 2025,
+    "volume": "",
+    "pages": "1132–1140",
+    "doi": "10.5555/sample.0017"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Algorithm 1 (steps 3 and 4)",
+      "kind": "algorithm",
+      "role": "main",
+      "page": "5",
+      "gist": "Greedy assignment is within a factor of two of the optimal makespan.",
+      "statement": "For identical jobs and machines with preferences, Algorithm 1 returns a schedule whose makespan is at most twice the optimum.",
+      "conditions": [
+        "identical jobs",
+        "each machine ranks jobs"
+      ],
+      "quantifiers": "for every instance",
+      "result": {
+        "outcome": "defect_found",
+        "candidate_status": "confirmed",
+        "defect_class": "construction_or_algorithm_fails",
+        "affects": "main_result",
+        "depth": "deep_audit",
+        "summary": "A three-machine instance where the makespan is three times the optimum.",
+        "witness": "Step 3 can assign every job to the machine that ranks it highest even when that machine is already full, and step 4 never rebalances. The instance and the trace are in the evidence package.",
+        "tested": "All instances with three machines and up to nine jobs.",
+        "not_claimed": [
+          "Termination is not disputed.",
+          "A factor-two schedule is not claimed to be impossible."
+        ],
+        "repair": "none_proposed"
+      },
+      "vor_check": {
+        "level": "full",
+        "pages": "4–6",
+        "detail": "Statement, definitions and the decisive step checked on rendered pages of the published version."
+      },
+      "checks": [
+        {
+          "kind": "independent_reproduction",
+          "date": "2027-02",
+          "result": "confirms",
+          "detail": "The researcher traced the algorithm by hand on the instance."
+        },
+        {
+          "kind": "author_agreement",
+          "date": "2027-03",
+          "result": "confirms",
+          "detail": "The authors agreed that step 3 needs a capacity check."
+        }
+      ],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": "No earlier report found in the searched literature."
+    }
+  ],
+  "author_position": {
+    "position": "agrees",
+    "summary": "The authors agreed and plan to post a revised version with a capacity check in step 3."
+  },
+  "correction": null,
+  "evidence": {
+    "package_doi": "10.5555/sample-evidence.0017",
+    "package_sha256": "770f65d27ab9a9792941f480540687eb2019a5a5e99166cb21dfdad591c549f9",
+    "licence": "CC BY 4.0 (text); MIT (code)",
+    "files": [
+      {
+        "name": "README.md",
+        "sha256": "e349cb517a1c8b9cb1c8be587f30d4b811b90c27630168b146d79f3bcb0161aa"
+      },
+      {
+        "name": "schedule_trace.py",
+        "sha256": "4476260b231b36f77275796d4c0387ed95cef8b705a4fa023b5a904820bf763e"
+      }
+    ]
+  },
+  "history": [
+    {
+      "date": "2027-02",
+      "type": "audit",
+      "label": "Discovery audit completed"
+    },
+    {
+      "date": "2027-02",
+      "type": "check",
+      "label": "Reproduced by the researcher"
+    },
+    {
+      "date": "2027-02",
+      "type": "authors",
+      "label": "Authors notified"
+    },
+    {
+      "date": "2027-03",
+      "type": "authors",
+      "label": "Authors agreed"
+    },
+    {
+      "date": "2027-04-15",
+      "type": "release",
+      "label": "Record version 1.0 released"
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2027-04-15",
+      "change": "First release."
+    }
+  ],
+  "statements": {
+    "ai_use": "Discovery and the separate rechecks used AI models in separate sessions. The independent reproduction, the version-of-record check and every editorial decision were done by the researcher."
+  }
+}

@@ -1,0 +1,200 @@
+{
+  "public_id": "DEMO-2027-011",
+  "version": "1.0",
+  "released": "2027-03-24",
+  "status": "published",
+  "sample": true,
+  "kind": "defect",
+  "track": "game_theory",
+  "title": "Sample and Stand (2019)",
+  "headline": "Theorem 2(a) is false as stated, and a step in Lemma B2 needs an assumption the paper does not state.",
+  "work": {
+    "authors": [
+      "Ines Sample",
+      "Ravi Stand"
+    ],
+    "title": "Equilibrium with Endogenous Entry",
+    "venue": "Games and Decisions Quarterly",
+    "year": 2019,
+    "volume": "7",
+    "pages": "301–329",
+    "doi": "10.5555/sample.0011"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Theorem 2(a)",
+      "kind": "theorem",
+      "role": "main",
+      "page": "6",
+      "gist": "Every entry game in the class has a symmetric pure equilibrium.",
+      "statement": "Every entry game satisfying Assumptions A1–A3 has a symmetric equilibrium in pure strategies.",
+      "conditions": [
+        "Assumptions A1–A3",
+        "identical potential entrants"
+      ],
+      "quantifiers": "for every game satisfying the assumptions",
+      "result": {
+        "outcome": "defect_found",
+        "candidate_status": "confirmed",
+        "defect_class": "statement_false",
+        "affects": "main_result",
+        "depth": "deep_audit",
+        "summary": "An entry game satisfying A1–A3 whose pure equilibria are all asymmetric.",
+        "witness": "With three potential entrants and a market that is profitable for exactly two, every pure equilibrium has two entrants and one stays out, so none is symmetric.",
+        "tested": "Games with two to four entrants and profit functions on a grid, solved exactly.",
+        "not_claimed": [
+          "Part (b) of Theorem 2, on mixed equilibria, is not claimed to be false.",
+          "The theorem is not claimed to fail when entry is profitable for every number of entrants."
+        ],
+        "repair": "local_repair_proposed",
+        "repair_note": "Allowing mixed strategies restores the conclusion in all cases checked."
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "6–8",
+        "detail": "Statement and definitions checked on rendered pages; the proof compared in extracted text only."
+      },
+      "checks": [
+        {
+          "kind": "ai_recheck",
+          "date": "2027-01",
+          "result": "confirms",
+          "detail": "A separate AI session, not given the earlier result, rebuilt the game.",
+          "session": "blind"
+        },
+        {
+          "kind": "independent_reproduction",
+          "date": "2027-02",
+          "result": "confirms",
+          "detail": "The researcher solved the game exactly with separate code."
+        }
+      ],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": "No earlier report found in the searched literature."
+    },
+    {
+      "id": "c2",
+      "label": "Lemma B2",
+      "kind": "lemma",
+      "role": "supporting",
+      "page": "B3",
+      "gist": "The entry best-reply map has a closed graph.",
+      "statement": "The best-reply correspondence of the entry game has a closed graph in the space of entry probabilities.",
+      "conditions": [
+        "Assumptions A1–A3"
+      ],
+      "quantifiers": "for every game satisfying the assumptions",
+      "result": {
+        "outcome": "defect_found",
+        "candidate_status": "confirmed",
+        "defect_class": "missing_or_hidden_assumption",
+        "affects": "lemma_or_proof_step",
+        "depth": "deep_audit",
+        "summary": "A closed graph needs profits to be continuous in the number of entrants; this is not stated.",
+        "witness": "The limit step uses continuity of profits in the number of entrants; without it the graph is not closed in a three-entrant game with a profit jump.",
+        "tested": "The proof read line by line; the three-entrant game used as a test case.",
+        "not_claimed": [
+          "The lemma is not claimed to fail when profits are continuous in the number of entrants."
+        ],
+        "repair": "local_repair_proposed",
+        "repair_note": "Adding continuity of profits closes the step."
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "B3–B4",
+        "detail": "Statement and definitions checked on rendered pages; the proof compared in extracted text only."
+      },
+      "checks": [
+        {
+          "kind": "ai_recheck",
+          "date": "2027-02",
+          "result": "confirms",
+          "detail": "A separate AI session identified the same missing condition.",
+          "session": "informed"
+        },
+        {
+          "kind": "independent_reproduction",
+          "date": "2027-02",
+          "result": "confirms",
+          "detail": "The researcher checked the step by hand."
+        }
+      ],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": "No earlier report found in the searched literature."
+    }
+  ],
+  "author_position": {
+    "position": "none_yet",
+    "summary": null
+  },
+  "correction": null,
+  "evidence": {
+    "package_doi": "10.5555/sample-evidence.0011",
+    "package_sha256": "321d15e0be7de6d5c0f202928a8963240d13fbf5c65581871c78feeb985a6428",
+    "licence": "CC BY 4.0 (text); MIT (code)",
+    "files": [
+      {
+        "name": "README.md",
+        "sha256": "3ad55c793406bf5250597d6ffb92b5394f4c21f81c196a9118fcdf197c55383f"
+      },
+      {
+        "name": "entry_game.py",
+        "sha256": "0d961a23c1d04fa48bc98c9accd1729616f08c5453607c41e4f17968d64d404f"
+      },
+      {
+        "name": "closed_graph_note.md",
+        "sha256": "f0ce85ce11cdc7f2c73ca89af1a6d610a668d2ef7b6204740e1d00c37b242139"
+      }
+    ]
+  },
+  "history": [
+    {
+      "date": "2027-01",
+      "type": "audit",
+      "label": "Discovery audit completed"
+    },
+    {
+      "date": "2027-02",
+      "type": "check",
+      "label": "Both findings reproduced by the researcher"
+    },
+    {
+      "date": "2027-02",
+      "type": "source",
+      "label": "Checked against the published version: partial"
+    },
+    {
+      "date": "2027-02",
+      "type": "authors",
+      "label": "Authors notified"
+    },
+    {
+      "date": "2027-03",
+      "type": "authors",
+      "label": "Authors' agreement to a public record received"
+    },
+    {
+      "date": "2027-03-24",
+      "type": "release",
+      "label": "Record version 1.0 released"
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2027-03-24",
+      "change": "First release."
+    }
+  ],
+  "statements": {
+    "ai_use": "Discovery and the separate rechecks used AI models in separate sessions. The independent reproduction, the version-of-record check and every editorial decision were done by the researcher."
+  }
+}

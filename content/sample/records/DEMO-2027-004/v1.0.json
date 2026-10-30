@@ -1,88 +1,116 @@
 {
   "public_id": "DEMO-2027-004",
   "version": "1.0",
-  "released": "2027-06-24",
+  "released": "2027-04-08",
   "status": "published",
   "sample": true,
   "kind": "defect",
-  "track": "probability",
-  "title": "Theorem 2 in Sample (2026)",
-  "headline": "The upper bound in Theorem 2 fails for claim-size distributions that the stated assumptions allow (a missing assumption). The authors disagree; their reply is summarised below.",
+  "track": "matching_social_choice",
+  "title": "Placeholder (2025)",
+  "headline": "No defect was found in the main theorem. Lemma 5 relies on a cited result that does not cover its case, so its proof is incomplete; the lemma is not claimed to be false.",
   "work": {
     "authors": [
-      "Morgan Sample"
+      "Oskar Placeholder"
     ],
-    "title": "Bounds on Ruin Probabilities for Compound Renewal Processes",
-    "venue": "Journal of Hypothetical Probability (fictional)",
-    "year": 2026,
-    "volume": "12",
-    "pages": "1–29",
+    "title": "Course Allocation with Prerequisite Chains",
+    "venue": "Journal of Allocation Theory",
+    "year": 2025,
+    "volume": "221",
+    "pages": "105894",
     "doi": "10.5555/sample.0004"
   },
   "claims": [
     {
+      "id": "c1",
       "label": "Theorem 2",
-      "page": "9",
       "kind": "theorem",
       "role": "main",
-      "statement": "For every claim-size distribution with a finite second moment, the ruin probability is bounded above by the stated exponential expression.",
+      "page": "7",
+      "gist": "Serial dictatorship with prerequisites is the only efficient, non-bossy rule.",
+      "statement": "When prerequisites form chains, serial dictatorship respecting prerequisites is the unique rule that is efficient, non-bossy and strategy-proof.",
       "conditions": [
-        "compound renewal process",
-        "claim sizes with finite second moment",
-        "positive safety loading"
+        "prerequisites form chains",
+        "strict preferences over schedules",
+        "fixed priority order"
       ],
-      "quantifiers": "for every claim-size distribution with a finite second moment",
+      "quantifiers": "for every chain structure",
+      "result": {
+        "outcome": "no_defect_found",
+        "depth": "deep_audit",
+        "summary": "No counterexample among all small instances checked; the proof read line by line.",
+        "search_scope": "All instances with up to four students, four courses and chains of length up to three; uniqueness checked against every rule with the three properties. The proof read line by line.",
+        "limits": "Larger instances are covered by the proof reading only. The proof uses Lemma 5 (below)."
+      },
+      "vor_check": {
+        "level": "full",
+        "pages": "7–12",
+        "detail": "Statement, definitions and the decisive step checked on rendered pages of the published version."
+      },
+      "checks": [],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": null
+    },
+    {
+      "id": "c2",
+      "label": "Lemma 5",
+      "kind": "lemma",
+      "role": "supporting",
+      "page": "18",
+      "gist": "Efficient schedules are unique under weak preferences.",
+      "statement": "With weak preferences broken by the fixed order, the efficient schedule that respects prerequisites is unique.",
+      "conditions": [
+        "weak preferences",
+        "ties resolved by a fixed order"
+      ],
+      "quantifiers": "for every instance",
       "result": {
         "outcome": "defect_found",
         "candidate_status": "confirmed",
-        "defect_class": "missing_or_hidden_assumption",
-        "affects": "main_result",
+        "defect_class": "citation_or_dependency_gap",
+        "affects": "lemma_or_proof_step",
         "depth": "deep_audit",
-        "witness": "A claim-size distribution with a finite second moment but an infinite third moment violates the bound; the calculation is in the evidence package.",
-        "repair": "local_repair_proposed",
-        "repair_note": "Assuming a finite third moment restores the bound in all cases checked.",
+        "summary": "The cited uniqueness result covers strict preferences only; the proof needs weak ones.",
+        "witness": "The proof cites a uniqueness theorem proved for strict preferences. The step that would carry it over to weak preferences is not given, and the cited argument does not cover it.",
+        "tested": "The proof and the cited source read line by line; small instances searched for a counterexample (none found).",
         "not_claimed": [
-          "The bound is not claimed to fail for distributions with a finite third moment.",
-          "The paper's other results are not examined here."
-        ]
+          "Lemma 5 is not claimed to be false; no counterexample was found.",
+          "Theorem 2 is not claimed to be false."
+        ],
+        "repair": "none_proposed"
       },
       "vor_check": {
         "level": "partial",
-        "pages": "8–10",
-        "detail": "Statement and assumptions checked on rendered pages; the decisive step compared in extracted text only."
+        "pages": "18–19",
+        "detail": "Statement and definitions checked on rendered pages; the proof compared in extracted text only."
       },
       "checks": [
         {
+          "kind": "independent_reproduction",
+          "date": "2027-02",
+          "result": "confirms",
+          "detail": "The researcher compared the cited theorem's hypotheses with the lemma's."
+        },
+        {
           "kind": "ai_recheck",
-          "session": "blind",
-          "date": "2027-03",
+          "date": "2027-02",
           "result": "confirms",
-          "detail": "A separate AI session, not given the earlier result, found the same failure."
-        },
-        {
-          "kind": "independent_reproduction",
-          "date": "2027-03",
-          "result": "confirms",
-          "detail": "The researcher reproduced the calculation with separately written code."
-        },
-        {
-          "kind": "independent_reproduction",
-          "date": "2027-06",
-          "result": "confirms",
-          "detail": "After the authors disagreed, the researcher checked their argument by hand; the counterexample stands."
+          "detail": "A separate AI session reached the same reading of the cited result.",
+          "session": "blind"
         }
       ],
       "reproduction": {
         "result": "pass",
-        "detail": "Calculation rerun from the archived package."
+        "detail": "The small-instance search reruns with one command."
       },
-      "novelty": "No earlier report found in the searched record as of March 2027."
+      "novelty": "No earlier report found in the searched literature."
     }
   ],
   "author_position": {
-    "position": "disagrees",
-    "summary": "The authors hold that a convention in Section 2 excludes such distributions. This record quotes that convention and explains why, as printed, it does not exclude them. The authors were offered space for a full reply.",
-    "reply_link": null
+    "position": "partly_agrees",
+    "summary": "The author agreed that the citation does not cover weak preferences and believes a short argument closes the gap."
   },
   "correction": null,
   "evidence": {
@@ -95,48 +123,43 @@
         "sha256": "d41d118a8406ccea0295c7f6b0f6b83fcd58dfd66f1754d43e2885a5ef2baa34"
       },
       {
-        "name": "counterexample.py",
-        "sha256": "af3af95bda823446bea6f46bfc97f32e121098ed860dcc242f0978f5c6ab4dd8"
+        "name": "small_instances.py",
+        "sha256": "38881b268727f2ecafc9173b4bb1e1e0d334cf3b5899157ff3a835ef05a61d94"
       },
       {
-        "name": "convention_note.md",
-        "sha256": "8e23b5092cb459dda9da54d21c3d7989b61ef8650c70a2cc7dc8296095e81a83"
+        "name": "uniqueness_check.py",
+        "sha256": "08488fb0181f541f710d8c2337441c4f92540b41875d3aa042690ece9a0ac619"
       }
     ]
   },
   "history": [
     {
+      "date": "2027-01",
+      "type": "audit",
+      "label": "Deep audit of Theorem 2 completed: no defect found"
+    },
+    {
       "date": "2027-02",
       "type": "audit",
-      "label": "Discovery audit completed"
+      "label": "Gap in Lemma 5 identified"
     },
     {
-      "date": "2027-03",
+      "date": "2027-02",
       "type": "check",
-      "label": "Rechecked by a separate AI session: confirms"
+      "label": "Reproduced by the researcher"
     },
     {
-      "date": "2027-03",
-      "type": "check",
-      "label": "Independently reproduced by the researcher: confirms"
+      "date": "2027-02",
+      "type": "authors",
+      "label": "Author notified"
     },
     {
       "date": "2027-03",
       "type": "authors",
-      "label": "Authors notified and offered the opportunity to respond"
+      "label": "Author partly agreed"
     },
     {
-      "date": "2027-05",
-      "type": "authors",
-      "label": "Authors disagreed"
-    },
-    {
-      "date": "2027-06",
-      "type": "check",
-      "label": "Additional check by the researcher after the dispute: confirms"
-    },
-    {
-      "date": "2027-06-24",
+      "date": "2027-04-08",
       "type": "release",
       "label": "Record version 1.0 released"
     }
@@ -145,11 +168,11 @@
   "changelog": [
     {
       "version": "1.0",
-      "date": "2027-06-24",
-      "change": "First release, after the additional check."
+      "date": "2027-04-08",
+      "change": "First release."
     }
   ],
   "statements": {
-    "ai_use": "Discovery and one separate recheck used AI models in separate sessions. The independent reproduction, the version-of-record check and the editorial decision were done by the researcher."
+    "ai_use": "Discovery and the separate rechecks used AI models in separate sessions. The independent reproduction, the version-of-record check and every editorial decision were done by the researcher."
   }
 }

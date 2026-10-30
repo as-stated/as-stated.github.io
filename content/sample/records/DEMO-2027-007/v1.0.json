@@ -1,0 +1,147 @@
+{
+  "public_id": "DEMO-2027-007",
+  "version": "1.0",
+  "released": "2027-05-06",
+  "status": "published",
+  "sample": true,
+  "kind": "negative",
+  "track": "game_theory",
+  "title": "Pattern and Specimen (2019)",
+  "headline": "No defect was found in Theorem 2. A claim in the online appendix could not be settled because the final version of the appendix was not available; it is reported as unresolved, not as a defect.",
+  "work": {
+    "authors": [
+      "Ana Pattern",
+      "Felix Specimen"
+    ],
+    "title": "Bidding Rings in Repeated Procurement",
+    "venue": "Journal of Strategic Analysis",
+    "year": 2019,
+    "volume": "87(4)",
+    "pages": "1201–1240",
+    "doi": "10.5555/sample.0007"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Theorem 2",
+      "kind": "theorem",
+      "role": "main",
+      "page": "6",
+      "gist": "A bidding ring is stable only if the discount factor exceeds the stated bound.",
+      "statement": "In the repeated procurement game, a bidding ring is sustainable in equilibrium if and only if the discount factor exceeds δ*(n, c).",
+      "conditions": [
+        "identical costs c",
+        "n bidders",
+        "observable winning bids"
+      ],
+      "quantifiers": "for every n ≥ 2",
+      "result": {
+        "outcome": "no_defect_found",
+        "depth": "deep_audit",
+        "summary": "No counterexample among the games checked; the proof read line by line.",
+        "search_scope": "Two to five bidders, cost grids up to eight points, discount factors on a fine grid; all stage deviations checked. The proof read line by line.",
+        "limits": "Unobservable bids are outside the claim."
+      },
+      "vor_check": {
+        "level": "full",
+        "pages": "6–10",
+        "detail": "Statement, definitions and the decisive step checked on rendered pages of the published version."
+      },
+      "checks": [],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": null
+    },
+    {
+      "id": "c2",
+      "label": "Claim B.4 (online appendix)",
+      "kind": "remark",
+      "role": "supporting",
+      "page": "B7",
+      "gist": "The bound δ*(n, c) is strictly increasing in n.",
+      "statement": "The threshold discount factor δ*(n, c) is strictly increasing in the number of bidders.",
+      "conditions": [
+        "as Theorem 2"
+      ],
+      "quantifiers": "for every cost level c",
+      "result": {
+        "outcome": "unresolved",
+        "depth": "deep_audit",
+        "unresolved_reason": "source_limited",
+        "summary": "A boundary cost level appears to give equal thresholds in the 2019 appendix; the final appendix was not available.",
+        "detail": "In the 2019 working-paper appendix, at the boundary cost level the threshold is the same for three and four bidders. The journal's final appendix may restrict the cost range; it could not be obtained, so the question is not settled.",
+        "limits": "Not counted as a defect. Will be revisited if the final appendix becomes available."
+      },
+      "vor_check": {
+        "level": "none",
+        "pages": "B6–B8",
+        "detail": "Only the 2019 working-paper appendix was available; the final appendix could not be obtained."
+      },
+      "checks": [],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": null
+    }
+  ],
+  "author_position": {
+    "position": "courtesy_notice",
+    "summary": null
+  },
+  "correction": null,
+  "evidence": {
+    "package_doi": "10.5555/sample-evidence.0007",
+    "package_sha256": "ad5eeff62edecc8c3ca3a100a6c6834e21758f28984205e1850c205cab9417f9",
+    "licence": "CC BY 4.0 (text); MIT (code)",
+    "files": [
+      {
+        "name": "README.md",
+        "sha256": "bce2ae0849852f9eff4f92e33217ec7c4d08a8632ff483819c9e093daba0e23e"
+      },
+      {
+        "name": "ring_stability.py",
+        "sha256": "1f65e68aff8bce3d42c753f70a9e97894c577ef404f8e09c0253bbb53817c671"
+      },
+      {
+        "name": "boundary_case.json",
+        "sha256": "7bf8818e0d0a7f727e62938a79845c8bc9d0da38bb103d789ab40a354f94eb84"
+      }
+    ]
+  },
+  "history": [
+    {
+      "date": "2027-03",
+      "type": "audit",
+      "label": "Deep audit of Theorem 2 completed: no defect found"
+    },
+    {
+      "date": "2027-04",
+      "type": "source",
+      "label": "Final online appendix requested; not obtained"
+    },
+    {
+      "date": "2027-04",
+      "type": "authors",
+      "label": "Courtesy notice sent"
+    },
+    {
+      "date": "2027-05-06",
+      "type": "release",
+      "label": "Record version 1.0 released"
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2027-05-06",
+      "change": "First release."
+    }
+  ],
+  "statements": {
+    "ai_use": "The search was designed with AI assistance and rerun by the researcher; the version-of-record check and every editorial decision were done by the researcher."
+  }
+}

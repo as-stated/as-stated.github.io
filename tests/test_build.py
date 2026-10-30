@@ -141,8 +141,8 @@ class BuildTests(unittest.TestCase):
     def test_expected_pages_exist(self):
         for p in ["index.html", "cases/index.html", "statistics/index.html", "statistics/2027-03/index.html",
                   "methodology/index.html", "definitions/index.html", "updates/index.html", "about/index.html",
-                  "404.html", "feed.xml", "cases/DEMO-2027-001/index.html", "cases/DEMO-2027-001/v1.0/index.html",
-                  "data/records/DEMO-2027-001/v1.2.json", "data/snapshots/2027-06.json", "robots.txt",
+                  "404.html", "feed.xml", "cases/DEMO-2027-001/index.html", "cases/DEMO-2027-002/v1.0/index.html",
+                  "data/records/DEMO-2027-002/v1.2.json", "data/snapshots/2027-06.json", "robots.txt",
                   "sitemap.xml", ".nojekyll", "static/style.css", "static/app.js", "static/favicon.svg"]:
             self.assertTrue((self.out_p / p).exists(), p)
 
@@ -208,10 +208,10 @@ class BuildTests(unittest.TestCase):
 
     def test_outcome_distinctions_are_defined(self):
         defs = (self.out_p / "definitions/index.html").read_text(encoding="utf-8")
-        for label in ["False as printed", "Proof incomplete", "Repairable gap", "Missing assumption",
-                      "No defect found", "Unresolved", "Rejected candidate"]:
+        for label in ["No defect found", "False as stated", "Proof incomplete", "Missing assumption",
+                      "Construction fails", "Unresolved"]:
             self.assertIn(label, defs)
-        self.assertIn("not a proof of correctness", defs.replace("Not a proof", "not a proof"))
+        self.assertIn("not a proof that the claim is correct", defs)
 
     def test_negative_audits_carry_the_caveat_and_defects_the_non_claims(self):
         for rid, versions in self.content.records.items():
@@ -219,24 +219,42 @@ class BuildTests(unittest.TestCase):
             if versions[-1]["kind"] == "negative":
                 self.assertIn(build.NEGATIVE_CAVEAT, page, rid)
             else:
-                self.assertIn("Not claimed", page, rid)
+                self.assertIn("Does not establish", page, rid)
 
     def test_archived_versions_point_to_current(self):
-        page = (self.out_p / "cases/DEMO-2027-001/v1.0/index.html").read_text(encoding="utf-8")
+        page = (self.out_p / "cases/DEMO-2027-002/v1.0/index.html").read_text(encoding="utf-8")
         self.assertIn("Archived version 1.0. The current version is", page)
-        current = (self.out_p / "cases/DEMO-2027-001/index.html").read_text(encoding="utf-8")
+        current = (self.out_p / "cases/DEMO-2027-002/index.html").read_text(encoding="utf-8")
         self.assertNotIn("Archived version", current)
 
     def test_selection_statement_on_number_pages(self):
         for p in ["index.html", "statistics/index.html", "cases/index.html"]:
             self.assertIn("not sampled at random", (self.out / p).read_text(encoding="utf-8"), p)
 
-    def test_suppressed_counts_are_shown_as_dashes(self):
-        stats = (self.out_p / "statistics/index.html").read_text(encoding="utf-8")
-        snap = max(self.content.snapshots, key=lambda s: s["as_of"])
-        suppressed = [k for k, v in snap["examined_by_track"]["M01"].items() if v is None]
-        self.assertTrue(suppressed)
-        self.assertEqual(stats.count('data-label="Papers considered">–<'), len(suppressed))
+    def test_index_has_one_row_per_claim_grouped_by_paper(self):
+        page = (self.out_p / "cases/index.html").read_text(encoding="utf-8")
+        recs = self.content.latest_all()
+        self.assertEqual(page.count('class="ix-group"'), len(recs))
+        self.assertEqual(page.count('<tr class="ix-row"'), sum(len(r["claims"]) for r in recs))
+
+    def test_index_omits_private_fields(self):
+        for f in ["cases/index.html", "index.html"]:
+            text = (self.out_p / f).read_text(encoding="utf-8").lower()
+            for word in ["eligib", "owner approval", "evidence_path", "correspondence"]:
+                self.assertNotIn(word, text, f)
+
+    def test_ai_recheck_is_never_presented_as_a_human_check(self):
+        page = (self.out_p / "cases/index.html").read_text(encoding="utf-8")
+        for vt in re.findall(r'<span class="vt">([^<]*)</span>', page):
+            self.assertNotIn("AI", vt)
+
+    def test_unresolved_claims_are_not_counted_as_defects(self):
+        recs = self.content.latest_all()
+        unresolved = [c for r in recs for c in r["claims"] if c["result"]["outcome"] == "unresolved"]
+        self.assertTrue(unresolved)
+        rs = build.released_stats(self.content, "2099-12-31")
+        self.assertEqual(rs["unresolved"], len(unresolved))
+        self.assertEqual(rs["confirmed"], sum(c["result"]["outcome"] == "defect_found" for r in recs for c in r["claims"]))
 
     def test_methodology_publishes_the_trusted_fingerprint(self):
         page = (self.out_p / "methodology/index.html").read_text(encoding="utf-8")
@@ -255,7 +273,7 @@ class BuildTests(unittest.TestCase):
 
     def test_private_denylist_blocks_build(self):
         deny = self.tmp / "deny.txt"
-        deny.write_text("Jane Doe\n", encoding="utf-8")
+        deny.write_text("Clara Template\n", encoding="utf-8")
         with self.assertRaises(build.BuildError):
             build.build("sample", self.tmp / "dist_deny", denylist_file=deny)
 
@@ -280,11 +298,11 @@ class ReleaseGateTests(unittest.TestCase):
         return build.Content(channel, self.root).load()
 
     def test_untouched_copy_loads(self):
-        self.assertEqual(len(self.load().verified), 12)
+        self.assertEqual(len(self.load().verified), 25)
 
     def test_edited_record_is_refused(self):
-        f = self.root / "content/sample/records/DEMO-2027-003/v1.0.json"
-        f.write_bytes(f.read_bytes().replace(b"partly agree", b"fully agree"))
+        f = self.root / "content/sample/records/DEMO-2027-004/v1.0.json"
+        f.write_bytes(f.read_bytes().replace(b"partly_agrees", b"agrees"))
         with self.assertRaisesRegex(build.BuildError, "does not match"):
             self.load()
 
@@ -295,7 +313,7 @@ class ReleaseGateTests(unittest.TestCase):
 
     def test_unreleased_record_is_refused(self):
         src = self.root / "content/sample/records/DEMO-2027-002/v1.0.json"
-        dst = self.root / "content/sample/records/DEMO-2027-009/v1.0.json"
+        dst = self.root / "content/sample/records/DEMO-2027-099/v1.0.json"
         dst.parent.mkdir(parents=True)
         shutil.copyfile(src, dst)
         with self.assertRaisesRegex(build.BuildError, "not released"):
@@ -349,8 +367,9 @@ class ReleaseGateTests(unittest.TestCase):
 
     def test_published_small_cell_is_refused(self):
         def fn(s):
-            s["examined_by_track"]["M01"]["probability"] = 3
-            s["examined_by_track"]["M01"]["econometrics"] = None
+            cells = s["examined_by_track"]["M01"]
+            cells["mechanism_design"] = 3
+            cells["game_theory"] = None
         edit_json(self.root / "content/sample/snapshots/2027-06.json", fn)
         self._resign_sample()
         with self.assertRaisesRegex(build.BuildError, "small count"):
@@ -359,7 +378,11 @@ class ReleaseGateTests(unittest.TestCase):
     def test_reconstructable_suppression_is_refused(self):
         def fn(s):
             cells = s["examined_by_track"]["M01"]
-            cells["game_theory"] = 27     # leaves 2 for the two suppressed cells, so both must be 1
+            known = cells["game_theory"]
+            cells["mechanism_design"] = None
+            cells["matching_social_choice"] = None
+            cells["game_theory"] = s["totals"]["M01"] - 2   # leaves 2 for two suppressed cells, so both must be 1
+            del known
         edit_json(self.root / "content/sample/snapshots/2027-06.json", fn)
         self._resign_sample()
         with self.assertRaisesRegex(build.BuildError, "can be narrowed"):
@@ -368,7 +391,7 @@ class ReleaseGateTests(unittest.TestCase):
     def test_confirmation_standard_enforced(self):
         def fn(r):
             r["claims"][0]["checks"] = [k for k in r["claims"][0]["checks"] if k["kind"] == "ai_recheck"]
-        edit_json(self.root / "content/sample/records/DEMO-2027-003/v1.0.json", fn)
+        edit_json(self.root / "content/sample/records/DEMO-2027-015/v1.0.json", fn)
         self._resign_sample()
         with self.assertRaisesRegex(build.BuildError, "confirmation standard"):
             self.load()
@@ -376,9 +399,18 @@ class ReleaseGateTests(unittest.TestCase):
     def test_unresolved_claim_cannot_be_named(self):
         def fn(r):
             r["claims"][0]["result"]["outcome"] = "inconclusive"
-        edit_json(self.root / "content/sample/records/DEMO-2027-002/v1.0.json", fn)
+        edit_json(self.root / "content/sample/records/DEMO-2027-018/v1.0.json", fn)
         self._resign_sample()
         with self.assertRaisesRegex(build.BuildError, "cannot be published"):
+            self.load()
+
+    def test_unresolved_claim_cannot_stand_alone(self):
+        def fn(r):
+            r["claims"] = [c for c in r["claims"] if c["result"]["outcome"] == "unresolved"]
+            r["kind"] = "negative"
+        edit_json(self.root / "content/sample/records/DEMO-2027-007/v1.0.json", fn)
+        self._resign_sample()
+        with self.assertRaisesRegex(build.BuildError, "cannot be the only claim"):
             self.load()
 
     def test_build_refuses_to_overwrite_unknown_folder(self):
@@ -400,7 +432,7 @@ def find_browser():
     return next((c for c in candidates if c and Path(c).exists()), None)
 
 
-LAYOUT_PAGES = ["", "cases/", "cases/DEMO-2027-001/", "cases/DEMO-2027-001/v1.0/", "cases/DEMO-2027-005/",
+LAYOUT_PAGES = ["", "cases/", "cases/DEMO-2027-001/", "cases/DEMO-2027-002/v1.0/", "cases/DEMO-2027-007/",
                 "statistics/", "statistics/2027-03/", "methodology/", "definitions/", "updates/", "about/", "404.html"]
 WIDTHS = [360, 390, 768, 1280]
 
@@ -417,12 +449,12 @@ function load(src, w) { return new Promise(res => { const f = document.createEle
     const wide = [...d.body.querySelectorAll("*")].filter(e => e.getBoundingClientRect().right > w + 1)
       .slice(0, 3).map(e => e.tagName.toLowerCase() + "." + e.className);
     out.push({page: p, width: w, scrollWidth: html.scrollWidth, wide: wide,
-      styled: f.contentWindow.getComputedStyle(d.querySelector(".top")).borderBottomStyle === "solid",
+      styled: f.contentWindow.getComputedStyle(d.querySelector(".mast")).borderBottomStyle === "solid",
       js: html.getAttribute("data-js") === "1"});
     if (p === "cases/" && w === 390) {
-      const sel = d.getElementById("f-outcome"); sel.value = "o-false"; sel.dispatchEvent(new Event("change"));
-      const shown = [...d.querySelectorAll("#case-index tbody tr")].filter(r => !r.hidden).length;
-      out.push({filter: "o-false", shown: shown, count: d.getElementById("f-count").textContent,
+      const sel = d.getElementById("f-fam"); sel.value = "construction"; sel.dispatchEvent(new Event("change"));
+      const shown = [...d.querySelectorAll("#case-index tr.ix-row")].filter(r => !r.hidden && !r.parentElement.hidden).length;
+      out.push({filter: "construction", shown: shown, count: d.getElementById("f-count").textContent,
                 formVisible: !d.getElementById("filters").hidden});
     }
     f.remove();
@@ -483,8 +515,8 @@ class LayoutTests(unittest.TestCase):
         self.assertIsNotNone(self.results, self.raw)
         f = next(x for x in self.results if "filter" in x)
         self.assertTrue(f["formVisible"])
-        self.assertEqual(f["shown"], 1)
-        self.assertTrue(f["count"].startswith("1 of "))
+        self.assertEqual(f["shown"], 3)
+        self.assertTrue(f["count"].startswith("3 of "))
 
 
 if __name__ == "__main__":

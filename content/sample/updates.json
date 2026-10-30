@@ -6,92 +6,216 @@
       "date": "2027-07-05",
       "type": "snapshot",
       "title": "Statistics snapshot for June 2027",
-      "body": "Quarterly figures on author positions were refreshed. Six records are now public.",
+      "body": "Quarterly figures on author positions were refreshed.",
       "links": [
         "statistics"
       ]
     },
     {
-      "date": "2027-06-28",
-      "type": "release",
-      "title": "DEMO-2027-006 released: proof incomplete",
-      "body": "Released 90 days after the authors were notified, without a substantive reply. The corollary is not claimed to be false.",
-      "links": [
-        "DEMO-2027-006"
-      ]
-    },
-    {
       "date": "2027-06-24",
       "type": "release",
-      "title": "DEMO-2027-004 released: the authors disagree",
-      "body": "Released after an additional check by the researcher. The authors' position is summarised in the record.",
-      "links": [
-        "DEMO-2027-004"
-      ]
-    },
-    {
-      "date": "2027-06-12",
-      "type": "revision",
-      "title": "DEMO-2027-001 version 1.2: external replication",
-      "body": "An outside researcher reproduced the counterexample independently.",
-      "links": [
-        "DEMO-2027-001"
-      ]
-    },
-    {
-      "date": "2027-05-28",
-      "type": "release",
-      "title": "DEMO-2027-003 released after a published erratum",
-      "body": "The erratum does not mention this audit; the record says so.",
+      "title": "DEMO-2027-003 released: Stand and Model (2025), 2 claims",
+      "body": "Proposition 1 is false as stated and Algorithm 1 can cycle. The authors disagree; their position is summarised below.",
       "links": [
         "DEMO-2027-003"
       ]
     },
     {
-      "date": "2027-05-10",
+      "date": "2027-06-17",
+      "type": "release",
+      "title": "DEMO-2027-013 released: Prototype (2024), 2 claims",
+      "body": "The proof of Remark 3 has a gap that a short argument repairs. A related gap in Lemma 4(b) is confirmed for the 2024 appendix but unresolved for the revised appendix, which could not be obtained.",
+      "links": [
+        "DEMO-2027-013"
+      ]
+    },
+    {
+      "date": "2027-06-09",
       "type": "revision",
-      "title": "DEMO-2027-001 version 1.1: corrigendum published",
-      "body": "The journal published a corrigendum that credits this audit.",
+      "title": "DEMO-2027-002 version 1.2",
+      "body": "Added an external human verification.",
+      "links": [
+        "DEMO-2027-002"
+      ]
+    },
+    {
+      "date": "2027-06-03",
+      "type": "release",
+      "title": "DEMO-2027-016 released: Surrogate, Token and Draft (2024), 3 claims",
+      "body": "Theorems 2 and 4 and Lemma 3 are false as stated; each fails on a small instance.",
+      "links": [
+        "DEMO-2027-016"
+      ]
+    },
+    {
+      "date": "2027-05-27",
+      "type": "revision",
+      "title": "DEMO-2027-011 version 1.1",
+      "body": "Added the authors' written agreement.",
+      "links": [
+        "DEMO-2027-011"
+      ]
+    },
+    {
+      "date": "2027-05-20",
+      "type": "release",
+      "title": "DEMO-2027-001 released: Template and Proxy (2021), 4 claims",
+      "body": "Two supporting lemmas are false as stated, and two applications hold only under an assumption the paper does not state. The main theorem (Theorem 1) was not examined.",
       "links": [
         "DEMO-2027-001"
       ]
     },
     {
-      "date": "2027-05-02",
-      "type": "correction",
-      "title": "Our correction to DEMO-2027-005",
-      "body": "Version 1.0 overstated the search scope (five bidders instead of four). Version 1.1 corrects it.",
+      "date": "2027-05-13",
+      "type": "release",
+      "title": "DEMO-2027-015 released: Model (2026), 1 claim",
+      "body": "The only-if direction of Proposition 4 is false as stated.",
       "links": [
-        "DEMO-2027-005"
+        "DEMO-2027-015"
       ]
     },
     {
-      "date": "2027-04-20",
+      "date": "2027-05-06",
       "type": "release",
-      "title": "DEMO-2027-005 released: a negative deep audit",
-      "body": "No defect found within the stated scope.",
+      "title": "DEMO-2027-007 released: Pattern and Specimen (2019), 2 claims",
+      "body": "No defect was found in Theorem 2. A claim in the online appendix could not be settled because the final version of the appendix was not available; it is reported as unresolved, not as a defect.",
       "links": [
-        "DEMO-2027-005"
+        "DEMO-2027-007"
+      ]
+    },
+    {
+      "date": "2027-04-30",
+      "type": "revision",
+      "title": "DEMO-2027-002 version 1.1",
+      "body": "Added the published corrigendum and an audit of the corrected rules.",
+      "links": [
+        "DEMO-2027-002"
+      ]
+    },
+    {
+      "date": "2027-04-22",
+      "type": "release",
+      "title": "DEMO-2027-010 released: Fictive and Example (2022), 3 claims",
+      "body": "No defect was found in Theorems 1 and 2. The proof of the Exit Lemma skips a case; the authors agreed and supplied a short argument that closes it.",
+      "links": [
+        "DEMO-2027-010"
+      ]
+    },
+    {
+      "date": "2027-04-15",
+      "type": "release",
+      "title": "DEMO-2027-017 released: Example and Instance (2025), 1 claim",
+      "body": "Algorithm 1 does not always meet its stated approximation guarantee. The authors agreed.",
+      "links": [
+        "DEMO-2027-017"
+      ]
+    },
+    {
+      "date": "2027-04-08",
+      "type": "release",
+      "title": "DEMO-2027-004 released: Placeholder (2025), 2 claims",
+      "body": "No defect was found in the main theorem. Lemma 5 relies on a cited result that does not cover its case, so its proof is incomplete; the lemma is not claimed to be false.",
+      "links": [
+        "DEMO-2027-004"
       ]
     },
     {
       "date": "2027-04-05",
       "type": "snapshot",
-      "title": "First statistics snapshot (March 2027)",
+      "title": "Statistics snapshot for March 2027",
       "body": "Programme-wide counts under metric definitions version 1.1.",
       "links": [
         "statistics"
       ]
     },
     {
-      "date": "2027-03-15",
-      "type": "release",
-      "title": "First records released",
-      "body": "DEMO-2027-001 (a confirmed defect in an application) and DEMO-2027-002 (a negative deep audit). Methodology version 1.0 published.",
+      "date": "2027-03-29",
+      "type": "correction",
+      "title": "DEMO-2027-005 version 1.1 (our correction)",
+      "body": "Version 1.0 overstated the search for Theorem 3 (thirty-two players instead of sixteen). Findings unchanged.",
       "links": [
-        "DEMO-2027-001",
-        "DEMO-2027-002",
-        "methodology"
+        "DEMO-2027-005"
+      ]
+    },
+    {
+      "date": "2027-03-24",
+      "type": "release",
+      "title": "DEMO-2027-011 released: Sample and Stand (2019), 2 claims",
+      "body": "Theorem 2(a) is false as stated, and a step in Lemma B2 needs an assumption the paper does not state.",
+      "links": [
+        "DEMO-2027-011"
+      ]
+    },
+    {
+      "date": "2027-03-17",
+      "type": "release",
+      "title": "DEMO-2027-009 released: Token (2021), 2 claims",
+      "body": "No defect was found in Propositions 3 and 6 within the stated scope. Parts of the proofs rely on a supplement that was checked only in its working-paper form.",
+      "links": [
+        "DEMO-2027-009"
+      ]
+    },
+    {
+      "date": "2027-03-10",
+      "type": "release",
+      "title": "DEMO-2027-018 released: Specimen (2025), 1 claim",
+      "body": "No defect was found in Theorem 5 within the stated scope. This is not a proof that it is correct.",
+      "links": [
+        "DEMO-2027-018"
+      ]
+    },
+    {
+      "date": "2027-03-02",
+      "type": "release",
+      "title": "DEMO-2027-005 released: Instance (2023), 2 claims",
+      "body": "No defect was found in Theorem 3 or Lemma 8 within the stated scope. This is not a proof that they are correct.",
+      "links": [
+        "DEMO-2027-005"
+      ]
+    },
+    {
+      "date": "2027-02-24",
+      "type": "release",
+      "title": "DEMO-2027-012 released: Variant (2003), 1 claim",
+      "body": "Corollary 5.2 is false as originally printed. A corrigendum published in 2022, before this audit, already corrects it; the record documents a known error re-found by the method.",
+      "links": [
+        "DEMO-2027-012"
+      ]
+    },
+    {
+      "date": "2027-02-18",
+      "type": "release",
+      "title": "DEMO-2027-002 released: Sample and Variant (2025), 1 claim",
+      "body": "The mechanism used to prove Theorem 2 does not work as printed. The authors agreed; Theorem 2 itself is not refuted.",
+      "links": [
+        "DEMO-2027-002"
+      ]
+    },
+    {
+      "date": "2027-02-10",
+      "type": "release",
+      "title": "DEMO-2027-008 released: Draft and Mock (2026), 2 claims",
+      "body": "No defect was found in Theorem 1 or Corollary 2 within the stated scope. This is not a proof that they are correct.",
+      "links": [
+        "DEMO-2027-008"
+      ]
+    },
+    {
+      "date": "2027-01-26",
+      "type": "release",
+      "title": "DEMO-2027-006 released: Proxy and Surrogate (2018), 2 claims",
+      "body": "No defect was found in either theorem within the stated scope. This is not a proof that they are correct.",
+      "links": [
+        "DEMO-2027-006"
+      ]
+    },
+    {
+      "date": "2027-01-26",
+      "type": "release",
+      "title": "DEMO-2027-014 released: Mock and Pattern (2018), 2 claims",
+      "body": "No defect was found in Theorems 1 and 2 within the stated scope. This is not a proof that they are correct.",
+      "links": [
+        "DEMO-2027-014"
       ]
     }
   ]

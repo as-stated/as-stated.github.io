@@ -1,52 +1,85 @@
 {
   "public_id": "DEMO-2027-005",
   "version": "1.0",
-  "released": "2027-04-20",
+  "released": "2027-03-02",
   "status": "published",
   "sample": true,
   "kind": "negative",
-  "track": "mechanism_design",
-  "title": "Proposition 2 in Specimen (2023)",
-  "headline": "No defect found in Proposition 2 within the stated scope (deep audit). This is not a proof that the result is correct.",
+  "track": "matching_social_choice",
+  "title": "Instance (2023)",
+  "headline": "No defect was found in Theorem 3 or Lemma 8 within the stated scope. This is not a proof that they are correct.",
   "work": {
     "authors": [
-      "Riley Specimen"
+      "Hanna Instance"
     ],
-    "title": "Revenue Equivalence with Budget-Constrained Bidders",
-    "venue": "Journal of Hypothetical Economic Theory (fictional)",
+    "title": "Seeding Rules for Knockout Tournaments",
+    "venue": "Studies in Collective Choice",
     "year": 2023,
-    "volume": "36",
-    "pages": "104812",
+    "volume": "18",
+    "pages": "331–362",
     "doi": "10.5555/sample.0005"
   },
   "claims": [
     {
-      "label": "Proposition 2",
-      "page": "12",
-      "kind": "proposition",
+      "id": "c1",
+      "label": "Theorem 3",
+      "kind": "theorem",
       "role": "main",
-      "statement": "With symmetric, independent budgets, the first-price and second-price auctions yield the same expected revenue.",
+      "page": "12",
+      "gist": "Only the balanced seeding rule satisfies the three fairness axioms.",
+      "statement": "For knockout tournaments with 2^k players, balanced seeding is the unique seeding rule satisfying monotonicity, symmetry and the stronger-player axiom.",
       "conditions": [
-        "symmetric independent private values",
-        "symmetric independent budgets",
-        "risk-neutral bidders"
+        "2^k players",
+        "the three axioms of Section 3"
       ],
-      "quantifiers": "for every number of bidders and every symmetric budget distribution",
+      "quantifiers": "for every k ≥ 2",
       "result": {
         "outcome": "no_defect_found",
         "depth": "deep_audit",
-        "search_scope": "Discretised value and budget distributions for up to five bidders; the proof read line by line.",
-        "limits": "The online supplement was not obtained and was not examined."
+        "summary": "No other rule satisfies the axioms for up to sixteen players; the proof read line by line.",
+        "search_scope": "Every seeding rule for four, eight, sixteen and thirty-two players, checked against the three axioms. The proof read line by line.",
+        "limits": "Thirty-two or more players are covered by the proof reading only."
       },
       "vor_check": {
-        "level": "partial",
-        "pages": "10–14",
-        "detail": "Main text checked on rendered pages; the online supplement was not obtained."
+        "level": "full",
+        "pages": "12–15",
+        "detail": "Statement, definitions and the decisive step checked on rendered pages of the published version."
       },
       "checks": [],
       "reproduction": {
         "result": "pass",
-        "detail": "Search code rerun by the researcher."
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": null
+    },
+    {
+      "id": "c2",
+      "label": "Lemma 8",
+      "kind": "lemma",
+      "role": "supporting",
+      "page": "21",
+      "gist": "Monotone rules never pair the two strongest players in round one.",
+      "statement": "Every monotone seeding rule keeps the two strongest players in different halves of the bracket.",
+      "conditions": [
+        "as Theorem 3"
+      ],
+      "quantifiers": "for every k ≥ 2",
+      "result": {
+        "outcome": "no_defect_found",
+        "depth": "deep_audit",
+        "summary": "No counterexample for up to sixteen players.",
+        "search_scope": "All monotone rules for four, eight and sixteen players.",
+        "limits": "The search is finite; the general case rests on the proof."
+      },
+      "vor_check": {
+        "level": "full",
+        "pages": "21–22",
+        "detail": "Statement, definitions and the decisive step checked on rendered pages of the published version."
+      },
+      "checks": [],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
       },
       "novelty": null
     }
@@ -66,28 +99,33 @@
         "sha256": "268d3f8e814e1b66190e0a5aee1e3a6535e2b3a59d6b6bbf62a95d38c4ea1b3f"
       },
       {
-        "name": "auction_search.py",
-        "sha256": "dd2280deda4ee8daae93934a128e26db82cb3d3ee155ec2def56e6b15a249105"
+        "name": "brackets.py",
+        "sha256": "a44bd8d72dba508b6fae8d7a5d03085a0a2d0af98928417a133e6dcf86083eb4"
       },
       {
-        "name": "results.csv",
-        "sha256": "416f4a13573870d1ff655039c3775b07122692f66d9e2cb4129570a4c30f0449"
+        "name": "results.json",
+        "sha256": "2b1b37a2fe5ef026425d5e7c7c44e5f29b5b6805972fc6415160883d383385b8"
       }
     ]
   },
   "history": [
     {
-      "date": "2027-03",
+      "date": "2027-02",
       "type": "audit",
       "label": "Deep audit completed: no defect found"
     },
     {
-      "date": "2027-04",
-      "type": "authors",
-      "label": "Courtesy notice sent to the author"
+      "date": "2027-02",
+      "type": "reproduction",
+      "label": "Evidence package rerun: pass"
     },
     {
-      "date": "2027-04-20",
+      "date": "2027-03",
+      "type": "authors",
+      "label": "Courtesy notice sent"
+    },
+    {
+      "date": "2027-03-02",
       "type": "release",
       "label": "Record version 1.0 released"
     }
@@ -96,11 +134,11 @@
   "changelog": [
     {
       "version": "1.0",
-      "date": "2027-04-20",
+      "date": "2027-03-02",
       "change": "First release."
     }
   ],
   "statements": {
-    "ai_use": "The search was run with AI assistance and rerun by the researcher; the version-of-record check and the editorial decision were done by the researcher."
+    "ai_use": "The search was designed with AI assistance and rerun by the researcher; the version-of-record check and every editorial decision were done by the researcher."
   }
 }

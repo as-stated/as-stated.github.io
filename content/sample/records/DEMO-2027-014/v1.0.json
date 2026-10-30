@@ -1,0 +1,136 @@
+{
+  "public_id": "DEMO-2027-014",
+  "version": "1.0",
+  "released": "2027-01-26",
+  "status": "published",
+  "sample": true,
+  "kind": "negative",
+  "track": "matching_social_choice",
+  "title": "Mock and Pattern (2018)",
+  "headline": "No defect was found in Theorems 1 and 2 within the stated scope. This is not a proof that they are correct.",
+  "work": {
+    "authors": [
+      "Paolo Mock",
+      "Ana Pattern"
+    ],
+    "title": "Exchange Cycles with Compatibility Classes",
+    "venue": "Studies in Collective Choice",
+    "year": 2018,
+    "volume": "13",
+    "pages": "211–248",
+    "doi": "10.5555/sample.0014"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Theorem 1",
+      "kind": "theorem",
+      "role": "main",
+      "page": "7",
+      "gist": "With four or more classes, two-way exchanges achieve the maximum number of transplants.",
+      "statement": "If there are at least four compatibility classes, some maximum exchange uses only two-way cycles.",
+      "conditions": [
+        "at least four classes",
+        "class-based compatibility"
+      ],
+      "quantifiers": "for every pool",
+      "result": {
+        "outcome": "no_defect_found",
+        "depth": "deep_audit",
+        "summary": "No pool needed a longer cycle among those checked.",
+        "search_scope": "Exact search over all pools with four and five classes and up to twelve pairs.",
+        "limits": "Pools with three or fewer classes are outside the claim."
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "7–9",
+        "detail": "Statement and definitions checked on rendered pages; the proof compared in extracted text only."
+      },
+      "checks": [],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": null
+    },
+    {
+      "id": "c2",
+      "label": "Theorem 2",
+      "kind": "theorem",
+      "role": "main",
+      "page": "10",
+      "gist": "The maximum can be found by a greedy pass over classes.",
+      "statement": "Processing compatibility classes in the stated order and matching greedily yields a maximum two-way exchange.",
+      "conditions": [
+        "as Theorem 1"
+      ],
+      "quantifiers": "for every pool",
+      "result": {
+        "outcome": "no_defect_found",
+        "depth": "deep_audit",
+        "summary": "The greedy pass matched the maximum in every pool checked.",
+        "search_scope": "All pools in the search for Theorem 1.",
+        "limits": "Larger pools rest on the constructive proof."
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "10–12",
+        "detail": "Statement and definitions checked on rendered pages; the proof compared in extracted text only."
+      },
+      "checks": [],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": null
+    }
+  ],
+  "author_position": {
+    "position": "courtesy_notice",
+    "summary": null
+  },
+  "correction": null,
+  "evidence": {
+    "package_doi": "10.5555/sample-evidence.0014",
+    "package_sha256": "2655b929473a3ce15b6eca45392da7c8e4fb6f84806bc131dd9575a684fae10f",
+    "licence": "CC BY 4.0 (text); MIT (code)",
+    "files": [
+      {
+        "name": "README.md",
+        "sha256": "009ec95983819e63d5f48e1fb77a6ce2643a1b5c58a4461d3786782d54c10a2b"
+      },
+      {
+        "name": "exchange_pools.py",
+        "sha256": "ca7281abdae680a94297743d6632cdbf502cfee1d1d87f5b5820e85254a38b33"
+      }
+    ]
+  },
+  "history": [
+    {
+      "date": "2027-01",
+      "type": "audit",
+      "label": "Deep audit completed: no defect found"
+    },
+    {
+      "date": "2027-01",
+      "type": "authors",
+      "label": "Courtesy notice sent"
+    },
+    {
+      "date": "2027-01-26",
+      "type": "release",
+      "label": "Record version 1.0 released"
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2027-01-26",
+      "change": "First release."
+    }
+  ],
+  "statements": {
+    "ai_use": "The search was designed with AI assistance and rerun by the researcher; the version-of-record check and every editorial decision were done by the researcher."
+  }
+}

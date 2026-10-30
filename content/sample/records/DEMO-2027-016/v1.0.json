@@ -1,0 +1,245 @@
+{
+  "public_id": "DEMO-2027-016",
+  "version": "1.0",
+  "released": "2027-06-03",
+  "status": "published",
+  "sample": true,
+  "kind": "defect",
+  "track": "game_theory",
+  "title": "Surrogate, Token and Draft (2024)",
+  "headline": "Theorems 2 and 4 and Lemma 3 are false as stated; each fails on a small instance.",
+  "work": {
+    "authors": [
+      "Tom Surrogate",
+      "Mina Token",
+      "Ruth Draft"
+    ],
+    "title": "Rent Division with Budget Limits",
+    "venue": "Journal of Strategic Analysis",
+    "year": 2024,
+    "volume": "92(3)",
+    "pages": "777–812",
+    "doi": "10.5555/sample.0016"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Theorem 2",
+      "kind": "theorem",
+      "role": "main",
+      "page": "8",
+      "gist": "Every rent-division problem with budgets has an envy-free solution.",
+      "statement": "Every rent-division problem in which each tenant's budget covers the average rent has an envy-free allocation of rooms and rent.",
+      "conditions": [
+        "budgets cover the average rent",
+        "quasi-linear utilities"
+      ],
+      "quantifiers": "for every problem",
+      "result": {
+        "outcome": "defect_found",
+        "candidate_status": "confirmed",
+        "defect_class": "statement_false",
+        "affects": "main_result",
+        "depth": "deep_audit",
+        "summary": "A three-tenant problem with no envy-free solution within budgets.",
+        "witness": "With three tenants and one tenant's budget exactly at the average rent, every envy-free price vector charges that tenant more than the budget.",
+        "tested": "All problems with up to three tenants and integer values up to six.",
+        "not_claimed": [
+          "The theorem is not claimed to fail for two tenants."
+        ],
+        "repair": "none_proposed"
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "8–9",
+        "detail": "Statement and definitions checked on rendered pages; the proof compared in extracted text only."
+      },
+      "checks": [
+        {
+          "kind": "ai_recheck",
+          "date": "2027-04",
+          "result": "confirms",
+          "detail": "A separate AI session confirmed the instance.",
+          "session": "blind"
+        },
+        {
+          "kind": "independent_reproduction",
+          "date": "2027-04",
+          "result": "confirms",
+          "detail": "The researcher checked every envy-free price vector of the instance."
+        }
+      ],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": "No earlier report found in the searched literature."
+    },
+    {
+      "id": "c2",
+      "label": "Lemma 3",
+      "kind": "lemma",
+      "role": "supporting",
+      "page": "9",
+      "gist": "Lowering one room's rent never creates envy.",
+      "statement": "Starting from an envy-free solution, lowering the rent of one room does not create envy toward that room.",
+      "conditions": [
+        "as Theorem 2"
+      ],
+      "quantifiers": "for every envy-free solution",
+      "result": {
+        "outcome": "defect_found",
+        "candidate_status": "confirmed",
+        "defect_class": "statement_false",
+        "affects": "lemma_or_proof_step",
+        "depth": "deep_audit",
+        "summary": "A rent reduction that creates envy in a two-tenant problem.",
+        "witness": "With two tenants, lowering the rent of the cheaper room makes the other tenant prefer it.",
+        "tested": "All solutions with up to three tenants and integer rents.",
+        "not_claimed": [
+          "Nothing about Theorem 4 follows from this alone."
+        ],
+        "repair": "none_proposed"
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "9",
+        "detail": "Statement and definitions checked on rendered pages; the proof compared in extracted text only."
+      },
+      "checks": [
+        {
+          "kind": "ai_recheck",
+          "date": "2027-04",
+          "result": "confirms",
+          "detail": "A separate AI session confirmed the example.",
+          "session": "informed"
+        },
+        {
+          "kind": "independent_reproduction",
+          "date": "2027-04",
+          "result": "confirms",
+          "detail": "The researcher computed both utilities by hand."
+        }
+      ],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": "No earlier report found in the searched literature."
+    },
+    {
+      "id": "c3",
+      "label": "Theorem 4",
+      "kind": "theorem",
+      "role": "main",
+      "page": "11",
+      "gist": "The rent-adjustment procedure ends at an envy-free solution.",
+      "statement": "The rent-adjustment procedure of Section 4 terminates at an envy-free solution within budgets.",
+      "conditions": [
+        "as Theorem 2"
+      ],
+      "quantifiers": "from every initial rent vector",
+      "result": {
+        "outcome": "defect_found",
+        "candidate_status": "confirmed",
+        "defect_class": "statement_false",
+        "affects": "main_result",
+        "depth": "deep_audit",
+        "summary": "The procedure stops at a solution where one tenant is envious.",
+        "witness": "In the instance for Theorem 2, the procedure from equal rents stops at a solution where one tenant envies another.",
+        "tested": "All initial rent vectors for the instances above.",
+        "not_claimed": [
+          "Termination itself is not disputed."
+        ],
+        "repair": "none_proposed"
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "11–12",
+        "detail": "Statement and definitions checked on rendered pages; the proof compared in extracted text only."
+      },
+      "checks": [
+        {
+          "kind": "ai_recheck",
+          "date": "2027-04",
+          "result": "confirms",
+          "detail": "A separate AI session confirmed the final solution.",
+          "session": "blind"
+        },
+        {
+          "kind": "independent_reproduction",
+          "date": "2027-05",
+          "result": "confirms",
+          "detail": "The researcher traced the procedure by hand."
+        }
+      ],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": "No earlier report found in the searched literature."
+    }
+  ],
+  "author_position": {
+    "position": "none_yet",
+    "summary": null
+  },
+  "correction": null,
+  "evidence": {
+    "package_doi": "10.5555/sample-evidence.0016",
+    "package_sha256": "2734a26b3ca4f2e5a22115101e590397a414da67926d839e7e1ae7de37daf0cf",
+    "licence": "CC BY 4.0 (text); MIT (code)",
+    "files": [
+      {
+        "name": "README.md",
+        "sha256": "9abfa50a84abe63d70aae5dbdb540b929c1fb15b4ee4e5f527cfbbbf4a14f34f"
+      },
+      {
+        "name": "rent_instances.py",
+        "sha256": "c1ea59bcbb3c184faa412c2be196d648ad23d42a9cceb53696996c7f4e450012"
+      },
+      {
+        "name": "instances.json",
+        "sha256": "a19f87867961fed296a577568149e98850b6f27cbb451431fc4828b362000fa5"
+      }
+    ]
+  },
+  "history": [
+    {
+      "date": "2027-02",
+      "type": "audit",
+      "label": "Discovery audit completed"
+    },
+    {
+      "date": "2027-02",
+      "type": "authors",
+      "label": "Authors notified"
+    },
+    {
+      "date": "2027-04",
+      "type": "check",
+      "label": "All three findings reproduced by the researcher"
+    },
+    {
+      "date": "2027-05",
+      "type": "authors",
+      "label": "No substantive reply within 90 days"
+    },
+    {
+      "date": "2027-06-03",
+      "type": "release",
+      "label": "Record version 1.0 released"
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2027-06-03",
+      "change": "First release."
+    }
+  ],
+  "statements": {
+    "ai_use": "Discovery and the separate rechecks used AI models in separate sessions. The independent reproduction, the version-of-record check and every editorial decision were done by the researcher."
+  }
+}

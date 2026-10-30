@@ -1,90 +1,145 @@
 {
   "public_id": "DEMO-2027-003",
   "version": "1.0",
-  "released": "2027-05-28",
+  "released": "2027-06-24",
   "status": "published",
   "sample": true,
   "kind": "defect",
-  "track": "optimization",
-  "title": "Lemma 3 in Placeholder and Fictive (2023)",
-  "headline": "A step in the proof of Lemma 3 needs an extra condition (a repairable proof gap). Theorem 1 is not refuted. An erratum was published after the authors were notified.",
+  "track": "game_theory",
+  "title": "Stand and Model (2025)",
+  "headline": "Proposition 1 is false as stated and Algorithm 1 can cycle. The authors disagree; their position is summarised below.",
   "work": {
     "authors": [
-      "Kim Placeholder",
-      "Lee Fictive"
+      "Ravi Stand",
+      "Elena Model"
     ],
-    "title": "Optimal Base-Stock Policies under Lost Sales with Random Yield",
-    "venue": "Review of Hypothetical Operations (fictional)",
-    "year": 2023,
-    "volume": "17",
-    "pages": "211–240",
+    "title": "Fee Adjustment on Two-Sided Platforms",
+    "venue": "Games and Decisions Quarterly",
+    "year": 2025,
+    "volume": "13",
+    "pages": "52211",
     "doi": "10.5555/sample.0003"
   },
   "claims": [
     {
-      "label": "Lemma 3",
-      "page": "222",
-      "kind": "lemma",
-      "role": "auxiliary",
-      "statement": "The expected one-period cost is convex in the order-up-to level for every yield distribution with finite mean.",
+      "id": "c1",
+      "label": "Proposition 1",
+      "kind": "proposition",
+      "role": "main",
+      "page": "5",
+      "gist": "Platform profit is concave in the buyer fee.",
+      "statement": "For every fixed seller fee, the platform's equilibrium profit is a concave function of the buyer fee.",
       "conditions": [
-        "lost sales",
-        "yield distribution with finite mean"
+        "linear demand on each side",
+        "cross-side benefits below one"
       ],
-      "quantifiers": "for every yield distribution with finite mean",
+      "quantifiers": "for every fixed seller fee",
       "result": {
         "outcome": "defect_found",
         "candidate_status": "confirmed",
-        "defect_class": "proof_gap_repairable",
-        "affects": "lemma_or_proof_step",
+        "defect_class": "statement_false",
+        "affects": "main_result",
         "depth": "deep_audit",
-        "witness": "The interchange of differentiation and expectation in the proof needs a bounded density, which the lemma does not assume. A two-point yield distribution shows the step fails.",
-        "repair": "repair_checked",
-        "repair_note": "Adding a bounded-density assumption restores the step; the conclusion holds in all cases checked.",
+        "summary": "A parameter choice where profit has two local maxima in the buyer fee.",
+        "witness": "With cross-side benefits 0.6 and 0.3 and seller fee 2, profit as a function of the buyer fee has two local maxima, so it is not concave.",
+        "tested": "A grid of cross-side benefits and fees; profit computed in closed form at every grid point.",
         "not_claimed": [
-          "Theorem 1 (optimality of base-stock policies) is not refuted.",
-          "The convexity conclusion is not claimed to be false; only the proof step is incomplete."
-        ]
+          "It is not claimed that an optimal buyer fee fails to exist.",
+          "Results that use only the existence of an optimum are not affected."
+        ],
+        "repair": "none_proposed"
       },
       "vor_check": {
-        "level": "full",
-        "pages": "221–223",
-        "detail": "Statement, assumptions and the proof step checked on rendered pages of the published version."
+        "level": "partial",
+        "pages": "4–6",
+        "detail": "Statement and definitions checked on rendered pages; the proof compared in extracted text only."
       },
       "checks": [
         {
           "kind": "ai_recheck",
-          "session": "informed",
           "date": "2027-03",
           "result": "confirms",
-          "detail": "A separate AI session, given the earlier report, rechecked the proof step."
+          "detail": "A separate AI session, not given the earlier result, recomputed the profit curve.",
+          "session": "blind"
         },
         {
           "kind": "independent_reproduction",
           "date": "2027-03",
           "result": "confirms",
-          "detail": "The researcher checked the step by hand and reproduced the two-point example."
+          "detail": "The researcher derived the profit function by hand."
+        },
+        {
+          "kind": "external_human",
+          "date": "2027-06",
+          "result": "confirms",
+          "detail": "After the authors' reply, an outside researcher (fictional) checked the example against the printed model."
         }
       ],
       "reproduction": {
         "result": "pass",
-        "detail": "Example computation rerun from the archived package."
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
       },
-      "novelty": "No earlier report found in the searched record as of March 2027."
+      "novelty": "No earlier report found in the searched literature."
+    },
+    {
+      "id": "c2",
+      "label": "Algorithm 1",
+      "kind": "algorithm",
+      "role": "supporting",
+      "page": "9",
+      "gist": "Simultaneous fee updating converges to the optimal fees.",
+      "statement": "Starting from any fees, simultaneous best-response updating of the two fees (Algorithm 1) converges to the profit-maximising fees.",
+      "conditions": [
+        "both fees updated in the same round",
+        "step size one"
+      ],
+      "quantifiers": "from every initial pair of fees",
+      "result": {
+        "outcome": "defect_found",
+        "candidate_status": "confirmed",
+        "defect_class": "construction_or_algorithm_fails",
+        "affects": "secondary_result",
+        "depth": "deep_audit",
+        "summary": "Oscillates between two fee pairs from a symmetric start.",
+        "witness": "From equal initial fees, the two updates overshoot in opposite directions and alternate between two fee pairs indefinitely.",
+        "tested": "Initial fees on a grid for the parameter range of Proposition 1.",
+        "not_claimed": [
+          "Sequential updating of one fee at a time is not claimed to fail."
+        ],
+        "repair": "none_proposed"
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "9–10",
+        "detail": "Statement and definitions checked on rendered pages; the proof compared in extracted text only."
+      },
+      "checks": [
+        {
+          "kind": "ai_recheck",
+          "date": "2027-03",
+          "result": "confirms",
+          "detail": "A separate AI session reproduced the oscillation.",
+          "session": "informed"
+        },
+        {
+          "kind": "independent_reproduction",
+          "date": "2027-03",
+          "result": "confirms",
+          "detail": "The researcher traced the updates by hand."
+        }
+      ],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": "No earlier report found in the searched literature."
     }
   ],
   "author_position": {
-    "position": "partly_agrees",
-    "summary": "The authors accept that the step needs an extra condition and consider the main result unaffected, which this record also states."
+    "position": "disagrees",
+    "summary": "The authors consider the intended model to bound cross-side benefits more tightly, which would exclude both examples. The record reports the model as printed; the tighter bound does not appear in the paper."
   },
-  "correction": {
-    "type": "erratum",
-    "doi": "10.5555/sample.0003e",
-    "date": "2027-05-20",
-    "relation": "after_notification",
-    "attribution": "none_stated",
-    "note": "The erratum does not mention this audit. We do not claim that it resulted from our work."
-  },
+  "correction": null,
   "evidence": {
     "package_doi": "10.5555/sample-evidence.0003",
     "package_sha256": "55f9f8cd2e317770b8a0f60aec1a8ffdb65660176e181f2f091de81afdacb64b",
@@ -95,53 +150,43 @@
         "sha256": "d4fbd189a3918069dc05634e7da640d75337475c9b3cd0c229bb68b26ef908b8"
       },
       {
-        "name": "two_point_example.py",
-        "sha256": "dc94cad0b53809b9eb354c7893e614e9abbf1a8bbf517a018c762887c9547639"
+        "name": "profit_curve.py",
+        "sha256": "b36d75a9bd045db02f2cf169a3621395fe0fbcae6a85843eedf2aa4187e8ab5f"
       },
       {
-        "name": "proof_step_note.pdf",
-        "sha256": "5186a63b00319f4058cb10e7a1557b20defc8f75f0499620a221bf112335dc69"
+        "name": "fee_updates.py",
+        "sha256": "391bfcbd5e9462eb36c09d0610759400364465bc20c1e4e7614fb50ad7e4a319"
       }
     ]
   },
   "history": [
     {
-      "date": "2027-02",
+      "date": "2027-03",
       "type": "audit",
       "label": "Discovery audit completed"
     },
     {
       "date": "2027-03",
       "type": "check",
-      "label": "Rechecked by a separate AI session: confirms"
-    },
-    {
-      "date": "2027-03",
-      "type": "check",
-      "label": "Independently reproduced by the researcher: confirms"
-    },
-    {
-      "date": "2027-03",
-      "type": "source",
-      "label": "Checked against the version of record: full"
+      "label": "Both findings reproduced by the researcher"
     },
     {
       "date": "2027-03",
       "type": "authors",
-      "label": "Authors notified and offered the opportunity to respond"
+      "label": "Authors notified"
     },
     {
       "date": "2027-04",
       "type": "authors",
-      "label": "Authors partly agreed"
+      "label": "Authors replied and disagreed"
     },
     {
-      "date": "2027-05-20",
-      "type": "correction",
-      "label": "Erratum published (no attribution stated)"
+      "date": "2027-06",
+      "type": "check",
+      "label": "Additional outside check after the dispute: confirms"
     },
     {
-      "date": "2027-05-28",
+      "date": "2027-06-24",
       "type": "release",
       "label": "Record version 1.0 released"
     }
@@ -150,11 +195,11 @@
   "changelog": [
     {
       "version": "1.0",
-      "date": "2027-05-28",
+      "date": "2027-06-24",
       "change": "First release."
     }
   ],
   "statements": {
-    "ai_use": "Discovery and one separate recheck used AI models in separate sessions. The independent reproduction, the version-of-record check and the editorial decision were done by the researcher."
+    "ai_use": "Discovery and the separate rechecks used AI models in separate sessions. The independent reproduction, the version-of-record check and every editorial decision were done by the researcher."
   }
 }

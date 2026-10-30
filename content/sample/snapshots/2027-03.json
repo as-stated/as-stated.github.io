@@ -9,36 +9,36 @@
     "description": "Current selection: recent articles in leading theory journals, and results with features where errors often hide."
   },
   "totals": {
-    "M01": 30,
-    "M02": 12,
-    "M03": 16,
-    "M04": 11,
-    "M05": 6,
+    "M01": 33,
+    "M02": 13,
+    "M03": 22,
+    "M04": 20,
+    "M05": 13,
     "M06": {
-      "open": 1,
-      "confirmed": 3,
+      "open": 5,
+      "confirmed": 4,
       "unresolved": 1,
-      "rejected": 1,
-      "open_ai_supported": 0,
-      "confirmed_previously_reported": 0
+      "rejected": 3,
+      "open_ai_supported": 4,
+      "confirmed_previously_reported": 1
     },
     "M07": {
-      "vor_full": 4,
-      "vor_partial": 2,
+      "vor_full": 6,
+      "vor_partial": 8,
       "vor_none": 0
     },
     "M08": {
-      "blind": 2,
+      "blind": 3,
       "informed": 1
     },
-    "M09": 3,
+    "M09": 4,
     "M10": 0,
     "M11": {
-      "full": 2,
-      "partial": 1,
+      "full": 1,
+      "partial": 3,
       "none": 0
     },
-    "M12": 3,
+    "M12": 5,
     "M13": {
       "agreed": 1,
       "partly_agreed": 0,
@@ -55,43 +55,37 @@
   },
   "examined_by_track": {
     "M01": {
-      "game_theory": 12,
+      "game_theory": 16,
       "mechanism_design": 8,
-      "matching_social_choice": 6,
-      "optimization": null,
-      "econometrics": 0,
-      "probability": null
+      "matching_social_choice": 9
     },
     "M03": {
-      "game_theory": 7,
-      "mechanism_design": null,
-      "matching_social_choice": null,
-      "optimization": null,
-      "econometrics": 0,
-      "probability": null
+      "game_theory": 9,
+      "mechanism_design": 7,
+      "matching_social_choice": 6
     }
   },
   "activity": [
     {
       "month": "2027-01",
-      "discovery": 6,
-      "hostile_validation": 3,
-      "source_lock": 1,
-      "package_rerun": 2
+      "discovery": 7,
+      "hostile_validation": 4,
+      "source_lock": 3,
+      "package_rerun": 4
     },
     {
       "month": "2027-02",
-      "discovery": 5,
-      "hostile_validation": 4,
-      "source_lock": 2,
+      "discovery": 6,
+      "hostile_validation": 6,
+      "source_lock": 4,
       "package_rerun": 3
     },
     {
       "month": "2027-03",
-      "discovery": 4,
-      "hostile_validation": 3,
+      "discovery": 5,
+      "hostile_validation": 4,
       "source_lock": 2,
-      "package_rerun": 2
+      "package_rerun": 3
     }
   ]
 }

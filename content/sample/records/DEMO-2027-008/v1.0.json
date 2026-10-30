@@ -1,0 +1,141 @@
+{
+  "public_id": "DEMO-2027-008",
+  "version": "1.0",
+  "released": "2027-02-10",
+  "status": "published",
+  "sample": true,
+  "kind": "negative",
+  "track": "mechanism_design",
+  "title": "Draft and Mock (2026)",
+  "headline": "No defect was found in Theorem 1 or Corollary 2 within the stated scope. This is not a proof that they are correct.",
+  "work": {
+    "authors": [
+      "Ruth Draft",
+      "Paolo Mock"
+    ],
+    "title": "Collusion-Proof Posted Prices",
+    "venue": "Journal of Strategic Analysis",
+    "year": 2026,
+    "volume": "94(1)",
+    "pages": "88–121",
+    "doi": "10.5555/sample.0008"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Theorem 1",
+      "kind": "theorem",
+      "role": "main",
+      "page": "5",
+      "gist": "Anonymous posted prices resist collusion by any pair of buyers.",
+      "statement": "Every anonymous posted-price mechanism is pairwise collusion-proof when buyers cannot transfer money.",
+      "conditions": [
+        "anonymous prices",
+        "no side payments"
+      ],
+      "quantifiers": "for every number of buyers and goods",
+      "result": {
+        "outcome": "no_defect_found",
+        "depth": "deep_audit",
+        "summary": "No profitable pairwise deviation in any mechanism checked.",
+        "search_scope": "All posted-price mechanisms with up to four buyers and three goods on a price grid; every pair and joint deviation.",
+        "limits": "Side payments are outside the claim, as stated in the paper."
+      },
+      "vor_check": {
+        "level": "full",
+        "pages": "5–9",
+        "detail": "Statement, definitions and the decisive step checked on rendered pages of the published version."
+      },
+      "checks": [],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": null
+    },
+    {
+      "id": "c2",
+      "label": "Corollary 2",
+      "kind": "corollary",
+      "role": "supporting",
+      "page": "10",
+      "gist": "The same holds when goods are offered sequentially.",
+      "statement": "Offering the goods one at a time at the same prices preserves pairwise collusion-proofness.",
+      "conditions": [
+        "as Theorem 1"
+      ],
+      "quantifiers": "as Theorem 1",
+      "result": {
+        "outcome": "no_defect_found",
+        "depth": "deep_audit",
+        "summary": "No counterexample among the sequential versions checked.",
+        "search_scope": "Every order of offering the goods in the mechanisms above.",
+        "limits": "Price changes between offers are outside the search."
+      },
+      "vor_check": {
+        "level": "full",
+        "pages": "10",
+        "detail": "Statement, definitions and the decisive step checked on rendered pages of the published version."
+      },
+      "checks": [],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": null
+    }
+  ],
+  "author_position": {
+    "position": "courtesy_notice",
+    "summary": null
+  },
+  "correction": null,
+  "evidence": {
+    "package_doi": "10.5555/sample-evidence.0008",
+    "package_sha256": "99af0f0e003e94bcdf5774aeefd5dff8c1adc8fd0291b4c5c5a168e658c765a7",
+    "licence": "CC BY 4.0 (text); MIT (code)",
+    "files": [
+      {
+        "name": "README.md",
+        "sha256": "bb46512127fa83508bc409d670ccf5aa49046efd787fa0a086ffd57763598243"
+      },
+      {
+        "name": "pair_deviations.py",
+        "sha256": "906065b318bb458a4d3fc1d066fc22e03b84f360e58f5823f0f25373ef076c22"
+      }
+    ]
+  },
+  "history": [
+    {
+      "date": "2027-01",
+      "type": "audit",
+      "label": "Deep audit completed: no defect found"
+    },
+    {
+      "date": "2027-02",
+      "type": "reproduction",
+      "label": "Evidence package rerun: pass"
+    },
+    {
+      "date": "2027-02",
+      "type": "authors",
+      "label": "Courtesy notice sent"
+    },
+    {
+      "date": "2027-02-10",
+      "type": "release",
+      "label": "Record version 1.0 released"
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2027-02-10",
+      "change": "First release."
+    }
+  ],
+  "statements": {
+    "ai_use": "The search was designed with AI assistance and rerun by the researcher; the version-of-record check and every editorial decision were done by the researcher."
+  }
+}

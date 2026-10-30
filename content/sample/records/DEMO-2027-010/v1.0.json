@@ -1,0 +1,219 @@
+{
+  "public_id": "DEMO-2027-010",
+  "version": "1.0",
+  "released": "2027-04-22",
+  "status": "published",
+  "sample": true,
+  "kind": "defect",
+  "track": "mechanism_design",
+  "title": "Fictive and Example (2022)",
+  "headline": "No defect was found in Theorems 1 and 2. The proof of the Exit Lemma skips a case; the authors agreed and supplied a short argument that closes it.",
+  "work": {
+    "authors": [
+      "Sara Fictive",
+      "Daniel Example"
+    ],
+    "title": "Ascending Auctions for Complementary Bundles",
+    "venue": "Journal of Allocation Theory",
+    "year": 2022,
+    "volume": "205",
+    "pages": "105511",
+    "doi": "10.5555/sample.0010"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Theorem 1",
+      "kind": "theorem",
+      "role": "main",
+      "page": "9",
+      "gist": "The bundle clock ends at a Walrasian price whenever one exists.",
+      "statement": "If a Walrasian equilibrium exists, the ascending bundle clock terminates at a Walrasian price vector.",
+      "conditions": [
+        "gross substitutes within bundles",
+        "integer price increments"
+      ],
+      "quantifiers": "for every valuation profile",
+      "result": {
+        "outcome": "no_defect_found",
+        "depth": "deep_audit",
+        "summary": "No counterexample among the auctions checked; the proof read line by line.",
+        "search_scope": "Up to three bidders and four goods with integer valuations up to six. The proof read line by line.",
+        "limits": "Larger auctions rest on the proof."
+      },
+      "vor_check": {
+        "level": "full",
+        "pages": "9–12",
+        "detail": "Statement, definitions and the decisive step checked on rendered pages of the published version."
+      },
+      "checks": [
+        {
+          "kind": "ai_recheck",
+          "date": "2027-02",
+          "result": "confirms",
+          "detail": "A separate AI session reran the search independently.",
+          "session": "blind"
+        }
+      ],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": null
+    },
+    {
+      "id": "c2",
+      "label": "Theorem 2",
+      "kind": "theorem",
+      "role": "main",
+      "page": "15",
+      "gist": "Truthful bidding is an ex post equilibrium of the clock.",
+      "statement": "Under the conditions of Theorem 1, truthful bidding is an ex post equilibrium of the bundle clock.",
+      "conditions": [
+        "as Theorem 1"
+      ],
+      "quantifiers": "as Theorem 1",
+      "result": {
+        "outcome": "no_defect_found",
+        "depth": "deep_audit",
+        "summary": "No profitable deviation found in any auction checked.",
+        "search_scope": "Same auctions as Theorem 1; all single-bidder deviations.",
+        "limits": "Larger auctions rest on the proof."
+      },
+      "vor_check": {
+        "level": "full",
+        "pages": "15–17",
+        "detail": "Statement, definitions and the decisive step checked on rendered pages of the published version."
+      },
+      "checks": [
+        {
+          "kind": "ai_recheck",
+          "date": "2027-02",
+          "result": "confirms",
+          "detail": "A separate AI session reran the search independently.",
+          "session": "blind"
+        }
+      ],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": null
+    },
+    {
+      "id": "c3",
+      "label": "Exit Lemma",
+      "kind": "lemma",
+      "role": "supporting",
+      "page": "22",
+      "gist": "A bidder who exits never re-enters at a higher price.",
+      "statement": "Along every run of the clock, a bidder who drops out of a bundle does not bid on it again at a higher price.",
+      "conditions": [
+        "as Theorem 1"
+      ],
+      "quantifiers": "along every run of the clock",
+      "result": {
+        "outcome": "defect_found",
+        "candidate_status": "confirmed",
+        "defect_class": "proof_gap_repairable",
+        "affects": "lemma_or_proof_step",
+        "depth": "deep_audit",
+        "summary": "The proof omits re-entry after a tie between bundles; a short argument closes it.",
+        "witness": "The proof's induction does not treat rounds that follow a tie between two bundles. No counterexample to the lemma exists in the cases checked, and the authors' added argument handles the tie case.",
+        "tested": "The proof read line by line; all runs in auctions with up to three bidders checked.",
+        "not_claimed": [
+          "The Exit Lemma is not claimed to be false.",
+          "Theorems 1 and 2 are not affected once the gap is closed."
+        ],
+        "repair": "repair_proved",
+        "repair_note": "The authors supplied a short argument for the tie case; the researcher checked it."
+      },
+      "vor_check": {
+        "level": "full",
+        "pages": "22–23",
+        "detail": "Statement, definitions and the decisive step checked on rendered pages of the published version."
+      },
+      "checks": [
+        {
+          "kind": "independent_reproduction",
+          "date": "2027-03",
+          "result": "confirms",
+          "detail": "The researcher checked the missing case by hand."
+        },
+        {
+          "kind": "author_agreement",
+          "date": "2027-04",
+          "result": "confirms",
+          "detail": "The authors agreed that the case was missing and supplied the argument."
+        }
+      ],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": "No earlier report found in the searched literature."
+    }
+  ],
+  "author_position": {
+    "position": "agrees",
+    "summary": "The authors agreed that the tie case was missing and supplied the argument now summarised in the record."
+  },
+  "correction": null,
+  "evidence": {
+    "package_doi": "10.5555/sample-evidence.0010",
+    "package_sha256": "b8c368fd5691591ec58a2f695f66c5c903c9d3883be366ee43fe9d7540b1bf62",
+    "licence": "CC BY 4.0 (text); MIT (code)",
+    "files": [
+      {
+        "name": "README.md",
+        "sha256": "fbdfa6a8408c913ef564fd2dce45f7a1f87ff5c1c7bb7b505b30fa94b1ecb362"
+      },
+      {
+        "name": "clock_runs.py",
+        "sha256": "cced952c99e43de3fa8dbde56138edfcce6dd4e07d6a948a091955cb9aa9346c"
+      },
+      {
+        "name": "tie_case.md",
+        "sha256": "e64d7cce69c7531aafb3f8d7b47860018b7a573effc7645e167c6d0e8c2d2855"
+      }
+    ]
+  },
+  "history": [
+    {
+      "date": "2027-02",
+      "type": "audit",
+      "label": "Deep audit completed"
+    },
+    {
+      "date": "2027-03",
+      "type": "check",
+      "label": "Gap reproduced by the researcher"
+    },
+    {
+      "date": "2027-03",
+      "type": "authors",
+      "label": "Authors notified"
+    },
+    {
+      "date": "2027-04",
+      "type": "authors",
+      "label": "Authors agreed and supplied a repair"
+    },
+    {
+      "date": "2027-04-22",
+      "type": "release",
+      "label": "Record version 1.0 released"
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2027-04-22",
+      "change": "First release."
+    }
+  ],
+  "statements": {
+    "ai_use": "Discovery and the separate rechecks used AI models in separate sessions. The independent reproduction, the version-of-record check and every editorial decision were done by the researcher."
+  }
+}

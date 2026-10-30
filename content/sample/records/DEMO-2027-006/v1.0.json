@@ -1,81 +1,92 @@
 {
   "public_id": "DEMO-2027-006",
   "version": "1.0",
-  "released": "2027-06-28",
+  "released": "2027-01-26",
   "status": "published",
   "sample": true,
-  "kind": "defect",
-  "track": "econometrics",
-  "title": "Corollary 2 in Example and Instance (2025)",
-  "headline": "The proof of Corollary 2 does not establish it: a step applies Lemma 4 uniformly, but the lemma is only pointwise. No counterexample was found, so the corollary itself remains open (proof incomplete).",
+  "kind": "negative",
+  "track": "matching_social_choice",
+  "title": "Proxy and Surrogate (2018)",
+  "headline": "No defect was found in either theorem within the stated scope. This is not a proof that they are correct.",
   "work": {
     "authors": [
-      "Casey Example",
-      "Jordan Instance"
+      "Leila Proxy",
+      "Tom Surrogate"
     ],
-    "title": "Identification of Random Coefficients in Binary Choice with a Special Regressor",
-    "venue": "Journal of Hypothetical Econometrics (fictional)",
-    "year": 2025,
-    "volume": "9",
-    "pages": "77–102",
+    "title": "Shift Assignment with Seniority Ranks",
+    "venue": "Studies in Collective Choice",
+    "year": 2018,
+    "volume": "13",
+    "pages": "455–490",
     "doi": "10.5555/sample.0006"
   },
   "claims": [
     {
-      "label": "Corollary 2",
-      "page": "88",
-      "kind": "corollary",
-      "role": "secondary",
-      "statement": "Under Assumptions 1–3, the distribution of the random coefficients is identified from the conditional choice probabilities.",
+      "id": "c1",
+      "label": "Theorem 1",
+      "kind": "theorem",
+      "role": "main",
+      "page": "8",
+      "gist": "Nested seniority classes guarantee a fair, strategy-proof assignment.",
+      "statement": "If seniority classes are nested, there is an assignment rule that is fair to seniority and strategy-proof for workers.",
       "conditions": [
-        "special regressor with large support",
-        "special regressor conditionally independent of the coefficients",
-        "Assumptions 1–3 of Section 2"
+        "seniority classes are nested",
+        "strict preferences over shifts"
       ],
-      "quantifiers": "for every coefficient distribution satisfying Assumptions 1–3",
+      "quantifiers": "for every nested class structure",
       "result": {
-        "outcome": "defect_found",
-        "candidate_status": "confirmed",
-        "defect_class": "proof_invalid_statement_open",
-        "affects": "secondary_result",
+        "outcome": "no_defect_found",
         "depth": "deep_audit",
-        "witness": "The proof applies Lemma 4 uniformly over the support of the special regressor, but Lemma 4 is stated pointwise. A bounded example shows the uniform version of Lemma 4 fails under Assumptions 1–3.",
-        "repair": "none_proposed",
-        "repair_note": "A uniform version of Lemma 4 under an added tail condition may complete the proof; we have not checked this.",
-        "not_claimed": [
-          "Corollary 2 is not claimed to be false.",
-          "Theorem 1, the paper's main identification result, is not affected."
-        ]
+        "summary": "A fair, strategy-proof rule found for every structure checked.",
+        "search_scope": "Every nested structure over up to five shifts; rules constructed by the paper's algorithm and checked exhaustively.",
+        "limits": "Larger structures rest on the constructive proof."
       },
       "vor_check": {
-        "level": "full",
-        "pages": "86–89",
-        "detail": "Statement, assumptions, Lemma 4 and the proof step checked on rendered pages of the published version."
+        "level": "partial",
+        "pages": "8–11",
+        "detail": "Statement and definitions checked on rendered pages; the proof compared in extracted text only."
       },
-      "checks": [
-        {
-          "kind": "ai_recheck",
-          "session": "informed",
-          "date": "2027-02",
-          "result": "confirms",
-          "detail": "A separate AI session, given the earlier report, rechecked the proof step and the example."
-        },
-        {
-          "kind": "independent_reproduction",
-          "date": "2027-03",
-          "result": "confirms",
-          "detail": "The researcher checked the step by hand and verified the example."
-        }
-      ],
+      "checks": [],
       "reproduction": {
         "result": "pass",
-        "detail": "Example computation rerun from the archived package."
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
       },
-      "novelty": "No earlier report found in the searched record as of March 2027."
+      "novelty": null
+    },
+    {
+      "id": "c2",
+      "label": "Theorem 3",
+      "kind": "theorem",
+      "role": "main",
+      "page": "13",
+      "gist": "Without nesting, some preference profile defeats every such rule.",
+      "statement": "If seniority classes are not nested, some preference profile admits no assignment rule that is fair and strategy-proof.",
+      "conditions": [
+        "seniority classes are not nested"
+      ],
+      "quantifiers": "for every non-nested structure",
+      "result": {
+        "outcome": "no_defect_found",
+        "depth": "deep_audit",
+        "summary": "A defeating profile found for every non-nested structure checked.",
+        "search_scope": "Every non-nested structure over up to four shifts.",
+        "limits": "Structures over five or more shifts rest on the proof."
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "13–17",
+        "detail": "Statement and definitions checked on rendered pages; the proof compared in extracted text only."
+      },
+      "checks": [],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": null
     }
   ],
   "author_position": {
-    "position": "none_yet",
+    "position": "courtesy_notice",
     "summary": null
   },
   "correction": null,
@@ -89,56 +100,46 @@
         "sha256": "faae7f75b173040c2939d9177351df9230c10f26d07d9ea1f77d316ecdd5bc63"
       },
       {
-        "name": "pointwise_vs_uniform.py",
-        "sha256": "890d9ef0fdcd9d21f3f1923210f8f5716349ce17739e4c8547b9f3cffa23c06a"
+        "name": "shift_rules.py",
+        "sha256": "aad37ffc704670bf174d9bb3d2ecdffc40717441bb31f9023e7eda6cd703b36a"
       },
       {
-        "name": "proof_step_note.pdf",
-        "sha256": "fb88ef605c75761215c89f7d6b96a1b7adbd651f6981330a3596a6fc2abf664b"
+        "name": "profiles.json",
+        "sha256": "760b76e643b7e863b9b2c02e957de7eff9f3cce5d73324759f26f51beaaf69ca"
       }
     ]
   },
   "history": [
     {
-      "date": "2027-02",
+      "date": "2027-01",
       "type": "audit",
-      "label": "Discovery audit completed"
+      "label": "Deep audit completed: no defect found"
     },
     {
-      "date": "2027-02",
-      "type": "check",
-      "label": "Rechecked by a separate AI session: confirms"
+      "date": "2027-01",
+      "type": "reproduction",
+      "label": "Evidence package rerun: pass"
     },
     {
-      "date": "2027-03",
-      "type": "check",
-      "label": "Independently reproduced by the researcher: confirms"
-    },
-    {
-      "date": "2027-03",
-      "type": "source",
-      "label": "Checked against the version of record: full"
-    },
-    {
-      "date": "2027-03",
+      "date": "2027-01",
       "type": "authors",
-      "label": "Authors notified and offered the opportunity to respond"
+      "label": "Courtesy notice sent"
     },
     {
-      "date": "2027-06-28",
+      "date": "2027-01-26",
       "type": "release",
-      "label": "Record version 1.0 released, 90 days after notification without a substantive reply"
+      "label": "Record version 1.0 released"
     }
   ],
   "challenges": [],
   "changelog": [
     {
       "version": "1.0",
-      "date": "2027-06-28",
+      "date": "2027-01-26",
       "change": "First release."
     }
   ],
   "statements": {
-    "ai_use": "Discovery and one separate recheck used AI models in separate sessions. The independent reproduction, the version-of-record check and the editorial decision were done by the researcher."
+    "ai_use": "The search was designed with AI assistance and rerun by the researcher; the version-of-record check and every editorial decision were done by the researcher."
   }
 }

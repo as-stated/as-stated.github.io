@@ -3,29 +3,35 @@
   "use strict";
   document.documentElement.setAttribute("data-js", "1");
 
-  // Case index filters
+  // Claim index filters: rows are claims, groups are papers.
   var form = document.getElementById("filters");
   var index = document.getElementById("case-index");
   if (form && index) {
     form.hidden = false;
-    var rows = Array.prototype.slice.call(index.querySelectorAll("tbody tr"));
+    var groups = Array.prototype.slice.call(index.querySelectorAll("tbody.ix-group"));
     var get = function (id) { return document.getElementById(id); };
-    var q = get("f-text"), outcome = get("f-outcome"), track = get("f-track"), after = get("f-after"), count = get("f-count");
-    var has = function (list, v) { return (" " + list + " ").indexOf(" " + v + " ") !== -1; };
+    var q = get("f-text"), fam = get("f-fam"), kind = get("f-kind"), track = get("f-track"), count = get("f-count");
+    var total = index.querySelectorAll("tr.ix-row").length;
     var apply = function () {
       var s = q.value.trim().toLowerCase();
-      var shown = 0;
-      rows.forEach(function (r) {
-        var ok = (!s || r.dataset.text.indexOf(s) !== -1) &&
-          (!outcome.value || has(r.dataset.outcomes, outcome.value)) &&
-          (!track.value || r.dataset.track === track.value) &&
-          (!after.value || has(r.dataset.after, after.value));
-        r.hidden = !ok;
-        if (ok) { shown += 1; }
+      var claims = 0, papers = 0;
+      groups.forEach(function (g) {
+        var trackOk = !track.value || g.dataset.track === track.value;
+        var shown = 0;
+        Array.prototype.forEach.call(g.querySelectorAll("tr.ix-row"), function (r) {
+          var ok = trackOk && (!s || r.dataset.text.indexOf(s) !== -1) &&
+            (!fam.value || r.dataset.fam === fam.value) && (!kind.value || r.dataset.kind === kind.value);
+          r.hidden = !ok;
+          if (ok) { shown += 1; }
+        });
+        g.hidden = shown === 0;
+        claims += shown;
+        if (shown) { papers += 1; }
       });
-      count.textContent = shown + " of " + rows.length + " records";
+      count.textContent = claims === total ? total + " claims in " + groups.length + " papers"
+        : claims + " of " + total + " claims, in " + papers + " paper" + (papers === 1 ? "" : "s");
     };
-    [q, outcome, track, after].forEach(function (el) {
+    [q, fam, kind, track].forEach(function (el) {
       el.addEventListener("input", apply);
       el.addEventListener("change", apply);
     });

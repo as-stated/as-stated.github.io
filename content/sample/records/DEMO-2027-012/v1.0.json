@@ -1,0 +1,138 @@
+{
+  "public_id": "DEMO-2027-012",
+  "version": "1.0",
+  "released": "2027-02-24",
+  "status": "published",
+  "sample": true,
+  "kind": "defect",
+  "track": "game_theory",
+  "title": "Variant (2003)",
+  "headline": "Corollary 5.2 is false as originally printed. A corrigendum published in 2022, before this audit, already corrects it; the record documents a known error re-found by the method.",
+  "work": {
+    "authors": [
+      "Marek Variant"
+    ],
+    "title": "Bargaining with Outside Options and Deadlines",
+    "venue": "Journal of Strategic Analysis",
+    "year": 2003,
+    "volume": "71(2)",
+    "pages": "455–489",
+    "doi": "10.5555/sample.0012"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Corollary 5.2 (as originally printed)",
+      "kind": "corollary",
+      "role": "secondary",
+      "page": "478",
+      "gist": "Agreement is immediate whenever the deadline is long enough.",
+      "statement": "If the deadline exceeds T*, every subgame-perfect equilibrium reaches agreement in the first period.",
+      "conditions": [
+        "alternating offers",
+        "outside options below the pie",
+        "deadline longer than T*"
+      ],
+      "quantifiers": "for every such game",
+      "result": {
+        "outcome": "defect_found",
+        "candidate_status": "confirmed",
+        "defect_class": "statement_false",
+        "affects": "secondary_result",
+        "depth": "deep_audit",
+        "summary": "A game with a long deadline and delayed agreement, as the 2022 corrigendum notes.",
+        "witness": "With outside options close to half the pie, an equilibrium delays agreement to the second period even when the deadline exceeds T*.",
+        "tested": "Re-derived from the original statement without using the corrigendum, then compared with it.",
+        "not_claimed": [
+          "The paper's main characterization is not claimed to be false.",
+          "The corrected corollary is not claimed to be false."
+        ],
+        "repair": "none_proposed",
+        "previously_reported": true
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "478",
+        "detail": "The original statement checked on rendered pages; the corrigendum read in full."
+      },
+      "checks": [
+        {
+          "kind": "independent_reproduction",
+          "date": "2027-01",
+          "result": "confirms",
+          "detail": "The researcher re-derived the counterexample before reading the corrigendum."
+        },
+        {
+          "kind": "ai_recheck",
+          "date": "2027-01",
+          "result": "confirms",
+          "detail": "A separate AI session confirmed the counterexample.",
+          "session": "blind"
+        }
+      ],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": "Previously reported: the 2022 corrigendum corrects this corollary."
+    }
+  ],
+  "author_position": {
+    "position": "previously_corrected",
+    "summary": null
+  },
+  "correction": {
+    "type": "corrigendum",
+    "doi": "10.5555/sample.0012c",
+    "date": "2022",
+    "relation": "before_audit",
+    "attribution": "none_stated",
+    "claims": [
+      "c1"
+    ],
+    "note": "Published by the author in 2022, before this audit."
+  },
+  "evidence": {
+    "package_doi": "10.5555/sample-evidence.0012",
+    "package_sha256": "dc46872606d8b82f0b375e213b0aa7072c5ba7ff19591b63fcf13212dad7e08a",
+    "licence": "CC BY 4.0 (text); MIT (code)",
+    "files": [
+      {
+        "name": "README.md",
+        "sha256": "b3196b8abfedc48ebc65aeb7ef76e033c17230e52baa192541f9b937eb7a2754"
+      },
+      {
+        "name": "delay_example.py",
+        "sha256": "0512121012d57a6a13a5a9d67b6605d8c4425939f4d6e5e46c95903f7ed5f7f5"
+      }
+    ]
+  },
+  "history": [
+    {
+      "date": "2027-01",
+      "type": "audit",
+      "label": "Calibration audit completed"
+    },
+    {
+      "date": "2027-01",
+      "type": "check",
+      "label": "Re-derived by the researcher"
+    },
+    {
+      "date": "2027-02-24",
+      "type": "release",
+      "label": "Record version 1.0 released"
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2027-02-24",
+      "change": "First release."
+    }
+  ],
+  "statements": {
+    "ai_use": "Discovery and the separate rechecks used AI models in separate sessions. The independent reproduction, the version-of-record check and every editorial decision were done by the researcher."
+  }
+}

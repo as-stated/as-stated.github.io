@@ -9,95 +9,89 @@
     "description": "Current selection: recent articles in leading theory journals, and results with features where errors often hide."
   },
   "totals": {
-    "M01": 61,
+    "M01": 49,
     "M02": 23,
-    "M03": 31,
-    "M04": 21,
-    "M05": 11,
+    "M03": 45,
+    "M04": 42,
+    "M05": 34,
     "M06": {
-      "open": 2,
-      "confirmed": 6,
-      "unresolved": 1,
-      "rejected": 2,
-      "open_ai_supported": 1,
+      "open": 8,
+      "confirmed": 18,
+      "unresolved": 4,
+      "rejected": 4,
+      "open_ai_supported": 7,
       "confirmed_previously_reported": 1
     },
     "M07": {
-      "vor_full": 8,
-      "vor_partial": 3,
-      "vor_none": 1
+      "vor_full": 11,
+      "vor_partial": 9,
+      "vor_none": 0
     },
     "M08": {
-      "blind": 4,
-      "informed": 2
+      "blind": 12,
+      "informed": 4
     },
-    "M09": 6,
-    "M10": 1,
+    "M09": 18,
+    "M10": 2,
     "M11": {
       "full": 4,
-      "partial": 2,
+      "partial": 14,
       "none": 0
     },
-    "M12": 5,
+    "M12": 14,
     "M13": {
-      "agreed": 1,
+      "agreed": 5,
       "partly_agreed": 1,
-      "disagreed": 1,
-      "none_yet": 2
+      "disagreed": 2,
+      "none_yet": 9
     },
     "M17": {
-      "checked": 2,
-      "known_errors_refound": 2
+      "checked": 1,
+      "known_errors_refound": 1
     }
   },
   "unresolved_reasons": {
-    "source_limited": 1
+    "source_limited": 4
   },
   "examined_by_track": {
     "M01": {
-      "game_theory": 22,
-      "mechanism_design": 15,
-      "matching_social_choice": 11,
-      "optimization": 6,
-      "econometrics": null,
-      "probability": null
+      "game_theory": 24,
+      "mechanism_design": 12,
+      "matching_social_choice": 13
     },
     "M03": {
-      "game_theory": 11,
-      "mechanism_design": 7,
-      "matching_social_choice": 5,
-      "optimization": null,
-      "econometrics": null,
-      "probability": null
+      "game_theory": 19,
+      "mechanism_design": 18,
+      "matching_social_choice": 8
     }
   },
   "activity": [
     {
       "month": "2027-01",
-      "discovery": 6,
-      "hostile_validation": 3,
-      "source_lock": 1,
-      "package_rerun": 2
+      "discovery": 7,
+      "hostile_validation": 4,
+      "source_lock": 3,
+      "package_rerun": 4
     },
     {
       "month": "2027-02",
+      "discovery": 6,
+      "hostile_validation": 6,
+      "source_lock": 4,
+      "package_rerun": 3
+    },
+    {
+      "month": "2027-03",
       "discovery": 5,
       "hostile_validation": 4,
       "source_lock": 2,
       "package_rerun": 3
     },
     {
-      "month": "2027-03",
-      "discovery": 4,
-      "hostile_validation": 3,
-      "source_lock": 2,
-      "package_rerun": 2
-    },
-    {
       "month": "2027-04",
-      "discovery": 5,
-      "hostile_validation": 3,
-      "source_lock": 1,
+      "discovery": 6,
+      "hostile_validation": 5,
+      "source_lock": 3,
       "package_rerun": 2
     },
     {
@@ -105,13 +99,13 @@
       "discovery": 4,
       "hostile_validation": 4,
       "source_lock": 2,
-      "package_rerun": 1
+      "package_rerun": 2
     },
     {
       "month": "2027-06",
       "discovery": 3,
       "hostile_validation": 3,
-      "source_lock": 1,
+      "source_lock": 2,
       "package_rerun": 2
     }
   ]

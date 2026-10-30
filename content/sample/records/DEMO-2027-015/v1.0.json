@@ -1,0 +1,135 @@
+{
+  "public_id": "DEMO-2027-015",
+  "version": "1.0",
+  "released": "2027-05-13",
+  "status": "published",
+  "sample": true,
+  "kind": "defect",
+  "track": "game_theory",
+  "title": "Model (2026)",
+  "headline": "The only-if direction of Proposition 4 is false as stated.",
+  "work": {
+    "authors": [
+      "Elena Model"
+    ],
+    "title": "Stable Alliances in Contest Networks",
+    "venue": "Games and Decisions Quarterly",
+    "year": 2026,
+    "volume": "14",
+    "pages": "60104",
+    "doi": "10.5555/sample.0015"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Proposition 4 (only-if direction)",
+      "kind": "proposition",
+      "role": "main",
+      "page": "4",
+      "gist": "An alliance network is stable only if every alliance passes the effort test.",
+      "statement": "If an alliance network is stable, then every alliance in it satisfies the effort condition (E).",
+      "conditions": [
+        "symmetric contests",
+        "alliance costs as in (E)"
+      ],
+      "quantifiers": "for every stable alliance network",
+      "result": {
+        "outcome": "defect_found",
+        "candidate_status": "confirmed",
+        "defect_class": "statement_false",
+        "affects": "main_result",
+        "depth": "deep_audit",
+        "summary": "A four-player stable network with an alliance that fails condition (E).",
+        "witness": "A four-player network with two overlapping alliances is stable for the stated parameters, but one alliance fails (E).",
+        "tested": "All networks with up to five players over a grid of cost parameters.",
+        "not_claimed": [
+          "The if direction is not claimed to be false."
+        ],
+        "repair": "none_proposed"
+      },
+      "vor_check": {
+        "level": "full",
+        "pages": "4–5",
+        "detail": "Statement, definitions and the decisive step checked on rendered pages of the published version."
+      },
+      "checks": [
+        {
+          "kind": "ai_recheck",
+          "date": "2027-02",
+          "result": "confirms",
+          "detail": "A separate AI session, not given the earlier result, found the same network.",
+          "session": "blind"
+        },
+        {
+          "kind": "independent_reproduction",
+          "date": "2027-02",
+          "result": "confirms",
+          "detail": "The researcher verified stability by hand."
+        }
+      ],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": "No earlier report found in the searched literature."
+    }
+  ],
+  "author_position": {
+    "position": "none_yet",
+    "summary": null
+  },
+  "correction": null,
+  "evidence": {
+    "package_doi": "10.5555/sample-evidence.0015",
+    "package_sha256": "fc54c1add5a0d6bff047ab7206eff4d718790b7191e061fb8ef28551f998198c",
+    "licence": "CC BY 4.0 (text); MIT (code)",
+    "files": [
+      {
+        "name": "README.md",
+        "sha256": "b5b2d6186c2d382dd0c78b9daf201e0f3fa0539d958692f69484c117bfe39d55"
+      },
+      {
+        "name": "alliances.py",
+        "sha256": "406674f408f9abec65310d0443c92302e6d3cd9d4f419cbd0f5d7a67658a35b2"
+      }
+    ]
+  },
+  "history": [
+    {
+      "date": "2027-01",
+      "type": "audit",
+      "label": "Discovery audit completed"
+    },
+    {
+      "date": "2027-02",
+      "type": "check",
+      "label": "Reproduced by the researcher"
+    },
+    {
+      "date": "2027-02",
+      "type": "authors",
+      "label": "Author notified"
+    },
+    {
+      "date": "2027-05",
+      "type": "authors",
+      "label": "No substantive reply within 90 days"
+    },
+    {
+      "date": "2027-05-13",
+      "type": "release",
+      "label": "Record version 1.0 released"
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2027-05-13",
+      "change": "First release."
+    }
+  ],
+  "statements": {
+    "ai_use": "Discovery and the separate rechecks used AI models in separate sessions. The independent reproduction, the version-of-record check and every editorial decision were done by the researcher."
+  }
+}

@@ -1,59 +1,92 @@
 {
   "public_id": "DEMO-2027-002",
   "version": "1.0",
-  "released": "2027-03-15",
+  "released": "2027-02-18",
   "status": "published",
   "sample": true,
-  "kind": "negative",
-  "track": "game_theory",
-  "title": "Theorem 1 in Sample (2024)",
-  "headline": "No defect found in Theorem 1 within the stated scope (deep audit). This is not a proof that the theorem is correct.",
+  "kind": "defect",
+  "track": "mechanism_design",
+  "title": "Sample and Variant (2025)",
+  "headline": "The mechanism used to prove Theorem 2 does not work as printed. The authors agreed; Theorem 2 itself is not refuted.",
   "work": {
     "authors": [
-      "Ada Sample"
+      "Ines Sample",
+      "Marek Variant"
     ],
-    "title": "Equilibrium Uniqueness in Linear-Quadratic Network Games",
-    "venue": "Journal of Hypothetical Economic Theory (fictional)",
-    "year": 2024,
-    "volume": "38",
-    "pages": "105233",
+    "title": "Implementing Club Formation with Simple Messages",
+    "venue": "Review of Market Design",
+    "year": 2025,
+    "volume": "20(3)",
+    "pages": "911–948",
     "doi": "10.5555/sample.0002"
   },
   "claims": [
     {
-      "label": "Theorem 1",
-      "page": "7",
-      "kind": "theorem",
+      "id": "c1",
+      "label": "Theorem 2: club mechanism, Rules (a)–(c)",
+      "kind": "construction",
       "role": "main",
-      "statement": "If the spectral radius of the interaction matrix is below the stated bound, the network game has a unique Nash equilibrium, and it is interior.",
+      "page": "14",
+      "gist": "The three-rule mechanism implements every efficient club structure.",
+      "statement": "For at least three agents, the mechanism defined by Rules (a)–(c) implements in Nash equilibrium every efficient club structure satisfying conditions E1 and E2.",
       "conditions": [
-        "linear-quadratic payoffs",
-        "symmetric interaction matrix",
-        "spectral radius below the stated bound"
+        "at least three agents",
+        "conditions E1 and E2",
+        "complete information among agents"
       ],
-      "quantifiers": "for every network satisfying the spectral condition",
+      "quantifiers": "for every number of agents and every structure satisfying E1 and E2",
       "result": {
-        "outcome": "no_defect_found",
+        "outcome": "defect_found",
+        "candidate_status": "confirmed",
+        "defect_class": "construction_or_algorithm_fails",
+        "affects": "main_result",
         "depth": "deep_audit",
-        "search_scope": "All networks with up to six players on a grid of interaction weights, with boundary cases of the spectral condition; the proof read line by line.",
-        "limits": "Networks with more than six players are covered by the proof reading only."
+        "summary": "An unwanted equilibrium survives the printed rules; Theorem 2 itself is not refuted.",
+        "witness": "With three agents and two clubs, a message profile in which agents name different club sizes is an equilibrium whose outcome is not efficient. Rule (b) does not penalise it.",
+        "tested": "All message profiles for three to five agents with up to three clubs and announced sizes up to six.",
+        "not_claimed": [
+          "Theorem 2 asserts that some implementing mechanism exists; that statement is not refuted.",
+          "Conditions E1 and E2 are not claimed to be insufficient."
+        ],
+        "repair": "repair_checked",
+        "repair_note": "Requiring agents to agree on the announced size removes the equilibrium in all cases checked."
       },
       "vor_check": {
         "level": "full",
-        "pages": "6–9",
-        "detail": "Statement, assumptions and proof checked on rendered pages of the published version."
+        "pages": "13–16",
+        "detail": "Statement, definitions and the decisive step checked on rendered pages of the published version."
       },
-      "checks": [],
+      "checks": [
+        {
+          "kind": "ai_recheck",
+          "date": "2027-01",
+          "result": "confirms",
+          "detail": "A separate AI session, not given the earlier result, found the same equilibrium.",
+          "session": "blind"
+        },
+        {
+          "kind": "independent_reproduction",
+          "date": "2027-01",
+          "result": "confirms",
+          "detail": "The researcher enumerated the message profiles with separate code."
+        },
+        {
+          "kind": "author_agreement",
+          "date": "2027-02",
+          "result": "confirms",
+          "detail": "The authors agreed in writing that the printed rules admit the equilibrium."
+        }
+      ],
       "reproduction": {
         "result": "pass",
-        "detail": "Search code rerun by the researcher from the archived package."
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
       },
-      "novelty": null
+      "novelty": "No earlier report found in the searched literature."
     }
   ],
   "author_position": {
-    "position": "courtesy_notice",
-    "summary": null
+    "position": "agrees",
+    "summary": "The authors agreed that the printed rules admit an unwanted equilibrium and said they would publish a correction."
   },
   "correction": null,
   "evidence": {
@@ -66,12 +99,12 @@
         "sha256": "593559677b559de866b4b5debb316b1787163b9568ac494c8651e5f26eda8749"
       },
       {
-        "name": "search_networks.py",
-        "sha256": "700542699dea4ca0e6067e1aae3b8324990dde3b7965870249c8a2a42743fa1c"
+        "name": "enumerate_messages.py",
+        "sha256": "43a40061c89c3662811c2e75962fa439c65170f2198d23121bfc7a9ba11b4a21"
       },
       {
-        "name": "results.json",
-        "sha256": "c1c7cce590afa591eb284be1b4b3d50c86fa4ac1acbefaae64d62a8e30e9ede2"
+        "name": "equilibrium.json",
+        "sha256": "7b1f5e73b16f853a12f837b34cccd6a093bf1426221071698d1e1a875264a52e"
       }
     ]
   },
@@ -79,20 +112,30 @@
     {
       "date": "2027-01",
       "type": "audit",
-      "label": "Deep audit completed: no defect found"
+      "label": "Discovery audit completed"
+    },
+    {
+      "date": "2027-01",
+      "type": "check",
+      "label": "Reproduced by the researcher"
+    },
+    {
+      "date": "2027-01",
+      "type": "source",
+      "label": "Checked against the published version: full"
+    },
+    {
+      "date": "2027-01",
+      "type": "authors",
+      "label": "Authors notified"
     },
     {
       "date": "2027-02",
-      "type": "reproduction",
-      "label": "Evidence package rerun: pass"
-    },
-    {
-      "date": "2027-03",
       "type": "authors",
-      "label": "Courtesy notice sent to the author"
+      "label": "Authors agreed in writing"
     },
     {
-      "date": "2027-03-15",
+      "date": "2027-02-18",
       "type": "release",
       "label": "Record version 1.0 released"
     }
@@ -101,11 +144,11 @@
   "changelog": [
     {
       "version": "1.0",
-      "date": "2027-03-15",
+      "date": "2027-02-18",
       "change": "First release."
     }
   ],
   "statements": {
-    "ai_use": "The search was run with AI assistance and rerun by the researcher; the version-of-record check and the editorial decision were done by the researcher."
+    "ai_use": "Discovery and the separate rechecks used AI models in separate sessions. The independent reproduction, the version-of-record check and every editorial decision were done by the researcher."
   }
 }

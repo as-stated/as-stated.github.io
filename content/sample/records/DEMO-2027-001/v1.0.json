@@ -1,117 +1,244 @@
 {
   "public_id": "DEMO-2027-001",
   "version": "1.0",
-  "released": "2027-03-15",
+  "released": "2027-05-20",
   "status": "published",
   "sample": true,
   "kind": "defect",
-  "track": "game_theory",
-  "title": "Proposition 4 and Theorem 2 in Doe and Roe (2025)",
-  "headline": "Proposition 4 is false as printed (an application). Theorem 2, the main result, is not affected; a deep audit found no defect in it.",
+  "track": "mechanism_design",
+  "title": "Template and Proxy (2021)",
+  "headline": "Two supporting lemmas are false as stated, and two applications hold only under an assumption the paper does not state. The main theorem (Theorem 1) was not examined.",
   "work": {
     "authors": [
-      "Jane Doe",
-      "Richard Roe"
+      "Clara Template",
+      "Jonas Proxy"
     ],
-    "title": "Monotone Allocation Rules in Finite Contests",
-    "venue": "Journal of Hypothetical Economic Theory (fictional)",
-    "year": 2025,
-    "volume": "41",
-    "pages": "105912",
+    "title": "Serial Cost Sharing on Networks",
+    "venue": "Journal of Allocation Theory",
+    "year": 2021,
+    "volume": "196",
+    "pages": "105301",
     "doi": "10.5555/sample.0001"
   },
   "claims": [
     {
-      "label": "Proposition 4",
-      "page": "19",
-      "kind": "application",
-      "role": "secondary",
-      "statement": "In every two-prize contest with n ≥ 3 contestants, the rank-order rule is the unique allocation rule that is monotone, anonymous and budget-balanced.",
+      "id": "c1",
+      "label": "Lemma 4",
+      "kind": "lemma",
+      "role": "supporting",
+      "page": "9",
+      "gist": "Serial shares are monotone in every user's demand.",
+      "statement": "On every tree network, each user's serial cost share is non-decreasing in every other user's demand.",
       "conditions": [
-        "two prizes",
-        "n ≥ 3 contestants",
-        "budget balance with equality"
+        "tree network",
+        "concave edge costs",
+        "demands in a finite grid"
       ],
-      "quantifiers": "for every n ≥ 3; uniqueness among monotone, anonymous, budget-balanced rules",
+      "quantifiers": "for every tree network and every demand profile",
       "result": {
         "outcome": "defect_found",
         "candidate_status": "confirmed",
         "defect_class": "statement_false",
-        "affects": "application_or_example",
+        "affects": "lemma_or_proof_step",
         "depth": "deep_audit",
-        "witness": "For n = 3 and prize vector (1, ½), a second rule satisfies every stated condition. The full allocation table is in the evidence package.",
-        "repair": "local_repair_proposed",
-        "repair_note": "Requiring strict monotonicity restores uniqueness in all cases checked.",
+        "summary": "A three-user path where one user's share falls when another's demand rises.",
+        "witness": "On a path with three users and concave edge costs, raising the middle user's demand lowers the first user's share. The costs and both demand profiles are listed in the evidence package.",
+        "tested": "All paths and stars with up to four users, integer demands up to five, exact rational arithmetic.",
         "not_claimed": [
-          "Theorem 2, the paper's main characterization, is not refuted.",
-          "The proposition is not claimed to fail for n = 2."
-        ]
+          "Theorem 1 is not claimed to be false; its proof uses Lemma 4 only for linear costs, where the lemma holds.",
+          "The lemma is not claimed to fail for linear edge costs."
+        ],
+        "repair": "none_proposed"
       },
       "vor_check": {
-        "level": "full",
-        "pages": "18–19",
-        "detail": "Statement, definitions and the decisive example checked on rendered pages of the published version."
+        "level": "partial",
+        "pages": "9–11",
+        "detail": "Statement and definitions checked on rendered pages; the proof compared in extracted text only."
       },
       "checks": [
         {
           "kind": "ai_recheck",
-          "session": "blind",
-          "date": "2027-02",
+          "date": "2027-01",
           "result": "confirms",
-          "detail": "A separate AI session, not given the earlier result, rebuilt the example from the printed definitions."
+          "detail": "A separate AI session, not given the earlier result, rebuilt the example.",
+          "session": "blind"
         },
         {
           "kind": "independent_reproduction",
           "date": "2027-02",
           "result": "confirms",
-          "detail": "The researcher verified the example with separately written code in exact rational arithmetic."
-        },
-        {
-          "kind": "author_agreement",
-          "date": "2027-03",
-          "result": "confirms",
-          "detail": "The authors agreed in writing that the proposition is false as printed."
+          "detail": "The researcher recomputed both cost shares with separately written code."
         }
       ],
       "reproduction": {
         "result": "pass",
         "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
       },
-      "novelty": "No earlier report found in the searched record as of February 2027."
+      "novelty": "No earlier report found in the searched literature."
     },
     {
-      "label": "Theorem 2",
-      "page": "11",
-      "kind": "theorem",
-      "role": "main",
-      "statement": "A monotone, anonymous allocation rule on a finite contest is implementable by single-crossing payments.",
+      "id": "c2",
+      "label": "Lemma 12",
+      "kind": "lemma",
+      "role": "supporting",
+      "page": "31",
+      "gist": "Merging two users never raises their combined share.",
+      "statement": "If two users on the same branch are merged into one user with their combined demand, their total cost share does not increase.",
       "conditions": [
-        "finite contest",
-        "strictly ordered types"
+        "users on the same branch",
+        "concave edge costs"
       ],
-      "quantifiers": "for every finite contest and every monotone, anonymous rule",
+      "quantifiers": "for every pair of users on a branch",
       "result": {
-        "outcome": "no_defect_found",
+        "outcome": "defect_found",
+        "candidate_status": "confirmed",
+        "defect_class": "statement_false",
+        "affects": "lemma_or_proof_step",
         "depth": "deep_audit",
-        "search_scope": "All monotone, anonymous rules for n = 2 to 5 on a seven-point type grid; the proof read line by line.",
-        "limits": "Infinite type spaces are covered by the proof reading only."
+        "summary": "Merging two users on a four-edge branch raises their combined share.",
+        "witness": "On a branch with four edges, merging the two outermost users raises their combined share from 7 to 8 because the merged demand crosses a cost breakpoint.",
+        "tested": "All branches with up to five edges and two to four users.",
+        "not_claimed": [
+          "The lemma is not claimed to fail when the cost function has no breakpoints."
+        ],
+        "repair": "none_proposed"
       },
       "vor_check": {
         "level": "partial",
-        "pages": "11–14",
+        "pages": "31–33",
         "detail": "Statement and definitions checked on rendered pages; the proof compared in extracted text only."
       },
-      "checks": [],
+      "checks": [
+        {
+          "kind": "ai_recheck",
+          "date": "2027-02",
+          "result": "confirms",
+          "detail": "A separate AI session, given the earlier result, checked the example against the printed definitions.",
+          "session": "informed"
+        },
+        {
+          "kind": "independent_reproduction",
+          "date": "2027-02",
+          "result": "confirms",
+          "detail": "The researcher verified both totals by hand."
+        }
+      ],
       "reproduction": {
         "result": "pass",
-        "detail": "Search code rerun from the archived package."
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
       },
-      "novelty": null
+      "novelty": "No earlier report found in the searched literature."
+    },
+    {
+      "id": "c3",
+      "label": "Application to airport games (Section 6.1)",
+      "kind": "application",
+      "role": "application",
+      "page": "24",
+      "gist": "The serial rule coincides with the nucleolus in airport games.",
+      "statement": "In every airport game, the serial cost-sharing rule selects the nucleolus.",
+      "conditions": [
+        "airport game: costs nested along a single runway"
+      ],
+      "quantifiers": "for every airport game",
+      "result": {
+        "outcome": "defect_found",
+        "candidate_status": "confirmed",
+        "defect_class": "missing_or_hidden_assumption",
+        "affects": "application_or_example",
+        "depth": "deep_audit",
+        "summary": "Holds only when no two planes have equal runway needs; the paper does not say so.",
+        "witness": "With two planes that need the same runway length, the serial rule and the nucleolus split their segment differently. With distinct needs, no counterexample exists in the cases checked.",
+        "tested": "All airport games with up to six planes and integer runway lengths up to five.",
+        "not_claimed": [
+          "The application is not claimed to fail when runway needs are distinct."
+        ],
+        "repair": "local_repair_proposed",
+        "repair_note": "Requiring distinct runway needs restores the application in all cases checked."
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "24–26",
+        "detail": "Statement and definitions checked on rendered pages; the proof compared in extracted text only."
+      },
+      "checks": [
+        {
+          "kind": "independent_reproduction",
+          "date": "2027-02",
+          "result": "confirms",
+          "detail": "The researcher computed both allocations with separate code."
+        },
+        {
+          "kind": "ai_recheck",
+          "date": "2027-02",
+          "result": "confirms",
+          "detail": "A separate AI session confirmed the example.",
+          "session": "blind"
+        }
+      ],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": "No earlier report found in the searched literature."
+    },
+    {
+      "id": "c4",
+      "label": "Application to irrigation networks (Section 6.2)",
+      "kind": "application",
+      "role": "application",
+      "page": "27",
+      "gist": "The serial rule is consistent on irrigation networks.",
+      "statement": "On irrigation networks, the serial rule is consistent: removing a user and their share leaves the others' shares unchanged.",
+      "conditions": [
+        "irrigation network: a rooted tree with costs on edges"
+      ],
+      "quantifiers": "for every irrigation network",
+      "result": {
+        "outcome": "defect_found",
+        "candidate_status": "confirmed",
+        "defect_class": "missing_or_hidden_assumption",
+        "affects": "application_or_example",
+        "depth": "deep_audit",
+        "summary": "Consistency needs every edge cost to be strictly positive; zero-cost edges break it.",
+        "witness": "A four-user network with one zero-cost edge, where removing a leaf user changes another user's share.",
+        "tested": "Networks with up to five users, with and without zero-cost edges.",
+        "not_claimed": [
+          "The application is not claimed to fail when every edge cost is positive."
+        ],
+        "repair": "local_repair_proposed",
+        "repair_note": "Requiring strictly positive edge costs restores consistency in all cases checked."
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "27–28",
+        "detail": "Statement and definitions checked on rendered pages; the proof compared in extracted text only."
+      },
+      "checks": [
+        {
+          "kind": "independent_reproduction",
+          "date": "2027-03",
+          "result": "confirms",
+          "detail": "The researcher reproduced the example with separate code."
+        },
+        {
+          "kind": "ai_recheck",
+          "date": "2027-03",
+          "result": "confirms",
+          "detail": "A separate AI session confirmed the example.",
+          "session": "blind"
+        }
+      ],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": "No earlier report found in the searched literature."
     }
   ],
   "author_position": {
-    "position": "agrees",
-    "summary": "The authors confirmed the counterexample and said they would submit a corrigendum."
+    "position": "none_yet",
+    "summary": null
   },
   "correction": null,
   "evidence": {
@@ -124,16 +251,20 @@
         "sha256": "a6de9c11b8248abf722502822424b3e27d962cd04daf5136944e0261f13d0298"
       },
       {
-        "name": "certificate.json",
-        "sha256": "83841f4441390612aaaac156bc79b8415dd7b21f9d85c6c6801011a3c23a5ccf"
+        "name": "lemma4_paths.py",
+        "sha256": "7caccb21d8a506971598eac56dd5dfbd709dd581b32c4d7c64a84878345c182e"
       },
       {
-        "name": "run_all.py",
-        "sha256": "e8c93563b9c57160c5b217a2e8774cfda8efeef4f4c154252a42890f11267682"
+        "name": "lemma12_merge.py",
+        "sha256": "1cba532249336a0fe6f2adcd94c51f76331e33cfa390fd31c234cfd307b463ec"
       },
       {
-        "name": "search_theorem2.py",
-        "sha256": "ab8ecf2e2be1a5b72844fe14d6b0565d6428f6ceb2ef0df50351146cf2c8aa90"
+        "name": "applications.py",
+        "sha256": "392d8a3ef821e3cd2dec29a23ef5ccb05eeb94d9b346ffedafbb081fc71005d8"
+      },
+      {
+        "name": "certificates.json",
+        "sha256": "dc75b2fabc490be994770012d8b9bebc7e325e701abf495dd8ef42ead681a571"
       }
     ]
   },
@@ -141,22 +272,22 @@
     {
       "date": "2027-01",
       "type": "audit",
-      "label": "Discovery audit completed"
+      "label": "Discovery audit of Lemmas 4 and 12 completed"
+    },
+    {
+      "date": "2027-02",
+      "type": "audit",
+      "label": "Applications in Section 6 audited"
     },
     {
       "date": "2027-02",
       "type": "check",
-      "label": "Rechecked by a separate AI session: confirms"
-    },
-    {
-      "date": "2027-02",
-      "type": "check",
-      "label": "Independently reproduced by the researcher: confirms"
+      "label": "All four findings reproduced by the researcher"
     },
     {
       "date": "2027-02",
       "type": "source",
-      "label": "Checked against the version of record: full"
+      "label": "Checked against the published version: partial"
     },
     {
       "date": "2027-02",
@@ -164,12 +295,12 @@
       "label": "Authors notified and offered the opportunity to respond"
     },
     {
-      "date": "2027-03",
+      "date": "2027-05",
       "type": "authors",
-      "label": "Authors agreed that the proposition is false as printed"
+      "label": "No substantive reply within 90 days"
     },
     {
-      "date": "2027-03-15",
+      "date": "2027-05-20",
       "type": "release",
       "label": "Record version 1.0 released"
     }
@@ -178,11 +309,11 @@
   "changelog": [
     {
       "version": "1.0",
-      "date": "2027-03-15",
+      "date": "2027-05-20",
       "change": "First release."
     }
   ],
   "statements": {
-    "ai_use": "Discovery and one separate recheck used AI models in separate sessions. The independent reproduction, the version-of-record check and the editorial decision were done by the researcher."
+    "ai_use": "Discovery and the separate rechecks used AI models in separate sessions. The independent reproduction, the version-of-record check and every editorial decision were done by the researcher."
   }
 }

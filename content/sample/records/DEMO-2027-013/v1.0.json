@@ -1,0 +1,173 @@
+{
+  "public_id": "DEMO-2027-013",
+  "version": "1.0",
+  "released": "2027-06-17",
+  "status": "published",
+  "sample": true,
+  "kind": "defect",
+  "track": "mechanism_design",
+  "title": "Prototype (2024)",
+  "headline": "The proof of Remark 3 has a gap that a short argument repairs. A related gap in Lemma 4(b) is confirmed for the 2024 appendix but unresolved for the revised appendix, which could not be obtained.",
+  "work": {
+    "authors": [
+      "Yara Prototype"
+    ],
+    "title": "Dynamic Pricing with Patient Buyers",
+    "venue": "Review of Market Design",
+    "year": 2024,
+    "volume": "19(2)",
+    "pages": "415–452",
+    "doi": "10.5555/sample.0013"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Remark 3",
+      "kind": "remark",
+      "role": "supporting",
+      "page": "17",
+      "gist": "Price paths that are optimal for finite horizons stay optimal in the limit.",
+      "statement": "If a price path is optimal for every finite horizon, its limit is optimal for the infinite-horizon problem.",
+      "conditions": [
+        "patient buyers with discount factor below one",
+        "bounded valuations"
+      ],
+      "quantifiers": "for every price path",
+      "result": {
+        "outcome": "defect_found",
+        "candidate_status": "confirmed",
+        "defect_class": "proof_gap_repairable",
+        "affects": "secondary_result",
+        "depth": "deep_audit",
+        "summary": "The proof assumes the limit path exists; a short compactness argument supplies it.",
+        "witness": "The argument passes to the limit without showing that the finite-horizon paths converge. A compactness argument on bounded paths closes the gap.",
+        "tested": "The proof read line by line; horizons up to twelve periods checked numerically.",
+        "not_claimed": [
+          "Remark 3 is not claimed to be false."
+        ],
+        "repair": "repair_checked",
+        "repair_note": "A compactness argument closes the gap in all cases checked."
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "17–18",
+        "detail": "Statement and definitions checked on rendered pages; the proof compared in extracted text only."
+      },
+      "checks": [
+        {
+          "kind": "independent_reproduction",
+          "date": "2027-04",
+          "result": "confirms",
+          "detail": "The researcher checked the limit argument by hand."
+        },
+        {
+          "kind": "ai_recheck",
+          "date": "2027-04",
+          "result": "confirms",
+          "detail": "A separate AI session confirmed the missing step.",
+          "session": "blind"
+        }
+      ],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": "No earlier report found in the searched literature."
+    },
+    {
+      "id": "c2",
+      "label": "Lemma 4(b) (online appendix)",
+      "kind": "lemma",
+      "role": "supporting",
+      "page": "A4",
+      "gist": "Optimal prices never rise after the first sale.",
+      "statement": "In every optimal price path, the price never increases after the first period with a sale.",
+      "conditions": [
+        "as Remark 3"
+      ],
+      "quantifiers": "for every optimal path",
+      "result": {
+        "outcome": "unresolved",
+        "depth": "deep_audit",
+        "unresolved_reason": "source_limited",
+        "summary": "Same gap as Remark 3 in the 2024 appendix; the revised appendix could not be obtained.",
+        "detail": "In the 2024 online appendix the proof has the same missing limit step as Remark 3. The journal posted a revised appendix in 2026, which could not be obtained; it may already address the gap.",
+        "limits": "Not counted as a defect until the revised appendix has been checked."
+      },
+      "vor_check": {
+        "level": "none",
+        "pages": "A4",
+        "detail": "Only the 2024 appendix was available; the 2026 revision could not be obtained."
+      },
+      "checks": [],
+      "reproduction": {
+        "result": "pass",
+        "detail": "The evidence package reruns with one command (Python 3.12, standard library only)."
+      },
+      "novelty": null
+    }
+  ],
+  "author_position": {
+    "position": "none_yet",
+    "summary": null
+  },
+  "correction": null,
+  "evidence": {
+    "package_doi": "10.5555/sample-evidence.0013",
+    "package_sha256": "4e37a927fbb70f475ed17be5683d64331069e21d0b643ca1fb4697ba9193d251",
+    "licence": "CC BY 4.0 (text); MIT (code)",
+    "files": [
+      {
+        "name": "README.md",
+        "sha256": "cf177d872ed8a17d5a5f14a9d6e399084fb188b3a69c9979bf86663a47c9b35f"
+      },
+      {
+        "name": "price_paths.py",
+        "sha256": "48360e21362f30c994100209beebd13d7e688f4d0e19ec370c55937c9b6a9b86"
+      }
+    ]
+  },
+  "history": [
+    {
+      "date": "2027-03",
+      "type": "audit",
+      "label": "Deep audit completed"
+    },
+    {
+      "date": "2027-03",
+      "type": "authors",
+      "label": "Author notified"
+    },
+    {
+      "date": "2027-04",
+      "type": "check",
+      "label": "Gap in Remark 3 reproduced by the researcher"
+    },
+    {
+      "date": "2027-04",
+      "type": "source",
+      "label": "Revised appendix requested; not obtained"
+    },
+    {
+      "date": "2027-06",
+      "type": "authors",
+      "label": "No substantive reply within 90 days"
+    },
+    {
+      "date": "2027-06-17",
+      "type": "release",
+      "label": "Record version 1.0 released"
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2027-06-17",
+      "change": "First release."
+    }
+  ],
+  "statements": {
+    "ai_use": "Discovery and the separate rechecks used AI models in separate sessions. The independent reproduction, the version-of-record check and every editorial decision were done by the researcher."
+  }
+}

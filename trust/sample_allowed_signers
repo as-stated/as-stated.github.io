@@ -1,3 +1,3 @@
 # DEMONSTRATION KEY. Signs the fictional sample content only; its private half was deleted after signing.
 # Never add it to trust/allowed_signers.
-release-approver namespaces="as-stated-release" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIkABHXEnDUsdoCca7W4XXeOHm/hnyTBtU/pu2qUDoDL
+release-approver namespaces="as-stated-release" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIumFNft2/jYvsCrzmTKfACSSfNLST8PR2HQD2+/X9tv
