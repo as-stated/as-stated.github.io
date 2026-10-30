@@ -22,6 +22,7 @@ build = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(build)
 
 INDEXABLE = {"methodology/index.html", "definitions/index.html", "about/index.html"}
+SAMPLE_CFG = "tests/site.sample.json"   # fictional fixtures with every page enabled; never deployed
 OLD_BRANDS = re.compile(r"Theorem Audit|Second Referee|Reviewer\s*(#\s*2|2|Two)|TA-20\d\d|SR-20\d\d", re.I)
 
 
@@ -29,6 +30,8 @@ def copy_project(dst):
     dst.mkdir(parents=True)
     for name in ["build.py", "site.json"]:
         shutil.copy2(ROOT / name, dst / name)
+    (dst / "tests").mkdir()
+    shutil.copy2(ROOT / SAMPLE_CFG, dst / SAMPLE_CFG)
     for name in ["content", "trust", "static"]:
         shutil.copytree(ROOT / name, dst / name)
     return dst
@@ -104,8 +107,8 @@ class BuildTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = Path(tempfile.mkdtemp(prefix="as_test_"))
-        cls.site, cls.content, cls.out = build.build(None, cls.tmp / "dist")
-        cls.site_p, cls.content_p, cls.out_p = build.build(None, cls.tmp / "site", pretty=True)
+        cls.site, cls.content, cls.out = build.build("sample", cls.tmp / "dist", config=SAMPLE_CFG)
+        cls.site_p, cls.content_p, cls.out_p = build.build("sample", cls.tmp / "site", pretty=True, config=SAMPLE_CFG)
 
     @classmethod
     def tearDownClass(cls):
@@ -275,15 +278,15 @@ class BuildTests(unittest.TestCase):
         deny = self.tmp / "deny.txt"
         deny.write_text("Clara Template\n", encoding="utf-8")
         with self.assertRaises(build.BuildError):
-            build.build("sample", self.tmp / "dist_deny", denylist_file=deny)
+            build.build("sample", self.tmp / "dist_deny", denylist_file=deny, config=SAMPLE_CFG)
 
     def test_expected_trust_pins_the_signing_key(self):
         fps = ",".join(build.key_fingerprints(self.content.trust))
-        build.build("sample", self.tmp / "dist_trust_ok", expect_trust=fps)
+        build.build("sample", self.tmp / "dist_trust_ok", expect_trust=fps, config=SAMPLE_CFG)
         with self.assertRaisesRegex(build.BuildError, "do not match"):
-            build.build("sample", self.tmp / "dist_trust_bad", expect_trust="SHA256:not-the-key")
+            build.build("sample", self.tmp / "dist_trust_bad", expect_trust="SHA256:not-the-key", config=SAMPLE_CFG)
         with self.assertRaisesRegex(build.BuildError, "no expected trust"):
-            build.build("sample", self.tmp / "dist_trust_none", expect_trust=" ")
+            build.build("sample", self.tmp / "dist_trust_none", expect_trust=" ", config=SAMPLE_CFG)
 
 
 class ReleaseGateTests(unittest.TestCase):
@@ -325,11 +328,24 @@ class ReleaseGateTests(unittest.TestCase):
         with self.assertRaisesRegex(build.BuildError, "untrusted"):
             self.load()
 
+    def _put_in_published(self):
+        src = self.root / "content/sample/records/DEMO-2027-018/v1.0.json"
+        dst = self.root / "content/published/records/DEMO-2027-018/v1.0.json"
+        dst.parent.mkdir(parents=True)
+        shutil.copyfile(src, dst)
+
+    def test_empty_published_channel_loads_without_a_key(self):
+        content = self.load("published")
+        self.assertTrue(content.empty)
+        self.assertEqual(content.records, {})
+
     def test_published_channel_needs_owner_key(self):
+        self._put_in_published()
         with self.assertRaisesRegex(build.BuildError, "no release key"):
             self.load("published")
 
     def test_published_channel_refuses_demonstration_key(self):
+        self._put_in_published()
         sample_line = (self.root / "trust/sample_allowed_signers").read_text().splitlines()[-1]
         (self.root / "trust/allowed_signers").write_text(sample_line + "\n", encoding="utf-8")
         with self.assertRaisesRegex(build.BuildError, "demonstration key"):
@@ -418,7 +434,7 @@ class ReleaseGateTests(unittest.TestCase):
         other.mkdir()
         (other / "keep.txt").write_text("x")
         with self.assertRaisesRegex(build.BuildError, "refusing to replace"):
-            build.build("sample", other, root=self.root)
+            build.build("sample", other, root=self.root, config=SAMPLE_CFG)
         self.assertTrue((other / "keep.txt").exists())
 
 
@@ -451,7 +467,7 @@ function load(src, w) { return new Promise(res => { const f = document.createEle
     out.push({page: p, width: w, scrollWidth: html.scrollWidth, wide: wide,
       styled: f.contentWindow.getComputedStyle(d.querySelector(".mast")).borderBottomStyle === "solid",
       js: html.getAttribute("data-js") === "1"});
-    if (p === "cases/" && w === 390) {
+    if (p === "cases/" && w === 390 && d.getElementById("f-fam")) {
       const sel = d.getElementById("f-fam"); sel.value = "construction"; sel.dispatchEvent(new Event("change"));
       const shown = [...d.querySelectorAll("#case-index tr.ix-row")].filter(r => !r.hidden && !r.parentElement.hidden).length;
       out.push({filter: "construction", shown: shown, count: d.getElementById("f-count").textContent,
@@ -466,12 +482,15 @@ function load(src, w) { return new Promise(res => { const f = document.createEle
 
 @unittest.skipUnless(find_browser(), "Edge or Chrome is needed for the layout tests")
 class LayoutTests(unittest.TestCase):
+    """Layout of the fictional fixture build, which exercises every component."""
+    CONFIG, CHANNEL, PAGES = SAMPLE_CFG, "sample", LAYOUT_PAGES
+
     @classmethod
     def setUpClass(cls):
         cls.tmp = Path(tempfile.mkdtemp(prefix="as_layout_"))
-        build.build(None, cls.tmp / "site", pretty=True)
+        build.build(cls.CHANNEL, cls.tmp / "site", pretty=True, config=cls.CONFIG)
         (cls.tmp / "site" / "__harness.html").write_text(
-            HARNESS % (json.dumps(LAYOUT_PAGES), json.dumps(WIDTHS)), encoding="utf-8")
+            HARNESS % (json.dumps(cls.PAGES), json.dumps(WIDTHS)), encoding="utf-8")
         class Quiet(http.server.SimpleHTTPRequestHandler):
             def log_message(self, *args):
                 pass
@@ -498,7 +517,7 @@ class LayoutTests(unittest.TestCase):
 
     def test_harness_ran(self):
         self.assertIsNotNone(self.results, self.raw)
-        self.assertEqual(len([r for r in self.results if "page" in r]), len(LAYOUT_PAGES) * len(WIDTHS))
+        self.assertEqual(len([r for r in self.results if "page" in r]), len(self.PAGES) * len(WIDTHS))
 
     def test_no_horizontal_overflow_at_phone_tablet_and_desktop_widths(self):
         self.assertIsNotNone(self.results, self.raw)
@@ -517,6 +536,90 @@ class LayoutTests(unittest.TestCase):
         self.assertTrue(f["formVisible"])
         self.assertEqual(f["shown"], 3)
         self.assertTrue(f["count"].startswith("3 of "))
+
+
+class ProductionLayoutTests(LayoutTests):
+    """Layout of the production build (published channel, optional pages off)."""
+    CONFIG, CHANNEL, PAGES = "site.json", None, ["", "cases/", "methodology/", "definitions/", "about/", "404.html"]
+
+    def test_case_filters_work(self):
+        self.assertIsNotNone(self.results, self.raw)
+        self.assertFalse([x for x in self.results if "filter" in x], "an empty index must not show filters")
+
+
+class ProductionTests(unittest.TestCase):
+    """The deployed configuration: published channel only, no fictional material, four sections."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = Path(tempfile.mkdtemp(prefix="as_prod_"))
+        cls.site, cls.content, cls.out = build.build(None, cls.tmp / "site", pretty=True)
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tmp)
+
+    def pages(self):
+        return {p.relative_to(self.out).as_posix(): p.read_text(encoding="utf-8")
+                for p in self.out.rglob("*") if p.is_file() and p.suffix in {".html", ".xml", ".txt", ".json"}}
+
+    def test_builds_from_the_published_channel_only(self):
+        self.assertEqual(self.content.channel, "published")
+        self.assertFalse(self.content.is_sample)
+        self.assertFalse((self.out / "data").exists())
+
+    def test_navigation_is_cases_methodology_definitions_about(self):
+        nav = re.search(r'<nav class="nav"[^>]*>(.*?)</nav>', (self.out / "index.html").read_text(encoding="utf-8")).group(1)
+        self.assertEqual(re.findall(r">([^<]+)</a>", nav), ["Cases", "Methodology", "Definitions", "About"])
+
+    def test_statistics_and_updates_are_not_built_or_linked(self):
+        for path in ["statistics/index.html", "updates/index.html", "feed.xml"]:
+            self.assertFalse((self.out / path).exists(), path)
+        for name, text in self.pages().items():
+            self.assertNotRegex(text, r'href="[^"]*(statistics|updates)/|feed\.xml', name)
+
+    def test_no_fictional_or_demonstration_material(self):
+        fixtures = [json.loads(p.read_text(encoding="utf-8")) for p in (ROOT / "content/sample/records").rglob("*.json")]
+        names = {a for r in fixtures for a in r["work"]["authors"]} | {r["work"]["title"] for r in fixtures}
+        for name, text in self.pages().items():
+            self.assertNotRegex(text, r"DEMO-|demo-banner|[Ff]ictional|[Dd]emonstration|10\.5555|noindex", name)
+            for n in names:
+                self.assertNotIn(n, text, name)
+
+    def test_cases_page_states_that_nothing_is_released(self):
+        cases = (self.out / "cases/index.html").read_text(encoding="utf-8")
+        self.assertIn("No case records have been released yet.", cases)
+        self.assertNotIn('id="case-index"', cases)
+        self.assertIn("No case records have been released yet.", (self.out / "index.html").read_text(encoding="utf-8"))
+
+    def test_policies_live_on_the_methodology_page(self):
+        m = (self.out / "methodology/index.html").read_text(encoding="utf-8")
+        for anchor in ["responses", "corrections", "challenges", "release", "standard"]:
+            self.assertIn(f'id="{anchor}"', m)
+        self.assertIn("No release key has been added yet", m)
+
+    def test_links_resolve(self):
+        BuildTests.check_links(self, self.out)
+
+    def html_files(self, out=None):
+        return sorted((out or self.out).rglob("*.html"))
+
+    def test_trust_pin_none_only_while_empty(self):
+        build.check_expected_trust(self.content, "none")
+        with self.assertRaisesRegex(build.BuildError, "do not match"):
+            build.check_expected_trust(self.content, "SHA256:some-key")
+        sample = build.Content("sample").load()
+        with self.assertRaisesRegex(build.BuildError, "'none'"):
+            build.check_expected_trust(sample, "none")
+
+    def test_published_content_still_needs_a_release_key(self):
+        root = copy_project(self.tmp / "proj")
+        src = next((root / "content/sample/records").rglob("v1.0.json"))
+        dst = root / "content/published/records" / src.parent.name / "v1.0.json"
+        dst.parent.mkdir(parents=True)
+        shutil.copyfile(src, dst)
+        with self.assertRaisesRegex(build.BuildError, "no release key"):
+            build.Content("published", root).load()
 
 
 if __name__ == "__main__":

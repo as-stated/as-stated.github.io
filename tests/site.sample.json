@@ -1,0 +1,25 @@
+{
+  "name": "As Stated",
+  "descriptor": "Independent scrutiny of published mathematical and theoretical claims.",
+  "tagline": "What was claimed. What was tested. What survived.",
+  "channel": "sample",
+  "out_dir": "dist",
+  "id_prefix": "DEMO",
+  "owner": "Sergey Alexeev",
+  "owner_bio": "Publications and contact details: <a href=\"https://www.alexeev.pw/\">alexeev.pw</a>.",
+  "base_url": "https://as-stated.github.io/",
+  "repository_url": "https://github.com/as-stated/as-stated.github.io",
+  "contact_html": "For a response to a published record, a challenge or a replication, use the contact details on <a href=\"https://www.alexeev.pw/\">alexeev.pw</a>. Please do not send allegations about papers that are not on this site through public channels.",
+  "demo_notice": "<strong>Demonstration.</strong> Every case, paper, author, date and statistic shown here is fictional. No real findings have been published. The project description, methodology and policies are real.",
+  "methodology_version": "1.0",
+  "metrics_version": "1.1",
+  "home": {
+    "intro": [
+      "As Stated examines published theoretical claims one at a time: theorems, lemmas, propositions, algorithms and constructions in game theory, mechanism design, and matching and social choice. Each record gives the exact claim, what was tested, what was found, how the finding was verified and what it does not establish."
+    ]
+  },
+  "pages": {
+    "statistics": true,
+    "updates": true
+  }
+}

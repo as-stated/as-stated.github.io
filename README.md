@@ -5,22 +5,24 @@ Independent scrutiny of published mathematical and theoretical claims.
 
 Source for the public website at <https://as-stated.github.io/>.
 
-**Current status: demonstration.** Every case, paper, author, date and statistic on the site is fictional
-and marked as such. The project description, methodology, definitions and policies are real. No real
-findings have been published.
+**Current status: production, no records released yet.** The site is built from the `published` channel,
+which is empty: the Cases page says that no case records have been released. Pages: home, Cases, Methodology,
+Definitions, About. The fictional sample corpus in `content/sample/` is used only by the tests and never
+appears on the site.
 
 ## Contents
 
 | Path | Purpose |
 | --- | --- |
 | `build.py` | Static site builder and release checker (Python 3.12+, standard library only). |
-| `site.json` | Name, descriptor, URLs, owner, demonstration notice. |
+| `site.json` | Production configuration: name, descriptor, URLs, owner, channel, optional pages. |
+| `tests/site.sample.json` | Test configuration that builds the fictional sample channel with every page enabled. |
 | `static/` | Stylesheet, script (filters and copy buttons; every page works without it), favicon. |
-| `content/sample/` | Fictional demonstration records, statistics snapshots, updates and their signed release statements. |
-| `content/published/` | Real, owner-approved content. Empty. |
+| `content/sample/` | Fictional test fixtures: records, statistics snapshots, updates and their signed release statements. Not deployed. |
+| `content/published/` | Real, owner-approved content. Empty: nothing has been released. |
 | `trust/allowed_signers` | Owner's public release key for the published channel. Empty on purpose. |
 | `trust/sample_allowed_signers` | Public half of the demonstration key. Its private half was deleted after signing. |
-| `make_sample_content.py` | Writes the fictional demonstration content. |
+| `make_sample_content.py` | Writes the fictional test fixtures. |
 | `tests/` | Unit, release-gate, statistics, link, leak and layout tests. |
 | `.github/workflows/deploy.yml` | Tests, builds and deploys to GitHub Pages after the owner approves. |
 
@@ -74,27 +76,36 @@ tool can push to `main` and change settings. The approval step can be removed un
 
 Pull requests run the tests and build but never deploy.
 
-## Regenerating the demonstration content
+## Optional pages
+
+`site.json` → `pages` switches on pages that are kept but not shown:
+
+- `"statistics": true` builds the Statistics page from signed snapshots and adds it to the navigation. Leave it
+  off until enough real records are released for the counts to be useful.
+- `"updates": true` builds a project-wide updates log and Atom feed. Case-specific revisions, author responses and
+  corrections live in each case's history instead.
+
+## Test fixtures
 
 ```
 python make_sample_content.py
 python build.py sign-sample
+python build.py build --config tests/site.sample.json --channel sample --pretty-urls --out _sample
 ```
 
-`sign-sample` creates a new demonstration key, signs every sample file and deletes the private key. The
-fingerprint changes, so an administrator must set `TRUST_FINGERPRINTS` to the new value (shown on the
-Methodology page and by `ssh-keygen -l -f` on the key in `trust/sample_allowed_signers`) before the next
-deployment can pass.
+The fixtures are fictional and signed with a throwaway key that the published channel refuses. Regenerating them
+does not affect the production site.
 
-## Moving to real content
+## Publishing a real record
 
-Only after the owner decides to publish a real record:
+Only after the owner decides to publish a specific record:
 
-1. The owner adds their public release key to `trust/allowed_signers` (one line; format in the file).
-2. Approved files go into `content/published/`, each signed by the owner:
+1. The owner adds their public release key to `trust/allowed_signers` (one line; format in the file), and an
+   administrator sets `TRUST_FINGERPRINTS` to that key's fingerprint. While no key exists and nothing is released,
+   the variable is `none`.
+2. The approved record goes into `content/published/records/<ID>/vX.Y.json`, signed by the owner:
    `python build.py sign --key PATH --kind record --id ID --version V --file FILE --channel published`.
-3. Set `SITE_CHANNEL: published` in the workflow, set `TRUST_FINGERPRINTS` to the owner key's fingerprint,
-   and update `site.json` (identifier prefix, notices).
+3. Build with `--private-denylist`, review the diff, push, and approve the deployment.
 
 Nothing in the private research archive is copied here by any automated step.
 

@@ -196,6 +196,7 @@ class Content:
         self.snapshots = []
         self.updates = {"items": []}
         self.verified = []  # (kind, id, version, sha256)
+        self.empty = False
 
     def check_trust(self):
         if not self.trust.exists():
@@ -230,7 +231,16 @@ class Content:
         self.verified.append((kind, rid, version, digest))
         return json.loads(data.decode("utf-8"))
 
+    def content_files(self):
+        return [f for sub in ("records", "snapshots", "releases") if (self.croot / sub).exists()
+                for f in (self.croot / sub).rglob("*") if f.is_file()] +                [f for f in [self.croot / "updates.json"] if f.exists()]
+
     def load(self):
+        # The published channel may be empty: nothing has been released yet. With no content there is nothing to
+        # verify, so a release key is not yet required. Any content at all needs the full signature checks.
+        self.empty = not self.content_files()
+        if self.empty and not self.is_sample:
+            return self
         self.check_trust()
         rdir = self.croot / "records"
         for f in sorted(rdir.glob("*/v*.json")) if rdir.exists() else []:
@@ -250,7 +260,7 @@ class Content:
             self.updates = self.released("updates", "updates", "1", uf)
             if bool(self.updates.get("sample")) != self.is_sample:
                 raise BuildError("updates.json sample flag does not match the channel")
-        if not self.records and not self.snapshots:
+        if not self.records and not self.snapshots and self.is_sample:
             raise BuildError(f"channel '{self.channel}' has no released content")
         check_statistics(self)
         return self
@@ -490,6 +500,16 @@ class Site:
 
 NAV = [("cases/", "Cases"), ("statistics/", "Statistics"), ("methodology/", "Methodology"),
        ("definitions/", "Definitions"), ("updates/", "Updates"), ("about/", "About")]
+OPTIONAL_PAGES = {"statistics/": "statistics", "updates/": "updates"}
+
+
+def page_on(site, name):
+    """Statistics and the updates log are built only when enabled in the site configuration."""
+    return bool(site.cfg.get("pages", {}).get(name, False))
+
+
+def nav_items(site):
+    return [(t, n) for t, n in NAV if t not in OPTIONAL_PAGES or page_on(site, OPTIONAL_PAGES[t])]
 TRACK_SHORT = {"game_theory": "Game theory", "mechanism_design": "Mechanism design",
                "matching_social_choice": "Matching and social choice"}
 CLAIM_KINDS = {"theorem": "Theorem", "proposition": "Proposition", "lemma": "Lemma", "corollary": "Corollary",
@@ -694,8 +714,12 @@ def layout(site, page, title, body, active="", description="", indexable=False, 
     cfg = site.cfg
     h = lambda t: site.href(page, t)
     cur = ' aria-current="page"'
-    nav = "".join(f'<a href="{h(t)}"{cur if active == t else ""}>{E(n)}</a>' for t, n in NAV)
-    banner = f'<div class="demo-banner" role="note">{cfg["demo_notice"]}</div>' if site.c.is_sample else ""
+    nav = "".join(f'<a href="{h(t)}"{cur if active == t else ""}>{E(n)}</a>' for t, n in nav_items(site))
+    feed_link = (f'<link rel="alternate" type="application/atom+xml" title="{E(cfg["name"])} updates" href="{h("feed.xml")}">'
+                 if page_on(site, "updates") else "")
+    feed_foot = f' · <a href="{h("feed.xml")}">Atom feed</a>' if page_on(site, "updates") else ""
+    notice = cfg.get("demo_notice", "<strong>Test build.</strong> Fictional fixtures; not for publication.")
+    banner = f'<div class="demo-banner" role="note">{notice}</div>' if site.c.is_sample else ""
     robots = "" if indexable or not site.c.is_sample else NOINDEX
     full_title = cfg["name"] if title == cfg["name"] else f"{title} · {cfg['name']}"
     return f"""<!doctype html>
@@ -709,7 +733,7 @@ def layout(site, page, title, body, active="", description="", indexable=False, 
 <meta name="color-scheme" content="light dark">
 <link rel="stylesheet" href="{h('static/style.css')}">
 <link rel="icon" href="{h('static/favicon.svg')}" type="image/svg+xml">
-<link rel="alternate" type="application/atom+xml" title="{E(cfg['name'])} updates" href="{h('feed.xml')}">
+{feed_link}
 </head>
 <body class="{cls}">
 <a class="skip" href="#main">Skip to content</a>
@@ -726,8 +750,8 @@ def layout(site, page, title, body, active="", description="", indexable=False, 
   <p>{E(cfg['descriptor'])}<br><span class="foot-tag">{E(cfg['tagline'])}</span></p></div>
   <div><p>Human-led, AI-assisted, independent research by {E(cfg['owner'])}. Not affiliated with or commissioned by
   the journals, publishers or authors whose work is examined.</p>
-  <p><a href="{h('about/')}#disclosure">Disclosure</a> · <a href="{h('methodology/')}#release">How releases are approved</a> ·
-  <a href="{h('feed.xml')}">Atom feed</a> · <a href="{E(cfg['repository_url'])}">Source</a></p></div>
+  <p><a href="{h('about/')}#disclosure">Disclosure</a> · <a href="{h('methodology/')}#release">How releases are approved</a>{feed_foot} ·
+  <a href="{E(cfg['repository_url'])}">Source</a></p></div>
   <div><p class="muted">Text and data CC BY 4.0; code MIT.<br>Methodology v{E(cfg['methodology_version'])}; metrics v{E(cfg['metrics_version'])}.</p></div>
 </div></footer>
 <script src="{h('static/app.js')}" defer></script>
@@ -742,6 +766,30 @@ def render_home(site):
     recs = sorted(site.c.latest_all(), key=lambda r: r["released"], reverse=True)
     k = counts(recs)
     demo = " (demonstration)" if site.c.is_sample else ""
+    stats_link = f' <a href="{site.href(page, "statistics/")}">Statistics</a>' if page_on(site, "statistics") else ""
+    plural = lambda n, w: f"{n} {w}{'s' if n != 1 else ''}"
+    if recs:
+        aside = f"""<p class="aside-k">Released so far{demo}</p>
+    <p class="aside-v"><strong>{k['claims']}</strong> {'claim' if k['claims'] == 1 else 'claims'} in <strong>{k['papers']}</strong> {'paper' if k['papers'] == 1 else 'papers'}</p>
+    <ul class="tally">
+      <li><span class="fd fd-none"><i class="mk"></i>No defect found</span><span class="n">{k['none']}</span></li>
+      <li><span class="fd fd-false"><i class="mk"></i>Defect confirmed</span><span class="n">{k['defect']}</span></li>
+      <li><span class="fd fd-unresolved"><i class="mk"></i>Unresolved</span><span class="n">{k['unresolved']}</span></li>
+    </ul>
+    <p class="aside-note">Papers are chosen deliberately, not sampled at random. These are counts of this programme's work, not error rates.{stats_link}</p>"""
+        recent = f"""<div class="sec-head"><h2>Recent case records</h2>
+  <a class="more" href="{site.href(page, 'cases/')}">All {plural(k['papers'], 'paper')} and {plural(k['claims'], 'claim')}</a></div>
+  <p class="sec-lede">Each paper is listed with every claim that was investigated in it. A paper can contain a claim that
+  survived and another that did not, so there is no verdict on the paper as a whole.</p>
+  {claim_index(site, page, recs[:4])}"""
+    else:
+        aside = f"""<p class="aside-k">Case records</p>
+    <p class="aside-v">No case records have been released yet.</p>
+    <p class="aside-note">A record is published only after the confirmation standard is met, the authors have been
+    contacted, and the release has been signed. <a href="{site.href(page, 'methodology/')}">How this works</a></p>"""
+        recent = f"""<div class="sec-head"><h2>Case records</h2></div>
+  <p class="sec-lede">No case records have been released yet. Released records will be listed here and on the
+  <a href="{site.href(page, 'cases/')}">Cases</a> page, one row per investigated claim, grouped by paper.</p>"""
     steps = "".join(f"<li><span class=\"st-n\">{i}</span><div><strong>{E(a)}</strong><p>{E(b)}</p></div></li>"
                     for i, (a, b) in enumerate(METHOD_STEPS[1:5], start=1))
     body = f"""
@@ -752,23 +800,11 @@ def render_home(site):
     {''.join(f'<p class="hero-p">{E(x)}</p>' for x in cfg['home']['intro'])}
   </div>
   <aside class="hero-aside" aria-label="Current record">
-    <p class="aside-k">Released so far{demo}</p>
-    <p class="aside-v"><strong>{k['claims']}</strong> claims in <strong>{k['papers']}</strong> papers</p>
-    <ul class="tally">
-      <li><span class="fd fd-none"><i class="mk"></i>No defect found</span><span class="n">{k['none']}</span></li>
-      <li><span class="fd fd-false"><i class="mk"></i>Defect confirmed</span><span class="n">{k['defect']}</span></li>
-      <li><span class="fd fd-unresolved"><i class="mk"></i>Unresolved</span><span class="n">{k['unresolved']}</span></li>
-    </ul>
-    <p class="aside-note">Papers are chosen deliberately, not sampled at random. These are counts of this programme's work, not error rates.
-    <a href="{site.href(page, 'statistics/')}">Statistics</a></p>
+    {aside}
   </aside>
 </div></section>
 <section class="wrap block">
-  <div class="sec-head"><h2>Recent case records</h2>
-  <a class="more" href="{site.href(page, 'cases/')}">All {k['papers']} papers and {k['claims']} claims</a></div>
-  <p class="sec-lede">Each paper is listed with every claim that was investigated in it. A paper can contain a claim
-  that survived and another that did not, so there is no verdict on the paper as a whole.</p>
-  {claim_index(site, page, recs[:4])}
+  {recent}
 </section>
 <section class="wrap block two">
   <div><h2>Reading a finding</h2><ul class="legend">{legend_html()}</ul></div>
@@ -790,14 +826,27 @@ def render_explorer(site):
     o_k = "".join(f'<option value="{x}">{E(CLAIM_KINDS[x])}</option>' for x in kinds)
     o_t = "".join(f'<option value="{t}">{E(TRACK_SHORT[t])}</option>' for t in tracks)
     demo = " All records shown are fictional demonstrations." if site.c.is_sample else ""
+    counted = (f'are counted in the <a href="{site.href(page, "statistics/")}">statistics</a> but not named'
+               if page_on(site, "statistics") else "are not named")
+    if not recs:
+        body = f"""
+<div class="wrap page-head">
+  <h1>Cases</h1>
+  <p class="lede">No case records have been released yet.</p>
+  <p class="small muted">A record is published only after the confirmation standard is met, the authors have been contacted
+  and the release has been signed. Released records will appear here, one row per investigated claim, grouped by paper.
+  See the <a href="{site.href(page, 'methodology/')}">methodology</a>.</p>
+</div>
+"""
+        site.add(page, layout(site, page, "Cases", body, "cases/", "Index of investigated claims", cls="cases"))
+        return
     body = f"""
 <div class="wrap page-head">
   <h1>Cases</h1>
   <p class="lede">Every investigated claim, grouped by paper, most recently updated first. {k['claims']} claims in
   {k['papers']} papers.{demo}</p>
   <p class="small muted">A record is published only after the confirmation standard is met, the authors have been contacted
-  and the release has been signed. Candidates still under review and rejected candidates are counted in the
-  <a href="{site.href(page, 'statistics/')}">statistics</a> but not named.</p>
+  and the release has been signed. Candidates still under review and rejected candidates {counted}.</p>
 </div>
 <div class="wrap">
 <form class="filters" id="filters" hidden>
@@ -1082,13 +1131,17 @@ def render_methodology(site):
     page = "methodology/index.html"
     fps = key_fingerprints(site.c.trust)
     keys = ", ".join(f'<span class="mono">{E(f)}</span>' for f in fps)
+    keys_line = (f"Trusted key fingerprint: {keys}" if fps else
+                 "No release key has been added yet, so nothing can be published.")
     preview = (" The cases on this site are fictional demonstrations signed with a throwaway demonstration key; real "
                "records will be signed with the researcher's own release key.") if site.c.is_sample else ""
     steps = "".join(f"<li><strong>{E(a)}.</strong> {E(b)}</li>" for a, b in METHOD_STEPS)
     toc = [("question", "The question"), ("process", "Process"), ("standard", "Confirmation standard"),
            ("findings", "Findings"), ("verification", "Verification"), ("negative", "Negative audits"),
            ("source", "Source check"), ("authors", "Authors first"), ("ai", "How AI is used"),
-           ("selection", "Selection and statistics"), ("release", "How releases are approved"), ("not", "What we do not do")]
+           ("responses", "Author responses"), ("corrections", "Corrections and withdrawals"),
+           ("challenges", "Challenges and replications"), ("selection", "Selection and statistics"),
+           ("release", "How releases are approved"), ("not", "What we do not do")]
     body = f"""
 <div class="wrap page-head"><p class="eyebrow">Methodology version {E(site.cfg['methodology_version'])}</p><h1>Methodology</h1>
 <p class="lede">How a published claim becomes a case record, and what each part of a record means.</p></div>
@@ -1127,12 +1180,29 @@ wait for an additional check. Where a finding may become a journal comment, the 
 <section id="ai"><h2>How AI is used</h2><p>AI models search for counterexamples, write test code and recheck results in
 separate sessions. They do not decide what is published. Every published defect has also been checked by a human, and the
 researcher makes every editorial decision. Each record states how AI was used in that case.</p></section>
+<section id="responses"><h2>Author responses</h2><ul>
+<li>Authors are contacted privately before anything about their paper is published, and are offered space for a reply.</li>
+<li>A reply is published as the authors' own words, a summary they approve, or a link to their own statement. Nothing from
+private correspondence is published without written consent.</li>
+<li>If the authors dispute a finding, it is not published until an additional independent check has been done.</li>
+<li>Positions are recorded only from written statements; a reply that only acknowledges receipt is not a position.</li>
+<li>Authors of a paper with a negative deep audit receive a courtesy notice when the record is approved.</li></ul>
+<p>Responses are recorded in the history of the case they concern.</p></section>
+<section id="corrections"><h2>Corrections and withdrawals</h2><ul>
+<li>Released versions are never edited. Every change is a new version with a dated change note; earlier versions stay online.</li>
+<li>Our own errors are labelled as our corrections. If a finding changes, older versions point to the current one.</li>
+<li>A finding we no longer stand behind is withdrawn: the record stays online with the reason.</li>
+<li>A published correction by the authors or journal is added to the record, and described as crediting this audit only if it says so.</li>
+<li>Material published by mistake is removed, and a short notice records the removal without repeating the content.</li></ul></section>
+<section id="challenges"><h2>Challenges and replications</h2><p>Anyone may challenge or replicate a published record.
+Substantive challenges are checked and their outcome is added to the record; replications are credited by name with
+consent. Allegations about papers not on this site should not be sent through public channels.</p></section>
 <section id="selection"><h2>Selection and statistics</h2><p>{E(SELECTION_STATEMENT)} Statistics are counts with stated
 units; small counts that could identify an unpublished case are suppressed.</p></section>
 <section id="release"><h2>How releases are approved</h2><p>Every record version, statistics snapshot and update list is
 published only if the researcher has signed a short release statement containing the SHA-256 of its exact data file. The
 site build verifies each signature and refuses anything unsigned, altered after signing, or signed by another key.{E(preview)}</p>
-<p class="small muted">Trusted key fingerprint: {keys}</p></section>
+<p class="small muted">{keys_line}</p></section>
 <section id="not"><h2>What we do not do</h2><ul><li>Publish anonymous or unchecked allegations.</li>
 <li>Rank journals, fields or authors.</li><li>Report error rates for published research.</li>
 <li>Name a paper because a candidate was rejected or remains unresolved.</li></ul></section>
@@ -1322,7 +1392,8 @@ def render_about(site):
     cfg = site.cfg
     status = ("This site currently shows fictional demonstration cases and statistics only. No real findings have been "
               "published. Real records will appear only after the steps described in the methodology, including the "
-              "researcher's signed approval.") if site.c.is_sample else ""
+              "researcher's signed approval.") if site.c.is_sample else (
+        "No case records have been released yet." if not site.c.records else "")
     body = f"""
 <div class="wrap page-head"><h1>About</h1><p class="lede">{E(cfg['name'])}: {E(cfg['descriptor'].rstrip('.').lower())}.
 <em>{E(cfg['tagline'])}</em></p></div>
@@ -1386,6 +1457,11 @@ def check_expected_trust(content, expected):
     that only an administrator can change), so a commit cannot quietly swap in a different signing key."""
     want = sorted(x.strip() for x in (expected or "").split(",") if x.strip())
     _require(want, "no expected trust fingerprints given (set the TRUST_FINGERPRINTS repository variable)")
+    if want == ["none"]:
+        # Allowed only while the channel is empty and no key is trusted at all.
+        _require(getattr(content, "empty", False) and not key_fingerprints(content.trust),
+                 "TRUST_FINGERPRINTS is 'none' but the channel has content or a trusted key")
+        return
     have = sorted(key_fingerprints(content.trust))
     _require(have == want, f"trusted keys {have} do not match the expected fingerprints {want}")
 
@@ -1407,10 +1483,12 @@ def build(channel=None, out=None, pretty=False, denylist_file=None, root=ROOT, c
         render_record(site, versions[-1])
         for v in versions:
             render_record(site, v, frozen=True)
-    render_statistics(site)
+    if page_on(site, "statistics"):
+        render_statistics(site)
     render_methodology(site)
     render_definitions(site)
-    render_updates(site)
+    if page_on(site, "updates"):
+        render_updates(site)
     render_about(site)
     render_404(site)
     out = Path(out) if out else root / cfg.get("out_dir", "dist")
