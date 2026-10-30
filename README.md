@@ -57,18 +57,19 @@ are opened directly from disk. `python build.py check` verifies releases and sta
 6. **Deployment approval.** The `deploy` job runs in the `github-pages` environment, which requires the
    owner's approval for each deployment and accepts only the `main` branch.
 
-These controls depend on GitHub settings and on who holds credentials. They do not stop someone who holds
-the owner's GitHub session or an administrator token. Automated assistants working on this project must
-not hold credentials that can push to this repository, change its settings or approve deployments; they
-prepare changes locally for the owner to review and push.
+Points 1–5 check the content of every build. Point 6 is a repository setting. None of them stops someone
+who holds the owner's GitHub login, including an automated tool running with that login: such a person or
+tool can push to `main` and change settings. The approval step can be removed under Settings → Environments
+→ `github-pages` → Required reviewers; deployments then start automatically after each push to `main`.
 
 ## Deployment workflow
 
-1. Make changes on a local branch. Run the tests and build locally; inspect the pages.
-2. The owner reviews the diff, merges to `main` and pushes with their own credentials.
+1. Make changes locally. Run the tests and build locally; inspect the pages.
+2. Commit and push to `main`.
 3. GitHub Actions runs the tests, builds the site (verifying every signature and the pinned keys) and
    uploads the result.
-4. The owner approves the deployment in the repository's Actions tab (environment `github-pages`).
+4. While the `github-pages` environment requires a reviewer, approve the deployment on the run page in
+   the Actions tab (Review deployments → `github-pages` → Approve and deploy).
 5. Check <https://as-stated.github.io/> and a nested page (for example a case record) over HTTPS.
 
 Pull requests run the tests and build but never deploy.
