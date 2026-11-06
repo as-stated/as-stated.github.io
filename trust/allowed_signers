@@ -1,5 +1,4 @@
-# Release approver key for the PUBLISHED channel.
-# Empty on purpose: the published build refuses to run until the owner adds their own public key here.
-# Format (one line, from the owner's release key .pub file; a security-key type is preferred):
-# release-approver namespaces="as-stated-release" sk-ssh-ed25519@openssh.com AAAA...
-# Never add the demonstration key from trust/sample_allowed_signers.
+# Legacy placeholder for the real PUBLISHED channel.
+# As of Step G (6 November 2026), real releases use exact SHA-256 manifests plus protected
+# GitHub Pages deployment approval and do not require a separate release-signing key.
+# The sample channel keeps trust/sample_allowed_signers for signature-verification tests.

@@ -5,10 +5,9 @@ Independent scrutiny of published mathematical and theoretical claims.
 
 Source for the public website at <https://as-stated.github.io/>.
 
-**Current status: production, no records released yet.** The site is built from the `published` channel,
-which is empty: the Cases page says that no case records have been released. Pages: home, Cases, Methodology,
-Definitions, About. The fictional sample corpus in `content/sample/` is used only by the tests and never
-appears on the site.
+**Current status: production with real released records.** The site is built from the `published` channel.
+The first real record is `TA-2026-001`, a negative deep audit of Kamada and Kojima (2018). The fictional
+sample corpus in `content/sample/` remains test-only and never appears on the production site.
 
 ## Contents
 
@@ -42,27 +41,19 @@ are opened directly from disk. `python build.py check` verifies releases and sta
 
 ## How publication is controlled
 
-1. **Signed releases.** A record version, statistics snapshot or updates list is built only if a release
-   statement naming its exact SHA-256 exists and carries a valid SSH signature (`ssh-keygen -Y`, namespace
-   `as-stated-release`) from a key in the channel's trust file. Editing a signed file, adding an unsigned
-   one or signing with another key makes the build fail.
-2. **Channels.** `sample` holds fictional content signed with the demonstration key. `published` trusts
-   only `trust/allowed_signers`, refuses the demonstration key and refuses anything marked as sample.
-3. **Pinned trust.** The workflow passes the `TRUST_FINGERPRINTS` repository variable to
-   `--expect-trust`. The build fails unless the trusted keys are exactly those fingerprints, so a commit
-   that swaps in a different key cannot deploy. Only repository administrators can change the variable.
-4. **Statistics checks.** Snapshots must satisfy the metric partitions and subset relations, must not fall
-   below what the released records show, and suppressed cells must not be recoverable to fewer than three
-   values from everything published, including earlier snapshots.
-5. **Leak scan.** Every build scans its output for local paths, sync-folder names, e-mail addresses and
-   credential patterns. `--private-denylist FILE` adds a list of private terms kept outside this repository.
-6. **Deployment approval.** The `deploy` job runs in the `github-pages` environment, which requires the
-   owner's approval for each deployment and accepts only the `main` branch.
+1. **Exact release manifests.** Every real record version, statistics snapshot or updates file is built only if a
+   release statement names its exact SHA-256. Editing a released file without a matching new version makes the build fail.
+2. **Channels.** `sample` holds fictional test fixtures. `published` holds only owner-approved real public content
+   and refuses anything marked as sample.
+3. **Private approval record.** The owner's exact release decision is retained in the private As Stated publication
+   layer; private registry material is not copied into this repository.
+4. **Leak scan.** Every build scans output for local paths, sync-folder names, e-mail addresses and credential patterns.
+   A release-specific private denylist can add terms that must remain private.
+5. **Deployment approval.** The `deploy` job runs in the protected `github-pages` environment and requires the owner's
+   approval before a new build becomes live.
 
-Points 1–5 check the content of every build. Point 6 is a repository setting. None of them stops someone
-who holds the owner's GitHub login, including an automated tool running with that login: such a person or
-tool can push to `main` and change settings. The approval step can be removed under Settings → Environments
-→ `github-pages` → Required reviewers; deployments then start automatically after each push to `main`.
+The fictional sample channel still uses its throwaway SSH signatures to exercise signature-verification tests. Real
+published records do not require a separate release-signing key.
 
 ## Deployment workflow
 
@@ -100,14 +91,13 @@ does not affect the production site.
 
 Only after the owner decides to publish a specific record:
 
-1. The owner adds their public release key to `trust/allowed_signers` (one line; format in the file), and an
-   administrator sets `TRUST_FINGERPRINTS` to that key's fingerprint. While no key exists and nothing is released,
-   the variable is `none`.
-2. The approved record goes into `content/published/records/<ID>/vX.Y.json`, signed by the owner:
-   `python build.py sign --key PATH --kind record --id ID --version V --file FILE --channel published`.
-3. Build with `--private-denylist`, review the diff, push, and approve the deployment.
+1. Add the exact public record under `content/published/records/<ID>/vX.Y.json`.
+2. Add the matching SHA-256 release statement under `content/published/releases/`.
+3. Run tests and a production build with the release-specific private denylist.
+4. Review the diff, commit and push to `main`.
+5. Approve the resulting `github-pages` deployment in GitHub.
 
-Nothing in the private research archive is copied here by any automated step.
+Nothing in the private research archive is copied here automatically.
 
 ## Licence
 

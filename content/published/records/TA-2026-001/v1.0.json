@@ -1,0 +1,132 @@
+{
+  "public_id": "TA-2026-001",
+  "version": "1.0",
+  "released": "2026-11-06",
+  "status": "published",
+  "sample": false,
+  "kind": "negative",
+  "track": "matching_social_choice",
+  "title": "Kamada and Kojima (2018)",
+  "headline": "No defect was found in Theorems 1 or 2 within the stated audit scope. This is not a proof that the theorems are correct.",
+  "work": {
+    "authors": [
+      "Yuichiro Kamada",
+      "Fuhito Kojima"
+    ],
+    "title": "Stability and strategy-proofness for matching with constraints: A necessary and sufficient condition",
+    "venue": "Theoretical Economics",
+    "year": 2018,
+    "volume": "13",
+    "pages": "761–793",
+    "doi": "10.3982/TE2717"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Theorem 1",
+      "kind": "theorem",
+      "role": "main",
+      "page": "771",
+      "gist": "A hierarchical region family admits a stable, doctor-strategy-proof mechanism.",
+      "statement": "If the region family is a hierarchy, there exists a mechanism that is stable and strategy-proof for doctors.",
+      "conditions": [
+        "finite doctors and hospitals with strict doctor rankings",
+        "responsive hospital preferences and regional quotas",
+        "admissible substitutable regional quasi-choice preferences",
+        "a fixed region family containing singleton and grand regions"
+      ],
+      "quantifiers": "The mechanism must work across the paper's admitted regional caps, regional preferences and agent preference profiles for the fixed doctor, hospital and region sets.",
+      "result": {
+        "outcome": "no_defect_found",
+        "depth": "deep_audit",
+        "summary": "No counterexample or nontrivial proof gap survived the recorded audit of the hierarchy direction.",
+        "search_scope": "The audit reconstructed the hierarchy mechanism and checked archived finite suites covering 4,284 hierarchical markets, 1,638,144 outcomes and 59,927,040 unilateral-deviation checks, with zero recorded failures. The proof logic and theorem quantifiers were also reviewed against the published version.",
+        "limits": "The finite search is selective and does not prove unrestricted sufficiency. The publication review reconciled the archived counts and source logic but did not rerun all 59,927,040 deviation checks."
+      },
+      "vor_check": {
+        "level": "full",
+        "pages": "769–772",
+        "detail": "The stability definition, mechanism quantifiers and Theorem 1 were checked on rendered pages of the published version."
+      },
+      "checks": [],
+      "reproduction": {
+        "result": "partial",
+        "detail": "The archived package integrity and reported counts were reconciled; the full historical computation was not rerun during publication review."
+      },
+      "novelty": null
+    },
+    {
+      "id": "c2",
+      "label": "Theorem 2",
+      "kind": "theorem",
+      "role": "main",
+      "page": "772",
+      "gist": "For a non-hierarchical region family, no stable, doctor-strategy-proof mechanism works across the full admitted domain.",
+      "statement": "If the region family is not a hierarchy, no mechanism is stable and strategy-proof for doctors across the paper's admitted domain.",
+      "conditions": [
+        "finite doctors and hospitals with strict doctor rankings",
+        "responsive hospital preferences and regional quotas",
+        "admissible substitutable regional quasi-choice preferences",
+        "a fixed region family containing singleton and grand regions"
+      ],
+      "quantifiers": "The impossibility concerns one mechanism required to work across the full admitted domain for the fixed doctor, hospital and region sets; it is not a claim that every fixed non-hierarchical profile is itself impossible.",
+      "result": {
+        "outcome": "no_defect_found",
+        "depth": "deep_audit",
+        "summary": "No counterexample or nontrivial proof gap survived the recorded audit of the non-hierarchy impossibility direction.",
+        "search_scope": "The audit checked the paper's decisive three-profile non-hierarchy example: at the baseline there are two stable matchings, and whichever one a putative stable mechanism selects, one doctor can misreport so that the other becomes uniquely stable and is strictly better under that doctor's true ranking. An exact certificate, a separate finite stability checker and a full 576-report stable-selection model corroborate the case split.",
+        "limits": "The theorem is about a mechanism over the full admitted domain, not impossibility for every fixed non-hierarchical profile. The finite certificate supports the decisive construction but does not by itself prove every step of the general theorem."
+      },
+      "vor_check": {
+        "level": "full",
+        "pages": "772–774, 787–788",
+        "detail": "Theorem 2, the three-profile example and the general non-hierarchy proof were checked on rendered pages of the published version."
+      },
+      "checks": [],
+      "reproduction": {
+        "result": "partial",
+        "detail": "The archived exact certificate and model outputs were reconciled and the logical case split was rechecked; the entire historical computation was not rerun during publication review."
+      },
+      "novelty": null
+    }
+  ],
+  "author_position": {
+    "position": "not_contacted",
+    "summary": null
+  },
+  "correction": null,
+  "evidence": {
+    "package_doi": null,
+    "package_sha256": null,
+    "licence": "No public evidence package released.",
+    "files": []
+  },
+  "history": [
+    {
+      "date": "2026-10",
+      "type": "audit",
+      "label": "Deep audit completed: no defect found within the recorded scope"
+    },
+    {
+      "date": "2026-10-31",
+      "type": "source",
+      "label": "Full published-version source check completed"
+    },
+    {
+      "date": "2026-11-06",
+      "type": "release",
+      "label": "Record version 1.0 approved for release"
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2026-11-06",
+      "change": "First release."
+    }
+  ],
+  "statements": {
+    "ai_use": "AI systems were used in the historical audit and in later review. The record distinguishes AI and computational evidence from human verification and does not treat AI agreement as human confirmation."
+  }
+}

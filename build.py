@@ -9,12 +9,11 @@ Commands
   python build.py sign-sample                      sign the fictional sample content with a
                                                    throwaway demonstration key (never trusted in production)
 
-Publication rule enforced here: a record version, statistics snapshot or updates file is
-built only if (1) a release statement naming its exact SHA-256 exists and (2) that statement
-carries a valid SSH signature from a key listed in the channel's allowed_signers file.
-The 'published' channel trusts only trust/allowed_signers (the owner's key) and refuses
-any content marked as sample. --expect-trust makes the build fail unless the trusted keys
-are exactly the given fingerprints, so a commit that swaps in another key cannot deploy.
+Publication rule enforced here: every released data file needs a release statement naming
+its exact SHA-256. The fictional sample channel additionally verifies throwaway SSH signatures.
+The real 'published' channel uses the hash manifest plus the protected GitHub Pages deployment
+approval; it refuses sample content. --expect-trust='none' is the expected production setting
+while the published channel has no signing key.
 """
 import argparse
 import hashlib
@@ -85,6 +84,7 @@ POSITIONS = {
     "none_yet": "No position yet",
     "courtesy_notice": "Courtesy notice sent",
     "not_disclosed": "Not disclosed",
+    "not_contacted": "Not contacted",
     "previously_corrected": "Not contacted: already corrected before the audit",
 }
 UNRESOLVED_REASONS = {"source_limited": "source not available", "disputed_reading": "reading of the source disputed"}
@@ -199,21 +199,16 @@ class Content:
         self.empty = False
 
     def check_trust(self):
+        # Real releases are controlled by exact hash manifests plus the protected GitHub Pages
+        # deployment approval. The sample channel keeps its throwaway signing-key checks.
+        if not self.is_sample:
+            return []
         if not self.trust.exists():
             raise BuildError(f"trust file missing: {self.trust.relative_to(self.root)}")
         keys = [key_of(ln) for ln in self.trust.read_text(encoding="utf-8").splitlines()
                 if ln.strip() and not ln.strip().startswith("#") and key_of(ln)]
         if not keys:
-            raise BuildError(f"no release key configured in {self.trust.relative_to(self.root)}; "
-                             "the owner must add their public key before anything can be published")
-        if not self.is_sample:
-            sample_file = self.root / CHANNELS["sample"]["trust"]
-            sample_keys = set()
-            if sample_file.exists():
-                sample_keys = {key_of(ln) for ln in sample_file.read_text(encoding="utf-8").splitlines()
-                               if ln.strip() and not ln.startswith("#") and key_of(ln)}
-            if set(keys) & sample_keys:
-                raise BuildError("the published channel trusts the demonstration key; remove it")
+            raise BuildError(f"no sample release key configured in {self.trust.relative_to(self.root)}")
         return keys
 
     def released(self, kind, rid, version, path):
@@ -225,9 +220,10 @@ class Content:
         if st.read_bytes() != release_statement(kind, rid, version, digest):
             raise BuildError(f"release statement does not match the file for {kind} {rid} {version} "
                              "(content changed after approval?)")
-        ok, msg = verify_signature(st, sig, self.trust)
-        if not ok:
-            raise BuildError(f"invalid or untrusted signature for {kind} {rid} {version}: {msg}")
+        if self.is_sample:
+            ok, msg = verify_signature(st, sig, self.trust)
+            if not ok:
+                raise BuildError(f"invalid or untrusted signature for {kind} {rid} {version}: {msg}")
         self.verified.append((kind, rid, version, digest))
         return json.loads(data.decode("utf-8"))
 
@@ -547,14 +543,15 @@ LADDER = [
     ("author_agreement", "Written author agreement", "Not given", "The authors agreed in writing."),
 ]
 POS_SHORT = {"agrees": "Authors agree", "partly_agrees": "Authors partly agree", "disagrees": "Authors disagree",
-             "none_yet": "No reply within 90 days"}
+             "none_yet": "No public author position", "not_contacted": "Not contacted"}
 POS_LONG = {
     "agrees": "The authors agreed with the finding in writing.",
     "partly_agrees": "The authors partly agreed with the finding in writing.",
     "disagrees": "The authors disagree with the finding.",
-    "none_yet": "The authors were notified and gave no substantive reply within 90 days.",
-    "courtesy_notice": "The authors received a courtesy notice when the record was approved.",
+    "none_yet": "No public author position is recorded.",
+    "courtesy_notice": "A courtesy notice was sent; notification is not a publication requirement.",
     "not_disclosed": "Not disclosed.",
+    "not_contacted": "The authors were not contacted; author notification is not a publication requirement.",
     "previously_corrected": "The authors were not contacted: the error had already been corrected before this audit.",
 }
 VOR_SHORT = {"full": "full source check", "partial": "partial source check", "none": "source not obtained"}
@@ -564,8 +561,8 @@ METHOD_STEPS = [
     ("Try to break it", "Search for counterexamples and for steps in the proof that fail."),
     ("Try to rescue it", "Look for the intended reading and for a repair before reporting a problem."),
     ("Confirm", "A defect counts only after two different kinds of check, at least one of them by a human."),
-    ("Authors first", "Authors are told before anything is published, and their reply is published with the record."),
-    ("Release and maintain", "Each release is signed. Responses, corrections and our own errors become new, dated versions."),
+    ("Author contact", "Contact is optional. Substantive responses already available are considered, while private correspondence stays private."),
+    ("Release and maintain", "Each real release has an exact SHA-256 manifest. Responses, corrections and our own errors become new, dated versions."),
 ]
 
 
@@ -719,7 +716,7 @@ def layout(site, page, title, body, active="", description="", indexable=False, 
                  if page_on(site, "updates") else "")
     feed_foot = f' · <a href="{h("feed.xml")}">Atom feed</a>' if page_on(site, "updates") else ""
     notice = cfg.get("demo_notice", "<strong>Test build.</strong> Fictional fixtures; not for publication.")
-    banner = f'<div class="demo-banner" role="note">{notice}</div>' if site.c.is_sample else ""
+    banner = f'<div class="sample-banner" role="note">{notice}</div>' if site.c.is_sample else ""
     robots = "" if indexable or not site.c.is_sample else NOINDEX
     full_title = cfg["name"] if title == cfg["name"] else f"{title} · {cfg['name']}"
     return f"""<!doctype html>
@@ -999,6 +996,9 @@ def render_record(site, rec, frozen=False):
         f'{" <strong>Our correction.</strong>" if ch.get("our_correction") else ""}</span></li>'
         for ch in rec["changelog"])
     files = "".join(f'<li class="mono">{E(f["name"])}</li>' for f in rec["evidence"]["files"])
+    evidence_package = (doi_html(site, rec["evidence"]["package_doi"])
+                        if rec["evidence"].get("package_doi")
+                        else '<span class="muted">No public evidence package released.</span>')
     url = cfg["base_url"].rstrip("/") + f"/cases/{rid}/v{ver}/"
     cite = f"{cfg['owner']} ({rec['released'][:4]}). Case record {rid}, version {ver}: {rec['title']}. {cfg['name']}. {url}"
     bib = (f"@misc{{{rid.replace('-', '_')}_v{ver.replace('.', '_')},\n  author = {{{cfg['owner']}}},\n"
@@ -1045,10 +1045,11 @@ def render_record(site, rec, frozen=False):
 <aside class="case-aside" aria-label="Record details">
   <dl class="side">
     <dt>Record</dt><dd><span class="mono">{E(rid)}</span>, version {E(ver)}<br>released {E(fmt_date(rec['released']))}</dd>
-    <dt>Evidence package</dt><dd>{doi_html(site, rec['evidence']['package_doi'])}<br>
+    <dt>Evidence package</dt><dd>{evidence_package}<br>
       <span class="small muted">{E(rec['evidence']['licence'])}</span><ul class="files">{files}</ul></dd>
-    <dt id="verification">Release verification</dt><dd class="small">Signed release. Record file SHA-256
+    <dt id="verification">Release verification</dt><dd class="small">Release manifest. Record file SHA-256
       <span class="mono hash" title="{E(digest)}">{E(digest[:16])}…</span> verified when the site was built.
+      Live deployment requires owner approval in the protected GitHub Pages environment.
       <a href="{site.href(page, f'data/records/{rid}/v{ver}.json')}">JSON</a> · <a href="{site.href(page, 'methodology/')}#release">How</a></dd>
     <dt>Cite this record</dt><dd><p class="cite" id="cite-text">{E(cite)}</p>
       <button class="btn" type="button" data-copy="cite-text">Copy citation</button>
@@ -1118,7 +1119,7 @@ never named because of an unresolved question alone.</dd></div>
 <section id="checks"><h2>Kinds of check</h2><p>Verification is shown as four kinds of check. Only the last three are human checks.</p>
 <dl class="defs">{lad}</dl><p>Rerunning the original evidence package shows the package works; it is reported separately and is not counted as a check.</p></section>
 <section id="vor"><h2>Source check</h2><p>The decisive elements are the statement, every definition and assumption the finding relies on, the decisive step, and any supplement the claim depends on.</p><ul>{vor}</ul></section>
-<section id="authors"><h2>Author positions</h2><p>Recorded only from written statements: agreed, partly agreed, disagree, or no substantive reply within 90 days (a reply that only acknowledges receipt is not a position). Summaries of a reply are published only with the authors' consent.</p></section>
+<section id="authors"><h2>Author positions</h2><p>Author contact is not a publication requirement. When a written author position exists, it may be recorded as agreed, partly agreed or disagreed. A record may also state that the authors were not contacted. Private correspondence is published only with separate consent to its public use.</p></section>
 <section id="corrections"><h2>Corrections</h2><p>A correction is described as crediting this audit only if its own text says so. A correction published before the audit marks the finding as previously reported; it is not an outcome of this audit.</p></section>
 </div></div>
 <div class="wrap"><section id="metrics" class="block"><h2>Metrics</h2><div class="table-wrap"><table class="data rtable metrics"><thead><tr><th scope=col>ID</th><th scope=col>Label</th><th scope=col>Unit</th><th scope=col>Counting rule</th><th scope=col>Updated</th></tr></thead><tbody>{metrics}</tbody></table></div>
@@ -1131,14 +1132,16 @@ def render_methodology(site):
     page = "methodology/index.html"
     fps = key_fingerprints(site.c.trust)
     keys = ", ".join(f'<span class="mono">{E(f)}</span>' for f in fps)
-    keys_line = (f"Trusted key fingerprint: {keys}" if fps else
-                 "No release key has been added yet, so nothing can be published.")
-    preview = (" The cases on this site are fictional demonstrations signed with a throwaway demonstration key; real "
-               "records will be signed with the researcher's own release key.") if site.c.is_sample else ""
+    if site.c.is_sample:
+        keys_line = f"Sample signing-key fingerprint: {keys}" if fps else "No sample signing key configured."
+        preview = " The cases on this sample build are fictional demonstrations."
+    else:
+        keys_line = "Real releases use exact SHA-256 manifests and protected GitHub Pages deployment approval."
+        preview = ""
     steps = "".join(f"<li><strong>{E(a)}.</strong> {E(b)}</li>" for a, b in METHOD_STEPS)
     toc = [("question", "The question"), ("process", "Process"), ("standard", "Confirmation standard"),
            ("findings", "Findings"), ("verification", "Verification"), ("negative", "Negative audits"),
-           ("source", "Source check"), ("authors", "Authors first"), ("ai", "How AI is used"),
+           ("source", "Source check"), ("authors", "Author contact"), ("ai", "How AI is used"),
            ("responses", "Author responses"), ("corrections", "Corrections and withdrawals"),
            ("challenges", "Challenges and replications"), ("selection", "Selection and statistics"),
            ("release", "How releases are approved"), ("not", "What we do not do")]
@@ -1172,22 +1175,21 @@ decisive element was checked on rendered pages of the published version (full), 
 needed version could not be obtained. A question that depends on an unobtainable version is reported as unresolved, not as
 a defect. It is shown only inside a record released for other, settled claims in the same paper, and the record is
 revised if the missing version becomes available.</p></section>
-<section id="authors"><h2>Authors first</h2><p>Authors are contacted privately before anything about their paper is published.
-A finding becomes eligible for publication after a published correction, after the authors agree to a public record, or
-90 days after contact without a substantive reply. Eligibility is not a deadline: each release also needs the
-confirmation standard, a final source check, consideration of any reply, and the researcher's approval. Disputed findings
-wait for an additional check. Where a finding may become a journal comment, the journal's policies come first.</p></section>
+<section id="authors"><h2>Author contact</h2><p>Author notification, a waiting period and author consent are not publication gates.
+The researcher may contact authors as part of the research process, especially when a possible defect is found, and any
+substantive response already available is considered when preparing the record. Private correspondence remains private
+unless separately approved for public use. A concrete journal, correction or collaboration strategy may still justify a
+case-specific hold.</p></section>
 <section id="ai"><h2>How AI is used</h2><p>AI models search for counterexamples, write test code and recheck results in
 separate sessions. They do not decide what is published. Every published defect has also been checked by a human, and the
 researcher makes every editorial decision. Each record states how AI was used in that case.</p></section>
 <section id="responses"><h2>Author responses</h2><ul>
-<li>Authors are contacted privately before anything about their paper is published, and are offered space for a reply.</li>
-<li>A reply is published as the authors' own words, a summary they approve, or a link to their own statement. Nothing from
-private correspondence is published without written consent.</li>
-<li>If the authors dispute a finding, it is not published until an additional independent check has been done.</li>
-<li>Positions are recorded only from written statements; a reply that only acknowledges receipt is not a position.</li>
-<li>Authors of a paper with a negative deep audit receive a courtesy notice when the record is approved.</li></ul>
-<p>Responses are recorded in the history of the case they concern.</p></section>
+<li>Author contact is optional and is not required before or after publication.</li>
+<li>If a substantive written response already exists, it is considered in the record and may motivate further checking.</li>
+<li>An author's disagreement is evidence to assess, not a veto over publication.</li>
+<li>A reply is published only as the authors' own public statement, wording they separately approve for public use, or a link to their public statement.</li>
+<li>Private correspondence is never quoted or summarized publicly without separate consent.</li></ul>
+<p>When public author-response information exists, it is recorded in the history of the case it concerns.</p></section>
 <section id="corrections"><h2>Corrections and withdrawals</h2><ul>
 <li>Released versions are never edited. Every change is a new version with a dated change note; earlier versions stay online.</li>
 <li>Our own errors are labelled as our corrections. If a finding changes, older versions point to the current one.</li>
@@ -1199,9 +1201,10 @@ Substantive challenges are checked and their outcome is added to the record; rep
 consent. Allegations about papers not on this site should not be sent through public channels.</p></section>
 <section id="selection"><h2>Selection and statistics</h2><p>{E(SELECTION_STATEMENT)} Statistics are counts with stated
 units; small counts that could identify an unpublished case are suppressed.</p></section>
-<section id="release"><h2>How releases are approved</h2><p>Every record version, statistics snapshot and update list is
-published only if the researcher has signed a short release statement containing the SHA-256 of its exact data file. The
-site build verifies each signature and refuses anything unsigned, altered after signing, or signed by another key.{E(preview)}</p>
+<section id="release"><h2>How releases are approved</h2><p>Every real record version has a release manifest containing the
+SHA-256 of its exact public data file. The site build refuses a missing or mismatched manifest. Public versions are
+immutable: corrections use a new version. A release also requires an explicit private owner decision, and the live
+GitHub Pages deployment remains protected by owner approval.{E(preview)}</p>
 <p class="small muted">{keys_line}</p></section>
 <section id="not"><h2>What we do not do</h2><ul><li>Publish anonymous or unchecked allegations.</li>
 <li>Rank journals, fields or authors.</li><li>Report error rates for published research.</li>
@@ -1358,12 +1361,11 @@ snapshots, newest first, followed by the policies that govern them. <a href="{si
 <div class="prose">
 <section id="log"><h2>Updates</h2><ol class="hist updates">{lis}</ol></section>
 <section id="author-responses"><h2>Author responses</h2><ul>
-<li>Authors are contacted privately before anything about their paper is published, and are offered space for a reply.</li>
-<li>A reply is published as the authors' own words, a summary they approve, or a link to their own statement. Nothing from
-private correspondence is published without written consent.</li>
-<li>If the authors dispute a finding, it is not published until an additional independent check has been done.</li>
-<li>Positions are recorded only from written statements; a reply that only acknowledges receipt is not a position.</li>
-<li>Authors of a paper with a negative deep audit receive a courtesy notice when the record is approved.</li></ul></section>
+<li>Author contact is optional and is not required before or after publication.</li>
+<li>If a substantive written response already exists, it is considered in the record and may motivate further checking.</li>
+<li>An author's disagreement is evidence to assess, not a veto over publication.</li>
+<li>A reply is published only as the authors' own public statement, wording they separately approve for public use, or a link to their public statement.</li>
+<li>Private correspondence is never quoted or summarized publicly without separate consent.</li></ul></section>
 <section id="corrections"><h2>Corrections and withdrawals</h2><ul>
 <li>Released versions are never edited. Every change is a new version with a dated change note; earlier versions stay online.</li>
 <li>Our own errors are labelled as our corrections. If a finding changes, older versions point to the current one.</li>
@@ -1453,14 +1455,13 @@ def load_config(root, config):
 
 
 def check_expected_trust(content, expected):
-    """Pin the channel's trusted keys to fingerprints held outside the repository (a GitHub repository variable
-    that only an administrator can change), so a commit cannot quietly swap in a different signing key."""
+    # Sample builds pin a throwaway signing key. Real production releases intentionally use no
+    # separate signing key; their final human control is the protected GitHub Pages deployment.
     want = sorted(x.strip() for x in (expected or "").split(",") if x.strip())
-    _require(want, "no expected trust fingerprints given (set the TRUST_FINGERPRINTS repository variable)")
+    _require(want, "no expected trust setting given (set the TRUST_FINGERPRINTS repository variable)")
     if want == ["none"]:
-        # Allowed only while the channel is empty and no key is trusted at all.
-        _require(getattr(content, "empty", False) and not key_fingerprints(content.trust),
-                 "TRUST_FINGERPRINTS is 'none' but the channel has content or a trusted key")
+        _require(not content.is_sample and not key_fingerprints(content.trust),
+                 "TRUST_FINGERPRINTS is 'none' only for the real published channel without a signing key")
         return
     have = sorted(key_fingerprints(content.trust))
     _require(have == want, f"trusted keys {have} do not match the expected fingerprints {want}")

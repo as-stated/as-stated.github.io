@@ -158,7 +158,7 @@ class BuildTests(unittest.TestCase):
                 self.assertEqual(c.lang, "en", f)
                 self.assertTrue(c.title, f)
                 self.assertEqual(c.h1, 1, f"{f}: expected exactly one h1")
-                self.assertIn('class="demo-banner"', text, f)
+                self.assertIn('class="sample-banner"', text, f)
                 self.assertIn("is fictional", text, f)
                 self.assertEqual(len(c.stylesheets), 1, f)
                 self.assertEqual(len(c.scripts), 1, f)
@@ -328,37 +328,39 @@ class ReleaseGateTests(unittest.TestCase):
         with self.assertRaisesRegex(build.BuildError, "untrusted"):
             self.load()
 
-    def _put_in_published(self):
+    def _put_in_published(self, *, sample=False, manifest=True):
         src = self.root / "content/sample/records/DEMO-2027-018/v1.0.json"
         dst = self.root / "content/published/records/DEMO-2027-018/v1.0.json"
         dst.parent.mkdir(parents=True)
-        shutil.copyfile(src, dst)
+        data = json.loads(src.read_text(encoding="utf-8"))
+        data["sample"] = sample
+        dst.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        if manifest:
+            digest = build.sha256_bytes(dst.read_bytes())
+            rel = self.root / "content/published/releases/record__DEMO-2027-018__1.0.txt"
+            rel.parent.mkdir(parents=True, exist_ok=True)
+            rel.write_bytes(build.release_statement("record", "DEMO-2027-018", "1.0", digest))
+        return dst
 
     def test_empty_published_channel_loads_without_a_key(self):
+        shutil.rmtree(self.root / "content/published/records")
+        shutil.rmtree(self.root / "content/published/releases")
         content = self.load("published")
         self.assertTrue(content.empty)
         self.assertEqual(content.records, {})
 
-    def test_published_channel_needs_owner_key(self):
-        self._put_in_published()
-        with self.assertRaisesRegex(build.BuildError, "no release key"):
+    def test_published_channel_requires_release_manifest(self):
+        self._put_in_published(manifest=False)
+        with self.assertRaisesRegex(build.BuildError, "no release statement"):
             self.load("published")
 
-    def test_published_channel_refuses_demonstration_key(self):
+    def test_published_channel_accepts_matching_manifest_without_key(self):
         self._put_in_published()
-        sample_line = (self.root / "trust/sample_allowed_signers").read_text().splitlines()[-1]
-        (self.root / "trust/allowed_signers").write_text(sample_line + "\n", encoding="utf-8")
-        with self.assertRaisesRegex(build.BuildError, "demonstration key"):
-            self.load("published")
+        content = self.load("published")
+        self.assertIn("DEMO-2027-018", content.records)
 
-    def test_published_channel_refuses_sample_content_even_if_owner_signed(self):
-        owner = new_key(self.tmp, "owner")
-        (self.root / "trust/allowed_signers").write_text(trust_line(owner), encoding="utf-8")
-        pub = self.root / "content/published"
-        for sub in ["records", "snapshots"]:
-            shutil.copytree(self.root / "content/sample" / sub, pub / sub)
-        shutil.copyfile(self.root / "content/sample/updates.json", pub / "updates.json")
-        resign_all(self.root, "published", owner)
+    def test_published_channel_refuses_sample_content(self):
+        self._put_in_published(sample=True)
         with self.assertRaisesRegex(build.BuildError, "sample flag"):
             self.load("published")
 
@@ -468,9 +470,9 @@ function load(src, w) { return new Promise(res => { const f = document.createEle
       styled: f.contentWindow.getComputedStyle(d.querySelector(".mast")).borderBottomStyle === "solid",
       js: html.getAttribute("data-js") === "1"});
     if (p === "cases/" && w === 390 && d.getElementById("f-fam")) {
-      const sel = d.getElementById("f-fam"); sel.value = "construction"; sel.dispatchEvent(new Event("change"));
+      const sel = d.getElementById("f-fam"); sel.value = [...sel.options].some(o => o.value === "construction") ? "construction" : "none"; sel.dispatchEvent(new Event("change"));
       const shown = [...d.querySelectorAll("#case-index tr.ix-row")].filter(r => !r.hidden && !r.parentElement.hidden).length;
-      out.push({filter: "construction", shown: shown, count: d.getElementById("f-count").textContent,
+      out.push({filter: sel.value, shown: shown, count: d.getElementById("f-count").textContent,
                 formVisible: !d.getElementById("filters").hidden});
     }
     f.remove();
@@ -540,15 +542,18 @@ class LayoutTests(unittest.TestCase):
 
 class ProductionLayoutTests(LayoutTests):
     """Layout of the production build (published channel, optional pages off)."""
-    CONFIG, CHANNEL, PAGES = "site.json", None, ["", "cases/", "methodology/", "definitions/", "about/", "404.html"]
+    CONFIG, CHANNEL, PAGES = "site.json", None, ["", "cases/", "cases/TA-2026-001/", "methodology/", "definitions/", "about/", "404.html"]
 
     def test_case_filters_work(self):
         self.assertIsNotNone(self.results, self.raw)
-        self.assertFalse([x for x in self.results if "filter" in x], "an empty index must not show filters")
+        f = next(x for x in self.results if "filter" in x)
+        self.assertTrue(f["formVisible"])
+        self.assertEqual(f["filter"], "none")
+        self.assertEqual(f["shown"], 2)
 
 
 class ProductionTests(unittest.TestCase):
-    """The deployed configuration: published channel only, no fictional material, four sections."""
+    """The deployed configuration: published channel only, real records, no fictional material."""
 
     @classmethod
     def setUpClass(cls):
@@ -566,7 +571,8 @@ class ProductionTests(unittest.TestCase):
     def test_builds_from_the_published_channel_only(self):
         self.assertEqual(self.content.channel, "published")
         self.assertFalse(self.content.is_sample)
-        self.assertFalse((self.out / "data").exists())
+        self.assertIn("TA-2026-001", self.content.records)
+        self.assertTrue((self.out / "data/records/TA-2026-001/v1.0.json").exists())
 
     def test_navigation_is_cases_methodology_definitions_about(self):
         nav = re.search(r'<nav class="nav"[^>]*>(.*?)</nav>', (self.out / "index.html").read_text(encoding="utf-8")).group(1)
@@ -582,21 +588,25 @@ class ProductionTests(unittest.TestCase):
         fixtures = [json.loads(p.read_text(encoding="utf-8")) for p in (ROOT / "content/sample/records").rglob("*.json")]
         names = {a for r in fixtures for a in r["work"]["authors"]} | {r["work"]["title"] for r in fixtures}
         for name, text in self.pages().items():
-            self.assertNotRegex(text, r"DEMO-|demo-banner|[Ff]ictional|[Dd]emonstration|10\.5555|noindex", name)
+            self.assertNotRegex(text, r"DEMO-|demo-banner|sample-banner|[Ff]ictional|[Dd]emonstration|10\.5555|noindex", name)
             for n in names:
                 self.assertNotIn(n, text, name)
 
-    def test_cases_page_states_that_nothing_is_released(self):
+    def test_cases_page_contains_the_real_record(self):
         cases = (self.out / "cases/index.html").read_text(encoding="utf-8")
-        self.assertIn("No case records have been released yet.", cases)
-        self.assertNotIn('id="case-index"', cases)
-        self.assertIn("No case records have been released yet.", (self.out / "index.html").read_text(encoding="utf-8"))
+        home = (self.out / "index.html").read_text(encoding="utf-8")
+        self.assertIn("Stability and strategy-proofness for matching with constraints", cases)
+        self.assertIn("TA-2026-001", cases)
+        self.assertIn("Kamada", cases)
+        self.assertNotIn("No case records have been released yet.", cases)
+        self.assertIn("Stability and strategy-proofness for matching with constraints", home)
 
     def test_policies_live_on_the_methodology_page(self):
         m = (self.out / "methodology/index.html").read_text(encoding="utf-8")
         for anchor in ["responses", "corrections", "challenges", "release", "standard"]:
             self.assertIn(f'id="{anchor}"', m)
-        self.assertIn("No release key has been added yet", m)
+        self.assertIn("exact SHA-256 manifests", m)
+        self.assertIn("Author notification, a waiting period and author consent are not publication gates", m)
 
     def test_links_resolve(self):
         BuildTests.check_links(self, self.out)
@@ -604,22 +614,32 @@ class ProductionTests(unittest.TestCase):
     def html_files(self, out=None):
         return sorted((out or self.out).rglob("*.html"))
 
-    def test_trust_pin_none_only_while_empty(self):
+    def test_trust_pin_none_for_real_published_channel(self):
         build.check_expected_trust(self.content, "none")
         with self.assertRaisesRegex(build.BuildError, "do not match"):
             build.check_expected_trust(self.content, "SHA256:some-key")
         sample = build.Content("sample").load()
-        with self.assertRaisesRegex(build.BuildError, "'none'"):
+        with self.assertRaisesRegex(build.BuildError, "only for the real published channel"):
             build.check_expected_trust(sample, "none")
 
-    def test_published_content_still_needs_a_release_key(self):
+    def test_published_content_needs_a_matching_release_manifest_not_a_key(self):
         root = copy_project(self.tmp / "proj")
         src = next((root / "content/sample/records").rglob("v1.0.json"))
-        dst = root / "content/published/records" / src.parent.name / "v1.0.json"
+        rid = src.parent.name
+        dst = root / "content/published/records" / rid / "v1.0.json"
         dst.parent.mkdir(parents=True)
-        shutil.copyfile(src, dst)
-        with self.assertRaisesRegex(build.BuildError, "no release key"):
+        data = json.loads(src.read_text(encoding="utf-8"))
+        data["sample"] = False
+        dst.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        with self.assertRaisesRegex(build.BuildError, "no release statement"):
             build.Content("published", root).load()
+        digest = build.sha256_bytes(dst.read_bytes())
+        rel = root / "content/published/releases" / f"record__{rid}__1.0.txt"
+        rel.parent.mkdir(parents=True, exist_ok=True)
+        rel.write_bytes(build.release_statement("record", rid, "1.0", digest))
+        content = build.Content("published", root).load()
+        self.assertIn(rid, content.records)
+        build.check_expected_trust(content, "none")
 
 
 if __name__ == "__main__":

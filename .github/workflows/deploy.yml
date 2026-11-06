@@ -1,9 +1,8 @@
 # Builds the site and deploys it to GitHub Pages.
-# The site is built from the PUBLISHED channel: only owner-signed releases appear. Every build verifies the signed
-# release statements against the trusted keys, and --expect-trust fails the build unless those keys are exactly the
-# fingerprints in the TRUST_FINGERPRINTS repository variable (only repository admins can change it). While nothing has
-# been released and no release key exists, the variable is set to "none". Deployment waits for the owner's approval in
-# the github-pages environment. The fictional sample channel is used only by the tests.
+# The site is built from the PUBLISHED channel. Real releases use immutable versioned data plus exact SHA-256 release
+# manifests. Fictional sample content remains test-only. TRUST_FINGERPRINTS stays "none" for the production channel;
+# sample builds retain their throwaway signature tests. Live deployment waits for the owner's approval in the protected
+# github-pages environment.
 name: Build and deploy
 on:
   push:
@@ -14,7 +13,7 @@ permissions:
   contents: read
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 env:
   SITE_CHANNEL: published
 jobs:
