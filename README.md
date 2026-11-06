@@ -18,8 +18,8 @@ sample corpus in `content/sample/` remains test-only and never appears on the pr
 | `tests/site.sample.json` | Test configuration that builds the fictional sample channel with every page enabled. |
 | `static/` | Stylesheet, script (filters and copy buttons; every page works without it), favicon. |
 | `content/sample/` | Fictional test fixtures: records, statistics snapshots, updates and their signed release statements. Not deployed. |
-| `content/published/` | Real, owner-approved content. Empty: nothing has been released. |
-| `trust/allowed_signers` | Owner's public release key for the published channel. Empty on purpose. |
+| `content/published/` | Real, owner-approved records, each with an exact SHA-256 release manifest. |
+| `trust/allowed_signers` | Not used by the published channel, which relies on release manifests and deployment approval. |
 | `trust/sample_allowed_signers` | Public half of the demonstration key. Its private half was deleted after signing. |
 | `make_sample_content.py` | Writes the fictional test fixtures. |
 | `tests/` | Unit, release-gate, statistics, link, leak and layout tests. |

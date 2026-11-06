@@ -592,6 +592,12 @@ class ProductionTests(unittest.TestCase):
             for n in names:
                 self.assertNotIn(n, text, name)
 
+    def test_no_demonstration_or_superseded_wording_in_any_output_file(self):
+        banned = (r"DEMO[-_]\d|\bdemo\b|[Ff]ictional|[Dd]emonstration|10\.5555|\"sample\": true|the authors have been\s+contacted|"
+                  r"release has been signed|authors were notified|[Cc]ourtesy notice|notified papers|after notification")
+        for path in sorted(p for p in self.out.rglob("*") if p.is_file() and p.suffix in {".html", ".css", ".js", ".json", ".xml", ".txt"}):
+            self.assertNotRegex(path.read_text(encoding="utf-8"), banned, str(path))
+
     def test_cases_page_contains_the_real_record(self):
         cases = (self.out / "cases/index.html").read_text(encoding="utf-8")
         home = (self.out / "index.html").read_text(encoding="utf-8")

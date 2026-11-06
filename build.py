@@ -782,8 +782,7 @@ def render_home(site):
     else:
         aside = f"""<p class="aside-k">Case records</p>
     <p class="aside-v">No case records have been released yet.</p>
-    <p class="aside-note">A record is published only after the confirmation standard is met, the authors have been
-    contacted, and the release has been signed. <a href="{site.href(page, 'methodology/')}">How this works</a></p>"""
+    <p class="aside-note">A record is published only after it meets the applicable research standard and the owner approves its exact content. <a href="{site.href(page, 'methodology/')}">How this works</a></p>"""
         recent = f"""<div class="sec-head"><h2>Case records</h2></div>
   <p class="sec-lede">No case records have been released yet. Released records will be listed here and on the
   <a href="{site.href(page, 'cases/')}">Cases</a> page, one row per investigated claim, grouped by paper.</p>"""
@@ -830,8 +829,7 @@ def render_explorer(site):
 <div class="wrap page-head">
   <h1>Cases</h1>
   <p class="lede">No case records have been released yet.</p>
-  <p class="small muted">A record is published only after the confirmation standard is met, the authors have been contacted
-  and the release has been signed. Released records will appear here, one row per investigated claim, grouped by paper.
+  <p class="small muted">A record is published only after it meets the applicable research standard and the owner approves its exact content. Released records will appear here, one row per investigated claim, grouped by paper.
   See the <a href="{site.href(page, 'methodology/')}">methodology</a>.</p>
 </div>
 """
@@ -842,8 +840,7 @@ def render_explorer(site):
   <h1>Cases</h1>
   <p class="lede">Every investigated claim, grouped by paper, most recently updated first. {k['claims']} claims in
   {k['papers']} papers.{demo}</p>
-  <p class="small muted">A record is published only after the confirmation standard is met, the authors have been contacted
-  and the release has been signed. Candidates still under review and rejected candidates {counted}.</p>
+  <p class="small muted">A record is published only after it meets the applicable research standard and the owner approves its exact content. Candidates still under review and rejected candidates {counted}.</p>
 </div>
 <div class="wrap">
 <form class="filters" id="filters" hidden>
@@ -981,7 +978,7 @@ def render_record(site, rec, frozen=False):
         else:
             attrib = ("It credits this audit." if corr["attribution"] == "credits_programme" else
                       "It does not mention this audit; we do not claim it resulted from our work.")
-            ctext = (f"{corr['type'].capitalize()} published {E(fmt_date(corr['date']))}, after the authors were notified "
+            ctext = (f"{corr['type'].capitalize()} published {E(fmt_date(corr['date']))}, after the authors were contacted "
                      f"({doi_html(site, corr['doi'])}). {E(attrib)}")
         resp.append(f"<dt>Correction</dt><dd>{ctext}</dd>")
     else:
@@ -1075,9 +1072,9 @@ METRIC_ROWS = [
     ("M09", "Confirmed: reproduced by the researcher", "claim", "Re-derived by hand or with separately written code. Package reruns do not count.", "monthly"),
     ("M10", "Confirmed: verified by an external human", "claim", "Verified by someone outside the programme.", "monthly"),
     ("M11", "Confirmed: source check", "claim", "Confirmed claims by full, partial or no check against the published version.", "monthly"),
-    ("M12", "Papers whose authors were notified", "paper", "Courtesy notices for negative audits are not counted.", "quarterly"),
-    ("M13", "Authors' position on confirmed findings", "claim", "Confirmed claims in notified papers, by the authors' latest written position.", "quarterly"),
-    ("M14", "Corrections published after notification", "claim", "Released records only; credited to this audit only if the correction says so.", "monthly"),
+    ("M12", "Papers whose authors were contacted", "paper", "Contact is optional and is not a publication requirement.", "quarterly"),
+    ("M13", "Authors' position on confirmed findings", "claim", "Confirmed claims in papers whose authors were contacted, by the authors' latest written position.", "quarterly"),
+    ("M14", "Corrections published after author contact", "claim", "Released records only; credited to this audit only if the correction says so.", "monthly"),
     ("M15", "Records released", "record", "Records with status published.", "monthly"),
     ("M16", "Our corrections and withdrawals", "record version", "Released versions that correct our error or withdraw a record.", "monthly"),
     ("M17", "Calibration checks", "claim", "Claims whose error was already corrected in print before the audit, used to test the method.", "monthly"),
@@ -1285,12 +1282,12 @@ def render_statistics(site):
             row("M10", "Verified by an external human", f"{t['M10']} of {conf}"),
             row("M11", "Source check full / partial / none", f"{t['M11']['full']} / {t['M11']['partial']} / {t['M11']['none']}", f"of {conf}")])
         after = "".join([
-            row("M12", "Papers whose authors were notified", t["M12"], f"as of {E(fmt_date(snap['as_of']))}"),
-            row("M13", "Authors agreed", f"{m13['agreed']} of {pop13}", "confirmed defects in notified papers"),
+            row("M12", "Papers whose authors were contacted", t["M12"], f"as of {E(fmt_date(snap['as_of']))}"),
+            row("M13", "Authors agreed", f"{m13['agreed']} of {pop13}", "confirmed defects in papers whose authors were contacted"),
             row("M13", "Authors partly agreed", f"{m13['partly_agreed']} of {pop13}"),
             row("M13", "Authors disagree", f"{m13['disagreed']} of {pop13}"),
             row("M13", "No substantive reply within 90 days", f"{m13['none_yet']} of {pop13}"),
-            row("M14", "Corrections after notification", corr,
+            row("M14", "Corrections after author contact", corr,
                 f"{rs['corrections']['credits_programme']} credit this audit, {rs['corrections']['none_stated']} state no attribution")])
         publ = "".join([
             row("M15", "Records released", len(site.c.latest_all(snap["as_of"]))),
