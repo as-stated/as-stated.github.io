@@ -1,7 +1,8 @@
 """Tests for build.py. Run from the project folder:  python -m unittest discover -s tests -v
 
+Tests generate their data at run time with tests/fixtures.py, so a fresh clone needs nothing else.
+
 The layout tests need Microsoft Edge or Google Chrome; they are skipped when neither is installed."""
-import copy
 import functools
 import http.server
 import importlib.util
@@ -10,6 +11,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import threading
 import unittest
@@ -20,45 +22,18 @@ ROOT = Path(__file__).resolve().parent.parent
 spec = importlib.util.spec_from_file_location("build", ROOT / "build.py")
 build = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(build)
+sys.path.insert(0, str(ROOT / "tests"))
+import fixtures  # noqa: E402
 
-INDEXABLE = {"methodology/index.html", "definitions/index.html", "about/index.html"}
-SAMPLE_CFG = "tests/site.sample.json"   # fictional fixtures with every page enabled; never deployed
+PUBLISHED = "content/published"
+LATEST_SNAPSHOT = PUBLISHED + "/snapshots/2000-06.json"
+# Assembled so that this file itself passes the public-tree check below.
+RETIRED_PREFIX = "DE" + "MO"
+BANNED_OUTPUT = (RETIRED_PREFIX + r"[-_]\d|\b" + RETIRED_PREFIX.lower() + r"\b|[Ff]ict" + "ional|[Dd]emon" + "stration|10\\.5555|"
+                 + r"\"sample\": true|sample-banner|the authors have been\s+contacted|release has been signed|authors were notified|"
+                 + r"[Cc]ourtesy notice|notified papers|after notification")
+BANNED_TREE = RETIRED_PREFIX + r"-20\d\d|[Ff]ict" + "ional|[Dd]emon" + r"stration|10\.5555|content/sam" + "ple|sample_allowed_" + "signers"
 OLD_BRANDS = re.compile(r"Theorem Audit|Second Referee|Reviewer\s*(#\s*2|2|Two)|TA-20\d\d|SR-20\d\d", re.I)
-
-
-def copy_project(dst):
-    dst.mkdir(parents=True)
-    for name in ["build.py", "site.json"]:
-        shutil.copy2(ROOT / name, dst / name)
-    (dst / "tests").mkdir()
-    shutil.copy2(ROOT / SAMPLE_CFG, dst / SAMPLE_CFG)
-    for name in ["content", "trust", "static"]:
-        shutil.copytree(ROOT / name, dst / name)
-    return dst
-
-
-def new_key(directory, name="k"):
-    key = Path(directory) / name
-    subprocess.run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", "test", "-f", str(key)], check=True)
-    return key
-
-
-def trust_line(key):
-    pub = Path(str(key) + ".pub").read_text().split()
-    return f'{build.PRINCIPAL} namespaces="{build.NAMESPACE}" {pub[0]} {pub[1]}\n'
-
-
-def resign_all(root, channel, key):
-    croot = root / "content" / channel
-    rel = croot / "releases"
-    if rel.exists():
-        shutil.rmtree(rel)
-    for f in sorted((croot / "records").glob("*/v*.json")):
-        build.sign(channel, key, "record", f.parent.name, f.stem[1:], f, root)
-    for f in sorted((croot / "snapshots").glob("*.json")):
-        build.sign(channel, key, "snapshot", f.stem, "1", f, root)
-    if (croot / "updates.json").exists():
-        build.sign(channel, key, "updates", "updates", "1", croot / "updates.json", root)
 
 
 def edit_json(path, fn):
@@ -107,8 +82,9 @@ class BuildTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = Path(tempfile.mkdtemp(prefix="as_test_"))
-        cls.site, cls.content, cls.out = build.build("sample", cls.tmp / "dist", config=SAMPLE_CFG)
-        cls.site_p, cls.content_p, cls.out_p = build.build("sample", cls.tmp / "site", pretty=True, config=SAMPLE_CFG)
+        cls.proj = fixtures.make_project(build, cls.tmp / "proj")
+        cls.site, cls.content, cls.out = build.build(None, cls.tmp / "dist", root=cls.proj)
+        cls.site_p, cls.content_p, cls.out_p = build.build(None, cls.tmp / "site", pretty=True, root=cls.proj)
 
     @classmethod
     def tearDownClass(cls):
@@ -120,11 +96,10 @@ class BuildTests(unittest.TestCase):
     def rel(self, f, out=None):
         return f.relative_to(out or self.out).as_posix()
 
-    def test_brand_and_demo_identifiers(self):
+    def test_brand_and_channel(self):
         self.assertEqual(self.site.cfg["name"], "As Stated")
-        self.assertEqual(self.content.channel, "sample")
+        self.assertEqual(self.content.channel, "published")
         self.assertTrue(self.content.records)
-        self.assertTrue(all(r.startswith("DEMO-") for r in self.content.records))
         home = (self.out / "index.html").read_text(encoding="utf-8")
         self.assertIn("As Stated", home)
         self.assertIn("Independent scrutiny of published mathematical and theoretical claims.", home)
@@ -136,20 +111,20 @@ class BuildTests(unittest.TestCase):
             self.assertIsNone(found, f"{self.rel(f, self.out_p)}: {found and found.group(0)}")
 
     def test_content_prefix_must_match_site(self):
-        root = copy_project(self.tmp / "prefix_proj")
+        root = fixtures.make_project(build, self.tmp / "prefix_proj")
         edit_json(root / "site.json", lambda c: c.update(id_prefix="XYZ"))
         with self.assertRaisesRegex(build.BuildError, "identifier prefix"):
-            build.build("sample", self.tmp / "dist_prefix", root=root)
+            build.build(None, self.tmp / "dist_prefix", root=root)
 
     def test_expected_pages_exist(self):
-        for p in ["index.html", "cases/index.html", "statistics/index.html", "statistics/2027-03/index.html",
+        for p in ["index.html", "cases/index.html", "statistics/index.html", "statistics/2000-03/index.html",
                   "methodology/index.html", "definitions/index.html", "updates/index.html", "about/index.html",
-                  "404.html", "feed.xml", "cases/DEMO-2027-001/index.html", "cases/DEMO-2027-002/v1.0/index.html",
-                  "data/records/DEMO-2027-002/v1.2.json", "data/snapshots/2027-06.json", "robots.txt",
+                  "404.html", "feed.xml", "cases/TEST-2000-001/index.html", "cases/TEST-2000-002/v1.0/index.html",
+                  "data/records/TEST-2000-002/v1.2.json", "data/snapshots/2000-06.json", "robots.txt",
                   "sitemap.xml", ".nojekyll", "static/style.css", "static/app.js", "static/favicon.svg"]:
             self.assertTrue((self.out_p / p).exists(), p)
 
-    def test_every_page_is_well_formed_and_carries_the_demo_notice(self):
+    def test_every_page_is_well_formed(self):
         for out in (self.out, self.out_p):
             for f in self.html_files(out):
                 text = f.read_text(encoding="utf-8")
@@ -158,25 +133,20 @@ class BuildTests(unittest.TestCase):
                 self.assertEqual(c.lang, "en", f)
                 self.assertTrue(c.title, f)
                 self.assertEqual(c.h1, 1, f"{f}: expected exactly one h1")
-                self.assertIn('class="sample-banner"', text, f)
-                self.assertIn("is fictional", text, f)
                 self.assertEqual(len(c.stylesheets), 1, f)
                 self.assertEqual(len(c.scripts), 1, f)
 
-    def test_only_genuine_project_pages_are_indexable(self):
+    def test_every_page_is_indexable_and_listed(self):
+        pages = []
         for f in self.html_files(self.out_p):
-            rel = self.rel(f, self.out_p)
-            robots = parse(f).robots
-            if rel in INDEXABLE:
-                self.assertIsNone(robots, f"{rel} should be indexable")
-            else:
-                self.assertEqual(robots, "noindex", f"{rel} is demonstration content and must carry noindex")
+            self.assertIsNone(parse(f).robots, self.rel(f, self.out_p))
+            if self.rel(f, self.out_p) != "404.html":
+                pages.append(self.rel(f, self.out_p))
         robots_txt = (self.out_p / "robots.txt").read_text()
         self.assertIn("Allow: /", robots_txt)
         self.assertIn("Sitemap: https://as-stated.github.io/sitemap.xml", robots_txt)
         locs = re.findall(r"<loc>([^<]+)</loc>", (self.out_p / "sitemap.xml").read_text(encoding="utf-8"))
-        self.assertEqual(sorted(locs), sorted("https://as-stated.github.io/" + p.replace("index.html", "")
-                                              for p in INDEXABLE))
+        self.assertEqual(sorted(locs), sorted("https://as-stated.github.io/" + p.replace("index.html", "") for p in pages))
 
     def test_no_external_scripts_styles_or_fonts(self):
         for f in self.html_files(self.out_p):
@@ -225,9 +195,9 @@ class BuildTests(unittest.TestCase):
                 self.assertIn("Does not establish", page, rid)
 
     def test_archived_versions_point_to_current(self):
-        page = (self.out_p / "cases/DEMO-2027-002/v1.0/index.html").read_text(encoding="utf-8")
+        page = (self.out_p / "cases/TEST-2000-002/v1.0/index.html").read_text(encoding="utf-8")
         self.assertIn("Archived version 1.0. The current version is", page)
-        current = (self.out_p / "cases/DEMO-2027-002/index.html").read_text(encoding="utf-8")
+        current = (self.out_p / "cases/TEST-2000-002/index.html").read_text(encoding="utf-8")
         self.assertNotIn("Archived version", current)
 
     def test_selection_statement_on_number_pages(self):
@@ -259,10 +229,22 @@ class BuildTests(unittest.TestCase):
         self.assertEqual(rs["unresolved"], len(unresolved))
         self.assertEqual(rs["confirmed"], sum(c["result"]["outcome"] == "defect_found" for r in recs for c in r["claims"]))
 
-    def test_methodology_publishes_the_trusted_fingerprint(self):
+    def test_methodology_states_how_releases_are_controlled(self):
         page = (self.out_p / "methodology/index.html").read_text(encoding="utf-8")
-        for fp in build.key_fingerprints(self.content.trust):
-            self.assertIn(fp, page)
+        self.assertIn("exact SHA-256 manifests", page)
+
+    def test_every_author_position_renders(self):
+        seen = {r["author_position"]["position"] for r in self.content.latest_all()}
+        self.assertLessEqual({"agrees", "partly_agrees", "disagrees", "none_yet", "not_contacted", "previously_corrected"}, seen)
+        for r in self.content.latest_all():
+            page = (self.out / "cases" / r["public_id"] / "index.html").read_text(encoding="utf-8")
+            self.assertIn(build.POS_LONG[r["author_position"]["position"]], page, r["public_id"])
+
+    def test_generated_data_is_deterministic(self):
+        again = fixtures.make_project(build, self.tmp / "again")
+        for f in sorted((self.proj / PUBLISHED).rglob("*")):
+            if f.is_file():
+                self.assertEqual(f.read_bytes(), (again / f.relative_to(self.proj)).read_bytes(), f.name)
 
     def test_leak_scan_is_clean_and_catches_leaks(self):
         self.assertEqual(build.scan_output(self.out, []), [])
@@ -276,110 +258,106 @@ class BuildTests(unittest.TestCase):
 
     def test_private_denylist_blocks_build(self):
         deny = self.tmp / "deny.txt"
-        deny.write_text("Clara Template\n", encoding="utf-8")
+        deny.write_text("Author A1\n", encoding="utf-8")
         with self.assertRaises(build.BuildError):
-            build.build("sample", self.tmp / "dist_deny", denylist_file=deny, config=SAMPLE_CFG)
+            build.build(None, self.tmp / "dist_deny", denylist_file=deny, root=self.proj)
 
-    def test_expected_trust_pins_the_signing_key(self):
-        fps = ",".join(build.key_fingerprints(self.content.trust))
-        build.build("sample", self.tmp / "dist_trust_ok", expect_trust=fps, config=SAMPLE_CFG)
+    def test_expected_trust_must_be_none(self):
+        build.build(None, self.tmp / "dist_trust_ok", expect_trust="none", root=self.proj)
         with self.assertRaisesRegex(build.BuildError, "do not match"):
-            build.build("sample", self.tmp / "dist_trust_bad", expect_trust="SHA256:not-the-key", config=SAMPLE_CFG)
+            build.build(None, self.tmp / "dist_trust_bad", expect_trust="SHA256:not-the-key", root=self.proj)
         with self.assertRaisesRegex(build.BuildError, "no expected trust"):
-            build.build("sample", self.tmp / "dist_trust_none", expect_trust=" ", config=SAMPLE_CFG)
+            build.build(None, self.tmp / "dist_trust_none", expect_trust=" ", root=self.proj)
 
 
 class ReleaseGateTests(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="as_gate_"))
-        self.root = copy_project(self.tmp / "proj")
+        self.root = fixtures.make_project(build, self.tmp / "proj")
 
     def tearDown(self):
         shutil.rmtree(self.tmp)
 
-    def load(self, channel="sample"):
-        return build.Content(channel, self.root).load()
+    def load(self):
+        return build.Content("published", self.root).load()
 
     def test_untouched_copy_loads(self):
         self.assertEqual(len(self.load().verified), 25)
 
     def test_edited_record_is_refused(self):
-        f = self.root / "content/sample/records/DEMO-2027-004/v1.0.json"
+        f = self.root / PUBLISHED / "records/TEST-2000-004/v1.0.json"
         f.write_bytes(f.read_bytes().replace(b"partly_agrees", b"agrees"))
         with self.assertRaisesRegex(build.BuildError, "does not match"):
             self.load()
 
-    def test_missing_signature_is_refused(self):
-        next((self.root / "content/sample/releases").glob("record__DEMO-2027-002*.sig")).unlink()
-        with self.assertRaisesRegex(build.BuildError, "signature"):
+    def test_missing_manifest_is_refused(self):
+        next((self.root / PUBLISHED / "releases").glob("record__TEST-2000-002*.txt")).unlink()
+        with self.assertRaisesRegex(build.BuildError, "not released"):
             self.load()
 
     def test_unreleased_record_is_refused(self):
-        src = self.root / "content/sample/records/DEMO-2027-002/v1.0.json"
-        dst = self.root / "content/sample/records/DEMO-2027-099/v1.0.json"
+        src = self.root / PUBLISHED / "records/TEST-2000-002/v1.0.json"
+        dst = self.root / PUBLISHED / "records/TEST-2000-099/v1.0.json"
         dst.parent.mkdir(parents=True)
         shutil.copyfile(src, dst)
         with self.assertRaisesRegex(build.BuildError, "not released"):
             self.load()
 
-    def test_signature_from_untrusted_key_is_refused(self):
-        other = new_key(self.tmp, "other")
-        (self.root / "trust/sample_allowed_signers").write_text(trust_line(other), encoding="utf-8")
-        with self.assertRaisesRegex(build.BuildError, "untrusted"):
+    def test_manifest_for_different_content_is_refused(self):
+        f = next((self.root / PUBLISHED / "releases").glob("record__TEST-2000-018*.txt"))
+        f.write_bytes(build.release_statement("record", "TEST-2000-018", "1.0", "0" * 64))
+        with self.assertRaisesRegex(build.BuildError, "does not match"):
             self.load()
 
-    def _put_in_published(self, *, sample=False, manifest=True):
-        src = self.root / "content/sample/records/DEMO-2027-018/v1.0.json"
-        dst = self.root / "content/published/records/DEMO-2027-018/v1.0.json"
+    def _add_record(self, *, sample=False, manifest=True):
+        src = self.root / PUBLISHED / "records/TEST-2000-018/v1.0.json"
+        dst = self.root / PUBLISHED / "records/TEST-2000-098/v1.0.json"
         dst.parent.mkdir(parents=True)
         data = json.loads(src.read_text(encoding="utf-8"))
         data["sample"] = sample
+        data["public_id"] = "TEST-2000-098"
         dst.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
         if manifest:
             digest = build.sha256_bytes(dst.read_bytes())
-            rel = self.root / "content/published/releases/record__DEMO-2027-018__1.0.txt"
-            rel.parent.mkdir(parents=True, exist_ok=True)
-            rel.write_bytes(build.release_statement("record", "DEMO-2027-018", "1.0", digest))
+            rel = self.root / PUBLISHED / "releases/record__TEST-2000-098__1.0.txt"
+            rel.write_bytes(build.release_statement("record", "TEST-2000-098", "1.0", digest))
         return dst
 
-    def test_empty_published_channel_loads_without_a_key(self):
-        shutil.rmtree(self.root / "content/published/records")
-        shutil.rmtree(self.root / "content/published/releases")
-        content = self.load("published")
+    def test_empty_channel_loads_without_a_key(self):
+        shutil.rmtree(self.root / "content")
+        (self.root / PUBLISHED).mkdir(parents=True)
+        content = self.load()
         self.assertTrue(content.empty)
         self.assertEqual(content.records, {})
 
-    def test_published_channel_requires_release_manifest(self):
-        self._put_in_published(manifest=False)
+    def test_record_without_manifest_is_refused(self):
+        self._add_record(manifest=False)
         with self.assertRaisesRegex(build.BuildError, "no release statement"):
-            self.load("published")
+            self.load()
 
-    def test_published_channel_accepts_matching_manifest_without_key(self):
-        self._put_in_published()
-        content = self.load("published")
-        self.assertIn("DEMO-2027-018", content.records)
+    def test_record_with_matching_manifest_is_accepted(self):
+        self._add_record()
+        self.assertIn("TEST-2000-098", self.load().records)
 
-    def test_published_channel_refuses_sample_content(self):
-        self._put_in_published(sample=True)
+    def test_content_flagged_as_not_real_is_refused(self):
+        self._add_record(sample=True)
         with self.assertRaisesRegex(build.BuildError, "sample flag"):
-            self.load("published")
+            self.load()
 
-    def _resign_sample(self):
-        key = new_key(self.tmp, "resign")
-        (self.root / "trust/sample_allowed_signers").write_text(trust_line(key), encoding="utf-8")
-        resign_all(self.root, "sample", key)
+    def _refresh_manifests(self):
+        fixtures.write_manifests(build, self.root)
 
     def test_statistics_partition_error_is_refused_even_when_signed(self):
-        edit_json(self.root / "content/sample/snapshots/2027-06.json",
+        edit_json(self.root / LATEST_SNAPSHOT,
                   lambda s: s["totals"]["M06"].update(open=3))
-        self._resign_sample()
+        self._refresh_manifests()
         with self.assertRaisesRegex(build.BuildError, "M06 does not partition"):
             self.load()
 
     def test_statistics_below_released_records_is_refused(self):
-        edit_json(self.root / "content/sample/snapshots/2027-06.json",
+        edit_json(self.root / LATEST_SNAPSHOT,
                   lambda s: s["totals"].update(M10=0))
-        self._resign_sample()
+        self._refresh_manifests()
         with self.assertRaisesRegex(build.BuildError, "below the"):
             self.load()
 
@@ -388,8 +366,8 @@ class ReleaseGateTests(unittest.TestCase):
             cells = s["examined_by_track"]["M01"]
             cells["mechanism_design"] = 3
             cells["game_theory"] = None
-        edit_json(self.root / "content/sample/snapshots/2027-06.json", fn)
-        self._resign_sample()
+        edit_json(self.root / LATEST_SNAPSHOT, fn)
+        self._refresh_manifests()
         with self.assertRaisesRegex(build.BuildError, "small count"):
             self.load()
 
@@ -401,24 +379,24 @@ class ReleaseGateTests(unittest.TestCase):
             cells["matching_social_choice"] = None
             cells["game_theory"] = s["totals"]["M01"] - 2   # leaves 2 for two suppressed cells, so both must be 1
             del known
-        edit_json(self.root / "content/sample/snapshots/2027-06.json", fn)
-        self._resign_sample()
+        edit_json(self.root / LATEST_SNAPSHOT, fn)
+        self._refresh_manifests()
         with self.assertRaisesRegex(build.BuildError, "can be narrowed"):
             self.load()
 
     def test_confirmation_standard_enforced(self):
         def fn(r):
             r["claims"][0]["checks"] = [k for k in r["claims"][0]["checks"] if k["kind"] == "ai_recheck"]
-        edit_json(self.root / "content/sample/records/DEMO-2027-015/v1.0.json", fn)
-        self._resign_sample()
+        edit_json(self.root / PUBLISHED / "records/TEST-2000-015/v1.0.json", fn)
+        self._refresh_manifests()
         with self.assertRaisesRegex(build.BuildError, "confirmation standard"):
             self.load()
 
     def test_unresolved_claim_cannot_be_named(self):
         def fn(r):
             r["claims"][0]["result"]["outcome"] = "inconclusive"
-        edit_json(self.root / "content/sample/records/DEMO-2027-018/v1.0.json", fn)
-        self._resign_sample()
+        edit_json(self.root / PUBLISHED / "records/TEST-2000-018/v1.0.json", fn)
+        self._refresh_manifests()
         with self.assertRaisesRegex(build.BuildError, "cannot be published"):
             self.load()
 
@@ -426,8 +404,8 @@ class ReleaseGateTests(unittest.TestCase):
         def fn(r):
             r["claims"] = [c for c in r["claims"] if c["result"]["outcome"] == "unresolved"]
             r["kind"] = "negative"
-        edit_json(self.root / "content/sample/records/DEMO-2027-007/v1.0.json", fn)
-        self._resign_sample()
+        edit_json(self.root / PUBLISHED / "records/TEST-2000-007/v1.0.json", fn)
+        self._refresh_manifests()
         with self.assertRaisesRegex(build.BuildError, "cannot be the only claim"):
             self.load()
 
@@ -436,7 +414,7 @@ class ReleaseGateTests(unittest.TestCase):
         other.mkdir()
         (other / "keep.txt").write_text("x")
         with self.assertRaisesRegex(build.BuildError, "refusing to replace"):
-            build.build("sample", other, root=self.root, config=SAMPLE_CFG)
+            build.build(None, other, root=self.root)
         self.assertTrue((other / "keep.txt").exists())
 
 
@@ -450,8 +428,8 @@ def find_browser():
     return next((c for c in candidates if c and Path(c).exists()), None)
 
 
-LAYOUT_PAGES = ["", "cases/", "cases/DEMO-2027-001/", "cases/DEMO-2027-002/v1.0/", "cases/DEMO-2027-007/",
-                "statistics/", "statistics/2027-03/", "methodology/", "definitions/", "updates/", "about/", "404.html"]
+LAYOUT_PAGES = ["", "cases/", "cases/TEST-2000-001/", "cases/TEST-2000-002/v1.0/", "cases/TEST-2000-007/",
+                "statistics/", "statistics/2000-03/", "methodology/", "definitions/", "updates/", "about/", "404.html"]
 WIDTHS = [360, 390, 768, 1280]
 
 # Loads every page in same-origin iframes at fixed widths and reports horizontal overflow, whether the
@@ -484,13 +462,17 @@ function load(src, w) { return new Promise(res => { const f = document.createEle
 
 @unittest.skipUnless(find_browser(), "Edge or Chrome is needed for the layout tests")
 class LayoutTests(unittest.TestCase):
-    """Layout of the fictional fixture build, which exercises every component."""
-    CONFIG, CHANNEL, PAGES = SAMPLE_CFG, "sample", LAYOUT_PAGES
+    """Layout of a build from generated data, which exercises every component."""
+    PAGES = LAYOUT_PAGES
+
+    @classmethod
+    def project_root(cls):
+        return fixtures.make_project(build, cls.tmp / "proj")
 
     @classmethod
     def setUpClass(cls):
         cls.tmp = Path(tempfile.mkdtemp(prefix="as_layout_"))
-        build.build(cls.CHANNEL, cls.tmp / "site", pretty=True, config=cls.CONFIG)
+        build.build(None, cls.tmp / "site", pretty=True, root=cls.project_root())
         (cls.tmp / "site" / "__harness.html").write_text(
             HARNESS % (json.dumps(cls.PAGES), json.dumps(WIDTHS)), encoding="utf-8")
         class Quiet(http.server.SimpleHTTPRequestHandler):
@@ -542,7 +524,11 @@ class LayoutTests(unittest.TestCase):
 
 class ProductionLayoutTests(LayoutTests):
     """Layout of the production build (published channel, optional pages off)."""
-    CONFIG, CHANNEL, PAGES = "site.json", None, ["", "cases/", "cases/TA-2026-001/", "methodology/", "definitions/", "about/", "404.html"]
+    PAGES = ["", "cases/", "cases/TA-2026-001/", "methodology/", "definitions/", "about/", "404.html"]
+
+    @classmethod
+    def project_root(cls):
+        return ROOT
 
     def test_case_filters_work(self):
         self.assertIsNotNone(self.results, self.raw)
@@ -553,7 +539,7 @@ class ProductionLayoutTests(LayoutTests):
 
 
 class ProductionTests(unittest.TestCase):
-    """The deployed configuration: published channel only, real records, no fictional material."""
+    """The deployed configuration: published channel only, real records, no test data."""
 
     @classmethod
     def setUpClass(cls):
@@ -570,7 +556,6 @@ class ProductionTests(unittest.TestCase):
 
     def test_builds_from_the_published_channel_only(self):
         self.assertEqual(self.content.channel, "published")
-        self.assertFalse(self.content.is_sample)
         self.assertIn("TA-2026-001", self.content.records)
         self.assertTrue((self.out / "data/records/TA-2026-001/v1.0.json").exists())
 
@@ -584,19 +569,26 @@ class ProductionTests(unittest.TestCase):
         for name, text in self.pages().items():
             self.assertNotRegex(text, r'href="[^"]*(statistics|updates)/|feed\.xml', name)
 
-    def test_no_fictional_or_demonstration_material(self):
-        fixtures = [json.loads(p.read_text(encoding="utf-8")) for p in (ROOT / "content/sample/records").rglob("*.json")]
-        names = {a for r in fixtures for a in r["work"]["authors"]} | {r["work"]["title"] for r in fixtures}
+    def test_no_generated_test_data_in_production(self):
+        items = fixtures.records()
+        names = {a for r in items for a in r["work"]["authors"]} | {r["work"]["title"] for r in items}
         for name, text in self.pages().items():
-            self.assertNotRegex(text, r"DEMO-|demo-banner|sample-banner|[Ff]ictional|[Dd]emonstration|10\.5555|noindex", name)
+            self.assertNotRegex(text, r"TEST-2000|noindex", name)
             for n in names:
                 self.assertNotIn(n, text, name)
 
-    def test_no_demonstration_or_superseded_wording_in_any_output_file(self):
-        banned = (r"DEMO[-_]\d|\bdemo\b|[Ff]ictional|[Dd]emonstration|10\.5555|\"sample\": true|the authors have been\s+contacted|"
-                  r"release has been signed|authors were notified|[Cc]ourtesy notice|notified papers|after notification")
+    def test_no_retired_or_superseded_wording_in_any_output_file(self):
         for path in sorted(p for p in self.out.rglob("*") if p.is_file() and p.suffix in {".html", ".css", ".js", ".json", ".xml", ".txt"}):
-            self.assertNotRegex(path.read_text(encoding="utf-8"), banned, str(path))
+            self.assertNotRegex(path.read_text(encoding="utf-8"), BANNED_OUTPUT, str(path))
+
+    def test_public_tree_holds_only_production_code_and_real_data(self):
+        self.assertEqual(sorted(p.name for p in (ROOT / "content").iterdir() if p.is_dir()), ["published"])
+        for rid in self.content.records:
+            self.assertRegex(rid, r"^TA-\d{4}-\d{3}$")
+        ignored = {".git", "_site", "dist", "__pycache__"}
+        for path in ROOT.rglob("*"):
+            if path.is_file() and not ignored & set(path.relative_to(ROOT).parts):
+                self.assertNotRegex(path.read_text(encoding="utf-8", errors="replace"), BANNED_TREE, str(path))
 
     def test_cases_page_contains_the_real_record(self):
         cases = (self.out / "cases/index.html").read_text(encoding="utf-8")
@@ -624,28 +616,6 @@ class ProductionTests(unittest.TestCase):
         build.check_expected_trust(self.content, "none")
         with self.assertRaisesRegex(build.BuildError, "do not match"):
             build.check_expected_trust(self.content, "SHA256:some-key")
-        sample = build.Content("sample").load()
-        with self.assertRaisesRegex(build.BuildError, "only for the real published channel"):
-            build.check_expected_trust(sample, "none")
-
-    def test_published_content_needs_a_matching_release_manifest_not_a_key(self):
-        root = copy_project(self.tmp / "proj")
-        src = next((root / "content/sample/records").rglob("v1.0.json"))
-        rid = src.parent.name
-        dst = root / "content/published/records" / rid / "v1.0.json"
-        dst.parent.mkdir(parents=True)
-        data = json.loads(src.read_text(encoding="utf-8"))
-        data["sample"] = False
-        dst.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-        with self.assertRaisesRegex(build.BuildError, "no release statement"):
-            build.Content("published", root).load()
-        digest = build.sha256_bytes(dst.read_bytes())
-        rel = root / "content/published/releases" / f"record__{rid}__1.0.txt"
-        rel.parent.mkdir(parents=True, exist_ok=True)
-        rel.write_bytes(build.release_statement("record", rid, "1.0", digest))
-        content = build.Content("published", root).load()
-        self.assertIn(rid, content.records)
-        build.check_expected_trust(content, "none")
 
 
 if __name__ == "__main__":

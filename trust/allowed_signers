@@ -1,4 +1,0 @@
-# Legacy placeholder for the real PUBLISHED channel.
-# As of Step G (6 November 2026), real releases use exact SHA-256 manifests plus protected
-# GitHub Pages deployment approval and do not require a separate release-signing key.
-# The sample channel keeps trust/sample_allowed_signers for signature-verification tests.

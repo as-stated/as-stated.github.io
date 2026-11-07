@@ -2,18 +2,13 @@
 """As Stated: static site builder and release checker (Python standard library only).
 
 Commands
-  python build.py build [--channel sample|published] [--pretty-urls] [--out DIR]
-                        [--private-denylist FILE] [--expect-trust FPR[,FPR...]]
-  python build.py check [--channel ...]            verify releases and statistics only
-  python build.py sign  --key KEY --kind KIND --id ID --version V --file FILE [--channel ...]
-  python build.py sign-sample                      sign the fictional sample content with a
-                                                   throwaway demonstration key (never trusted in production)
+  python build.py build [--channel published] [--pretty-urls] [--out DIR]
+                        [--private-denylist FILE] [--expect-trust none]
+  python build.py check                            verify releases and statistics only
 
-Publication rule enforced here: every released data file needs a release statement naming
-its exact SHA-256. The fictional sample channel additionally verifies throwaway SSH signatures.
-The real 'published' channel uses the hash manifest plus the protected GitHub Pages deployment
-approval; it refuses sample content. --expect-trust='none' is the expected production setting
-while the published channel has no signing key.
+Publication rule enforced here: every released data file needs a release statement naming its exact
+SHA-256, and any file flagged as not real is refused. Real releases use no separate signing key, so
+--expect-trust accepts only 'none'. Tests generate their own data at run time (tests/fixtures.py).
 """
 import argparse
 import hashlib
@@ -21,29 +16,15 @@ import html
 import json
 import re
 import shutil
-import subprocess
 import sys
-import tempfile
 from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 NAMESPACE = "as-stated-release"
-PRINCIPAL = "release-approver"
-CHANNELS = {
-    "sample": {"trust": "trust/sample_allowed_signers", "sample": True},
-    "published": {"trust": "trust/allowed_signers", "sample": False},
-}
+CHANNEL = "published"
 
 
-def channel_conf(name):
-    """'published' is the only real channel. Any 'sample' or 'sample-<brand>' channel holds fictional content
-    signed with the throwaway demonstration key."""
-    if name == "published":
-        return CHANNELS["published"]
-    if re.fullmatch(r"sample(-[a-z]+)?", name or ""):
-        return CHANNELS["sample"]
-    raise BuildError(f"unknown channel {name!r}")
 TRACKS = {
     "game_theory": "Game theory",
     "mechanism_design": "Mechanism design",
@@ -82,7 +63,6 @@ POSITIONS = {
     "partly_agrees": "Authors partly agreed",
     "disagrees": "Authors disagree",
     "none_yet": "No position yet",
-    "courtesy_notice": "Courtesy notice sent",
     "not_disclosed": "Not disclosed",
     "not_contacted": "Not contacted",
     "previously_corrected": "Not contacted: already corrected before the audit",
@@ -123,15 +103,6 @@ E = html.escape
 OUTPUT_MARKER = ".as-stated-build-output"
 
 
-def key_of(line):
-    """Return 'type base64' from an allowed_signers line, ignoring principals, options and comments."""
-    parts = line.split()
-    for i, p in enumerate(parts):
-        if (p.startswith("ssh-") or p.startswith("sk-ssh-") or p.startswith("ecdsa-")) and i + 1 < len(parts):
-            return f"{p} {parts[i + 1]}"
-    return None
-
-
 # ------------------------------------------------------------------ helpers
 def sha256_bytes(b):
     return hashlib.sha256(b).hexdigest()
@@ -154,76 +125,33 @@ def release_statement(kind, rid, version, digest):
     return (f"{NAMESPACE} v1\nkind: {kind}\nid: {rid}\nversion: {version}\nsha256: {digest}\n").encode()
 
 
-def statement_paths(croot, kind, rid, version):
-    base = croot / "releases" / f"{kind}__{rid}__{version}.txt"
-    return base, Path(str(base) + ".sig")
-
-
-def verify_signature(statement_file, sig_file, allowed_signers):
-    if not sig_file.exists():
-        return False, "signature file missing"
-    r = subprocess.run(["ssh-keygen", "-Y", "verify", "-f", str(allowed_signers), "-I", PRINCIPAL,
-                        "-n", NAMESPACE, "-s", str(sig_file)],
-                       input=statement_file.read_bytes(), capture_output=True)
-    return r.returncode == 0, (r.stdout + r.stderr).decode(errors="replace").strip()
-
-
-def key_fingerprints(allowed_signers):
-    fps = []
-    for line in allowed_signers.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or not key_of(line):
-            continue
-        with tempfile.NamedTemporaryFile("w", suffix=".pub", delete=False) as tf:
-            tf.write(key_of(line) + "\n")
-        r = subprocess.run(["ssh-keygen", "-l", "-f", tf.name], capture_output=True, text=True)
-        Path(tf.name).unlink()
-        if r.returncode == 0:
-            fps.append(r.stdout.split()[1])
-    return fps
+def statement_path(croot, kind, rid, version):
+    return croot / "releases" / f"{kind}__{rid}__{version}.txt"
 
 
 # ------------------------------------------------------------------ loading and release verification
 class Content:
-    def __init__(self, channel, root=ROOT):
-        conf = channel_conf(channel)
+    def __init__(self, channel=CHANNEL, root=ROOT):
+        if channel != CHANNEL:
+            raise BuildError(f"unknown channel {channel!r}")
         self.channel = channel
         self.root = root
         self.croot = root / "content" / channel
-        self.trust = root / conf["trust"]
-        self.is_sample = conf["sample"]
         self.records = {}   # id -> list of record dicts sorted by version
         self.snapshots = []
         self.updates = {"items": []}
         self.verified = []  # (kind, id, version, sha256)
         self.empty = False
 
-    def check_trust(self):
-        # Real releases are controlled by exact hash manifests plus the protected GitHub Pages
-        # deployment approval. The sample channel keeps its throwaway signing-key checks.
-        if not self.is_sample:
-            return []
-        if not self.trust.exists():
-            raise BuildError(f"trust file missing: {self.trust.relative_to(self.root)}")
-        keys = [key_of(ln) for ln in self.trust.read_text(encoding="utf-8").splitlines()
-                if ln.strip() and not ln.strip().startswith("#") and key_of(ln)]
-        if not keys:
-            raise BuildError(f"no sample release key configured in {self.trust.relative_to(self.root)}")
-        return keys
-
     def released(self, kind, rid, version, path):
         data = path.read_bytes()
         digest = sha256_bytes(data)
-        st, sig = statement_paths(self.croot, kind, rid, version)
+        st = statement_path(self.croot, kind, rid, version)
         if not st.exists():
             raise BuildError(f"not released: no release statement for {kind} {rid} {version}")
         if st.read_bytes() != release_statement(kind, rid, version, digest):
             raise BuildError(f"release statement does not match the file for {kind} {rid} {version} "
                              "(content changed after approval?)")
-        if self.is_sample:
-            ok, msg = verify_signature(st, sig, self.trust)
-            if not ok:
-                raise BuildError(f"invalid or untrusted signature for {kind} {rid} {version}: {msg}")
         self.verified.append((kind, rid, version, digest))
         return json.loads(data.decode("utf-8"))
 
@@ -232,32 +160,28 @@ class Content:
                 for f in (self.croot / sub).rglob("*") if f.is_file()] +                [f for f in [self.croot / "updates.json"] if f.exists()]
 
     def load(self):
-        # The published channel may be empty: nothing has been released yet. With no content there is nothing to
-        # verify, so a release key is not yet required. Any content at all needs the full signature checks.
+        # The channel may be empty when nothing has been released. Any content needs its exact manifest.
         self.empty = not self.content_files()
-        if self.empty and not self.is_sample:
+        if self.empty:
             return self
-        self.check_trust()
         rdir = self.croot / "records"
         for f in sorted(rdir.glob("*/v*.json")) if rdir.exists() else []:
             rid, version = f.parent.name, f.stem[1:]
             rec = self.released("record", rid, version, f)
-            validate_record(rec, rid, version, self.is_sample)
+            validate_record(rec, rid, version)
             self.records.setdefault(rid, []).append(rec)
         for rid in self.records:
             self.records[rid].sort(key=lambda r: vkey(r["version"]))
         sdir = self.croot / "snapshots"
         for f in sorted(sdir.glob("*.json")) if sdir.exists() else []:
             snap = self.released("snapshot", f.stem, "1", f)
-            validate_snapshot_shape(snap, f.stem, self.is_sample)
+            validate_snapshot_shape(snap, f.stem)
             self.snapshots.append(snap)
         uf = self.croot / "updates.json"
         if uf.exists():
             self.updates = self.released("updates", "updates", "1", uf)
-            if bool(self.updates.get("sample")) != self.is_sample:
-                raise BuildError("updates.json sample flag does not match the channel")
-        if not self.records and not self.snapshots and self.is_sample:
-            raise BuildError(f"channel '{self.channel}' has no released content")
+            if self.updates.get("sample"):
+                raise BuildError("updates.json sample flag: only real content may be released")
         check_statistics(self)
         return self
 
@@ -280,7 +204,7 @@ def support_kinds(claim):
     return {c["kind"] for c in claim.get("checks", []) if c.get("result") == "confirms"}
 
 
-def validate_record(rec, rid, version, is_sample):
+def validate_record(rec, rid, version):
     where = f"record {rid} v{version}"
     unknown = set(rec) - RECORD_KEYS
     _require(not unknown, f"{where}: unknown fields {sorted(unknown)}")
@@ -288,8 +212,7 @@ def validate_record(rec, rid, version, is_sample):
     _require(not missing, f"{where}: missing fields {sorted(missing)}")
     _require(rec["public_id"] == rid and rec["version"] == version, f"{where}: id or version does not match its path")
     _require(re.fullmatch(r"[A-Z]{2,4}-\d{4}-\d{3}", rid) is not None, f"{where}: malformed public id")
-    _require(bool(rec["sample"]) == is_sample,
-             f"{where}: sample flag is {rec['sample']} but channel requires {is_sample}")
+    _require(rec["sample"] is False, f"{where}: sample flag is {rec['sample']}: only real content may be released")
     _require(rec["kind"] in KINDS, f"{where}: bad kind")
     _require(rec["track"] in TRACKS, f"{where}: bad track")
     _require(rec["status"] in {"published", "withdrawn"}, f"{where}: bad status")
@@ -338,11 +261,11 @@ def validate_record(rec, rid, version, is_sample):
     _require(rec["author_position"]["position"] in POSITIONS, f"{where}: bad author position")
 
 
-def validate_snapshot_shape(snap, stem, is_sample):
+def validate_snapshot_shape(snap, stem):
     unknown = set(snap) - SNAPSHOT_KEYS
     _require(not unknown, f"snapshot {stem}: unknown fields {sorted(unknown)}")
     _require(snap["snapshot"] == stem, f"snapshot {stem}: name mismatch")
-    _require(bool(snap.get("sample")) == is_sample, f"snapshot {stem}: sample flag does not match the channel")
+    _require(not snap.get("sample"), f"snapshot {stem}: sample flag: only real content may be released")
     for metric in snap.get("examined_by_track", {}):
         _require(metric in {"M01", "M02", "M03", "M04"},
                  f"snapshot {stem}: track breakdowns that include unreleased work are allowed only for M01-M04")
@@ -472,7 +395,6 @@ def check_statistics(content):
 
 
 # ------------------------------------------------------------------ HTML rendering
-NOINDEX = '<meta name="robots" content="noindex">'
 
 
 class Site:
@@ -549,7 +471,6 @@ POS_LONG = {
     "partly_agrees": "The authors partly agreed with the finding in writing.",
     "disagrees": "The authors disagree with the finding.",
     "none_yet": "No public author position is recorded.",
-    "courtesy_notice": "A courtesy notice was sent; notification is not a publication requirement.",
     "not_disclosed": "Not disclosed.",
     "not_contacted": "The authors were not contacted; author notification is not a publication requirement.",
     "previously_corrected": "The authors were not contacted: the error had already been corrected before this audit.",
@@ -607,8 +528,6 @@ def citation_line(w):
 
 
 def doi_html(site, doi):
-    if site.c.is_sample:
-        return f'<span class="mono">doi:{E(doi)}</span> <span class="muted">(fictional)</span>'
     return f'<a class="mono" href="https://doi.org/{E(doi)}">doi:{E(doi)}</a>'
 
 
@@ -715,9 +634,6 @@ def layout(site, page, title, body, active="", description="", indexable=False, 
     feed_link = (f'<link rel="alternate" type="application/atom+xml" title="{E(cfg["name"])} updates" href="{h("feed.xml")}">'
                  if page_on(site, "updates") else "")
     feed_foot = f' · <a href="{h("feed.xml")}">Atom feed</a>' if page_on(site, "updates") else ""
-    notice = cfg.get("demo_notice", "<strong>Test build.</strong> Fictional fixtures; not for publication.")
-    banner = f'<div class="sample-banner" role="note">{notice}</div>' if site.c.is_sample else ""
-    robots = "" if indexable or not site.c.is_sample else NOINDEX
     full_title = cfg["name"] if title == cfg["name"] else f"{title} · {cfg['name']}"
     return f"""<!doctype html>
 <html lang="en">
@@ -726,7 +642,7 @@ def layout(site, page, title, body, active="", description="", indexable=False, 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{E(full_title)}</title>
 <meta name="description" content="{E(description or cfg['descriptor'])}">
-{robots}
+
 <meta name="color-scheme" content="light dark">
 <link rel="stylesheet" href="{h('static/style.css')}">
 <link rel="icon" href="{h('static/favicon.svg')}" type="image/svg+xml">
@@ -734,7 +650,7 @@ def layout(site, page, title, body, active="", description="", indexable=False, 
 </head>
 <body class="{cls}">
 <a class="skip" href="#main">Skip to content</a>
-{banner}
+
 <header class="mast"><div class="wrap mast-in">
   <a class="brand" href="{h('')}"><span class="brand-mark" aria-hidden="true">⊢</span><span class="brand-name">{E(cfg['name'])}</span></a>
   <nav class="nav" aria-label="Main">{nav}</nav>
@@ -762,11 +678,10 @@ def render_home(site):
     cfg = site.cfg
     recs = sorted(site.c.latest_all(), key=lambda r: r["released"], reverse=True)
     k = counts(recs)
-    demo = " (demonstration)" if site.c.is_sample else ""
     stats_link = f' <a href="{site.href(page, "statistics/")}">Statistics</a>' if page_on(site, "statistics") else ""
     plural = lambda n, w: f"{n} {w}{'s' if n != 1 else ''}"
     if recs:
-        aside = f"""<p class="aside-k">Released so far{demo}</p>
+        aside = f"""<p class="aside-k">Released so far</p>
     <p class="aside-v"><strong>{k['claims']}</strong> {'claim' if k['claims'] == 1 else 'claims'} in <strong>{k['papers']}</strong> {'paper' if k['papers'] == 1 else 'papers'}</p>
     <ul class="tally">
       <li><span class="fd fd-none"><i class="mk"></i>No defect found</span><span class="n">{k['none']}</span></li>
@@ -821,7 +736,6 @@ def render_explorer(site):
     o_f = "".join(f'<option value="{f}">{E(lbl)}</option>' for f, lbl, _ in FAMILIES if f in fams)
     o_k = "".join(f'<option value="{x}">{E(CLAIM_KINDS[x])}</option>' for x in kinds)
     o_t = "".join(f'<option value="{t}">{E(TRACK_SHORT[t])}</option>' for t in tracks)
-    demo = " All records shown are fictional demonstrations." if site.c.is_sample else ""
     counted = (f'are counted in the <a href="{site.href(page, "statistics/")}">statistics</a> but not named'
                if page_on(site, "statistics") else "are not named")
     if not recs:
@@ -839,7 +753,7 @@ def render_explorer(site):
 <div class="wrap page-head">
   <h1>Cases</h1>
   <p class="lede">Every investigated claim, grouped by paper, most recently updated first. {k['claims']} claims in
-  {k['papers']} papers.{demo}</p>
+  {k['papers']} papers.</p>
   <p class="small muted">A record is published only after it meets the applicable research standard and the owner approves its exact content. Candidates still under review and rejected candidates {counted}.</p>
 </div>
 <div class="wrap">
@@ -1005,8 +919,6 @@ def render_record(site, rec, frozen=False):
     if frozen and ver != current["version"]:
         notes += (f'<p class="notice">Archived version {E(ver)}. The current version is '
                   f'<a href="{site.href(page, "cases/" + rid + "/")}">{E(current["version"])}</a>.</p>')
-    if site.c.is_sample:
-        notes += '<p class="notice">Fictional demonstration record.</p>'
     fams = [family(c)[0] for c in claims]
     status = []
     if pos["position"] in POS_SHORT:
@@ -1127,14 +1039,7 @@ never named because of an unresolved question alone.</dd></div>
 
 def render_methodology(site):
     page = "methodology/index.html"
-    fps = key_fingerprints(site.c.trust)
-    keys = ", ".join(f'<span class="mono">{E(f)}</span>' for f in fps)
-    if site.c.is_sample:
-        keys_line = f"Sample signing-key fingerprint: {keys}" if fps else "No sample signing key configured."
-        preview = " The cases on this sample build are fictional demonstrations."
-    else:
-        keys_line = "Real releases use exact SHA-256 manifests and protected GitHub Pages deployment approval."
-        preview = ""
+    keys_line = "Real releases use exact SHA-256 manifests and protected GitHub Pages deployment approval."
     steps = "".join(f"<li><strong>{E(a)}.</strong> {E(b)}</li>" for a, b in METHOD_STEPS)
     toc = [("question", "The question"), ("process", "Process"), ("standard", "Confirmation standard"),
            ("findings", "Findings"), ("verification", "Verification"), ("negative", "Negative audits"),
@@ -1201,7 +1106,7 @@ units; small counts that could identify an unpublished case are suppressed.</p><
 <section id="release"><h2>How releases are approved</h2><p>Every real record version has a release manifest containing the
 SHA-256 of its exact public data file. The site build refuses a missing or mismatched manifest. Public versions are
 immutable: corrections use a new version. A release also requires an explicit private owner decision, and the live
-GitHub Pages deployment remains protected by owner approval.{E(preview)}</p>
+GitHub Pages deployment remains protected by owner approval.</p>
 <p class="small muted">{keys_line}</p></section>
 <section id="not"><h2>What we do not do</h2><ul><li>Publish anonymous or unchecked allegations.</li>
 <li>Rank journals, fields or authors.</li><li>Report error rates for published research.</li>
@@ -1308,8 +1213,6 @@ def render_statistics(site):
         notes = ""
         if not latest:
             notes += f'<p class="notice">Archived snapshot. <a href="{site.href(page, "statistics/")}">Latest</a>.</p>'
-        if site.c.is_sample:
-            notes += '<p class="notice">Demonstration statistics. All figures are fictional.</p>'
         body = f"""
 <div class="wrap">{notes}</div>
 <div class="wrap page-head"><p class="eyebrow">Snapshot {E(snap['snapshot'])} · as of {E(fmt_date(snap['as_of']))}</p><h1>Statistics</h1>
@@ -1348,10 +1251,9 @@ def render_updates(site):
                   f'<div class="h-t"><strong>{E(u["title"])}</strong><p>{E(u["body"])}</p>'
                   f'<p class="u-links">{" · ".join(filter(None, map(link_for, u.get("links", []))))}</p></div></li>'
                   for u in items)
-    demo = '<p class="notice">The updates listed are fictional demonstrations. The policies are real.</p>' if site.c.is_sample else ""
     body = f"""
 <div class="wrap page-head"><h1>Updates and policies</h1><p class="lede">Releases, revisions, corrections and statistics
-snapshots, newest first, followed by the policies that govern them. <a href="{site.href(page, 'feed.xml')}">Atom feed</a>.</p>{demo}</div>
+snapshots, newest first, followed by the policies that govern them. <a href="{site.href(page, 'feed.xml')}">Atom feed</a>.</p></div>
 <div class="wrap reading">
 <nav class="toc" aria-label="On this page"><a href="#log">Updates</a><a href="#author-responses">Author responses</a>
 <a href="#corrections">Corrections and withdrawals</a><a href="#challenges">Challenges and replications</a></nav>
@@ -1374,7 +1276,7 @@ Substantive challenges are checked and their outcome is added to the record; rep
 consent. Allegations about papers not on this site should not be sent through public channels.</p></section>
 </div></div>
 """
-    site.add(page, layout(site, page, "Updates and policies", body, "updates/", indexable=not site.c.is_sample, cls="updates"))
+    site.add(page, layout(site, page, "Updates and policies", body, "updates/", cls="updates"))
     entries = "".join(
         f"<entry><title>{E(u['title'])}</title><id>{E(site.cfg['base_url'])}updates/#{E(u['date'])}-{i}</id>"
         f"<updated>{E(u['date'])}T00:00:00Z</updated><summary>{E(u['body'])}</summary>"
@@ -1389,10 +1291,7 @@ consent. Allegations about papers not on this site should not be sent through pu
 def render_about(site):
     page = "about/index.html"
     cfg = site.cfg
-    status = ("This site currently shows fictional demonstration cases and statistics only. No real findings have been "
-              "published. Real records will appear only after the steps described in the methodology, including the "
-              "researcher's signed approval.") if site.c.is_sample else (
-        "No case records have been released yet." if not site.c.records else "")
+    status = "No case records have been released yet." if not site.c.records else ""
     body = f"""
 <div class="wrap page-head"><h1>About</h1><p class="lede">{E(cfg['name'])}: {E(cfg['descriptor'].rstrip('.').lower())}.
 <em>{E(cfg['tagline'])}</em></p></div>
@@ -1452,21 +1351,15 @@ def load_config(root, config):
 
 
 def check_expected_trust(content, expected):
-    # Sample builds pin a throwaway signing key. Real production releases intentionally use no
-    # separate signing key; their final human control is the protected GitHub Pages deployment.
+    # Real releases intentionally use no separate signing key.
     want = sorted(x.strip() for x in (expected or "").split(",") if x.strip())
     _require(want, "no expected trust setting given (set the TRUST_FINGERPRINTS repository variable)")
-    if want == ["none"]:
-        _require(not content.is_sample and not key_fingerprints(content.trust),
-                 "TRUST_FINGERPRINTS is 'none' only for the real published channel without a signing key")
-        return
-    have = sorted(key_fingerprints(content.trust))
-    _require(have == want, f"trusted keys {have} do not match the expected fingerprints {want}")
+    _require(want == ["none"], f"expected fingerprints {want} do not match: the published channel has no signing key")
 
 
 def build(channel=None, out=None, pretty=False, denylist_file=None, root=ROOT, config="site.json", expect_trust=None):
     cfg = load_config(root, config)
-    channel = channel or cfg.get("channel", "sample")
+    channel = channel or cfg.get("channel", CHANNEL)
     content = Content(channel, root).load()
     if expect_trust is not None:
         check_expected_trust(content, expect_trust)
@@ -1520,9 +1413,7 @@ def build(channel=None, out=None, pretty=False, denylist_file=None, root=ROOT, c
         dst = out / "data" / "snapshots" / f"{s['snapshot']}.json"
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(content.croot / "snapshots" / f"{s['snapshot']}.json", dst)
-    # Demonstration pages carry a noindex tag; only genuine project pages are listed for search engines.
-    listed = sorted(p for p, text in site.pages.items() if p.endswith(".html") and p != "404.html"
-                    and NOINDEX not in text)
+    listed = sorted(p for p in site.pages if p.endswith(".html") and p != "404.html")
     robots = f"User-agent: *\nAllow: /\nSitemap: {cfg['base_url']}sitemap.xml\n"
     (out / "robots.txt").write_text(robots, encoding="utf-8", newline="\n")
     urls = "".join(f"<url><loc>{E(cfg['base_url'] + p.replace('index.html', ''))}</loc></url>" for p in listed)
@@ -1538,51 +1429,6 @@ def build(channel=None, out=None, pretty=False, denylist_file=None, root=ROOT, c
     return site, content, out
 
 
-# ------------------------------------------------------------------ signing
-def sign(channel, key, kind, rid, version, file, root=ROOT):
-    croot = root / "content" / channel
-    digest = sha256_bytes(Path(file).read_bytes())
-    st, sig = statement_paths(croot, kind, rid, version)
-    st.parent.mkdir(parents=True, exist_ok=True)
-    st.write_bytes(release_statement(kind, rid, version, digest))
-    if sig.exists():
-        sig.unlink()
-    r = subprocess.run(["ssh-keygen", "-Y", "sign", "-f", str(key), "-n", NAMESPACE, str(st)], capture_output=True)
-    if r.returncode != 0:
-        raise BuildError("signing failed: " + (r.stdout + r.stderr).decode(errors="replace"))
-    return st, sig
-
-
-def sign_sample(root=ROOT):
-    """Create a throwaway demonstration key OUTSIDE the project, sign every sample file, keep only the public key."""
-    keydir = Path(tempfile.mkdtemp(prefix="as_demo_key_"))
-    key = keydir / "demo_key"
-    subprocess.run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", "DEMONSTRATION KEY - never trust for published content",
-                    "-f", str(key)], check=True)
-    n = 0
-    for croot in sorted(p for p in (root / "content").iterdir() if p.is_dir() and re.fullmatch(r"sample(-[a-z]+)?", p.name)):
-        ch = croot.name
-        rel = croot / "releases"
-        if rel.exists():
-            shutil.rmtree(rel)
-        for f in sorted((croot / "records").glob("*/v*.json")):
-            sign(ch, key, "record", f.parent.name, f.stem[1:], f, root)
-            n += 1
-        for f in sorted((croot / "snapshots").glob("*.json")):
-            sign(ch, key, "snapshot", f.stem, "1", f, root)
-            n += 1
-        if (croot / "updates.json").exists():
-            sign(ch, key, "updates", "updates", "1", croot / "updates.json", root)
-            n += 1
-    pub = (keydir / "demo_key.pub").read_text(encoding="utf-8").strip()
-    (root / "trust" / "sample_allowed_signers").write_text(
-        "# DEMONSTRATION KEY. Signs the fictional sample content only; its private half was deleted after signing.\n"
-        "# Never add it to trust/allowed_signers.\n"
-        f'{PRINCIPAL} namespaces="{NAMESPACE}" {" ".join(pub.split()[:2])}\n', encoding="utf-8", newline="\n")
-    shutil.rmtree(keydir)
-    return n
-
-
 # ------------------------------------------------------------------ command line
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -1593,32 +1439,19 @@ def main(argv=None):
     b.add_argument("--out")
     b.add_argument("--pretty-urls", action="store_true", help="links without index.html (for the hosted site)")
     b.add_argument("--private-denylist", help="file of private terms that must not appear (never commit it)")
-    b.add_argument("--expect-trust", help="comma-separated key fingerprints the channel must trust (used by CI)")
+    b.add_argument("--expect-trust", help="must be 'none': real releases use no signing key (used by CI)")
     c = sub.add_parser("check")
-    c.add_argument("--channel", default="sample")
-    s = sub.add_parser("sign")
-    s.add_argument("--channel", default="published")
-    s.add_argument("--key", required=True)
-    s.add_argument("--kind", required=True, choices=["record", "snapshot", "updates"])
-    s.add_argument("--id", required=True)
-    s.add_argument("--version", required=True)
-    s.add_argument("--file", required=True)
-    sub.add_parser("sign-sample")
+    c.add_argument("--channel", default=CHANNEL)
     a = ap.parse_args(argv)
     try:
         if a.cmd == "build":
             site, content, out = build(a.channel, a.out, a.pretty_urls, a.private_denylist, config=a.config,
                                        expect_trust=a.expect_trust)
             print(f"built {len(site.pages)} pages ({site.cfg['name']}) into {out} from channel '{content.channel}'; "
-                  f"{len(content.verified)} signed releases verified; leak scan passed")
+                  f"{len(content.verified)} release manifests verified; leak scan passed")
         elif a.cmd == "check":
             content = Content(a.channel).load()
-            print(f"channel '{a.channel}': {len(content.verified)} signed releases verified; statistics checks passed")
-        elif a.cmd == "sign":
-            st, sig = sign(a.channel, a.key, a.kind, a.id, a.version, a.file)
-            print(f"wrote {st.name} and {sig.name}")
-        elif a.cmd == "sign-sample":
-            print(f"signed {sign_sample()} sample files with a new throwaway demonstration key")
+            print(f"channel '{a.channel}': {len(content.verified)} release manifests verified; statistics checks passed")
     except BuildError as e:
         print(f"BUILD REFUSED: {e}", file=sys.stderr)
         return 1

@@ -1,5 +1,0 @@
-as-stated-release v1
-kind: snapshot
-id: 2027-06
-version: 1
-sha256: 74f62d100eecce56368328bdd798288bd28e10ed3fbcfb7c73b3778ba2ef1776

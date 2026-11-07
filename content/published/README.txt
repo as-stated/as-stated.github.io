@@ -8,4 +8,4 @@ Real releases live here:
 
 The build refuses a released data file with no matching release manifest or with a mismatched SHA-256.
 The private publication layer records the owner's approval. The live GitHub Pages deployment remains
-protected by owner approval. Fictional sample content is never accepted in this channel.
+protected by owner approval.

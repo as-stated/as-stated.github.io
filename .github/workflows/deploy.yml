@@ -1,7 +1,7 @@
 # Builds the site and deploys it to GitHub Pages.
 # The site is built from the PUBLISHED channel. Real releases use immutable versioned data plus exact SHA-256 release
-# manifests. Fictional sample content remains test-only. TRUST_FINGERPRINTS stays "none" for the production channel;
-# sample builds retain their throwaway signature tests. Live deployment waits for the owner's approval in the protected
+# manifests. Tests generate their own data at run time. TRUST_FINGERPRINTS stays "none": real releases use no signing
+# key. Live deployment waits for the owner's approval in the protected
 # github-pages environment.
 name: Build and deploy
 on:
@@ -28,7 +28,7 @@ jobs:
           python-version: "3.12"
       - name: Tests (release gate, statistics checks, links, leak scan, layout)
         run: python -m unittest discover -s tests -v
-      - name: Build (verifies every release signature and the pinned trusted keys)
+      - name: Build (verifies every release manifest)
         env:
           TRUST_FINGERPRINTS: ${{ vars.TRUST_FINGERPRINTS }}
         run: python build.py build --channel "$SITE_CHANNEL" --pretty-urls --out _site --expect-trust "$TRUST_FINGERPRINTS"
