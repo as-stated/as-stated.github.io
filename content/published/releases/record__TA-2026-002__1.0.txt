@@ -3,4 +3,3 @@ kind: record
 id: TA-2026-002
 version: 1.0
 sha256: b08b82e3758da815214378ff58615fc7cceaf856859ce727ed9c56b63bf3f5d4
-
