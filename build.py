@@ -958,7 +958,7 @@ def render_record(site, rec, frozen=False):
       <span class="small muted">{E(rec['evidence']['licence'])}</span><ul class="files">{files}</ul></dd>
     <dt id="verification">Release verification</dt><dd class="small">Release manifest. Record file SHA-256
       <span class="mono hash" title="{E(digest)}">{E(digest[:16])}…</span> verified when the site was built.
-      Live deployment requires owner approval in the protected GitHub Pages environment.
+      The owner approves each release. Automated tests and a privacy scan must pass before it deploys.
       <a href="{site.href(page, f'data/records/{rid}/v{ver}.json')}">JSON</a> · <a href="{site.href(page, 'methodology/')}#release">How</a></dd>
     <dt>Cite this record</dt><dd><p class="cite" id="cite-text">{E(cite)}</p>
       <button class="btn" type="button" data-copy="cite-text">Copy citation</button>
@@ -1039,7 +1039,7 @@ never named because of an unresolved question alone.</dd></div>
 
 def render_methodology(site):
     page = "methodology/index.html"
-    keys_line = "Real releases use exact SHA-256 manifests and protected GitHub Pages deployment approval."
+    keys_line = "Real releases use exact SHA-256 manifests."
     steps = "".join(f"<li><strong>{E(a)}.</strong> {E(b)}</li>" for a, b in METHOD_STEPS)
     toc = [("question", "The question"), ("process", "Process"), ("standard", "Confirmation standard"),
            ("findings", "Findings"), ("verification", "Verification"), ("negative", "Negative audits"),
@@ -1105,8 +1105,8 @@ consent. Allegations about papers not on this site should not be sent through pu
 units; small counts that could identify an unpublished case are suppressed.</p></section>
 <section id="release"><h2>How releases are approved</h2><p>Every real record version has a release manifest containing the
 SHA-256 of its exact public data file. The site build refuses a missing or mismatched manifest. Public versions are
-immutable: corrections use a new version. A release also requires an explicit private owner decision, and the live
-GitHub Pages deployment remains protected by owner approval.</p>
+immutable: corrections use a new version. The owner approves each release. Automated tests and a privacy scan must pass
+before it deploys.</p>
 <p class="small muted">{keys_line}</p></section>
 <section id="not"><h2>What we do not do</h2><ul><li>Publish anonymous or unchecked allegations.</li>
 <li>Rank journals, fields or authors.</li><li>Report error rates for published research.</li>

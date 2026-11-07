@@ -18,7 +18,7 @@ holds production code and real approved public data only.
 | `static/` | Stylesheet, script (filters and copy buttons; every page works without it), favicon. |
 | `content/published/` | Real, owner-approved records, each with an exact SHA-256 release manifest. |
 | `tests/` | Unit, release-gate, statistics, link, leak and layout tests. `tests/fixtures.py` generates their data in a temporary folder at run time; none of it is stored here. |
-| `.github/workflows/deploy.yml` | Tests, builds and deploys to GitHub Pages after the owner approves. |
+| `.github/workflows/deploy.yml` | Tests, builds and deploys to GitHub Pages. |
 
 ## Local use
 
@@ -43,8 +43,8 @@ are opened directly from disk. `python build.py check` verifies releases and sta
    layer; private registry material is not copied into this repository.
 4. **Leak scan.** Every build scans output for local paths, sync-folder names, e-mail addresses and credential patterns.
    A release-specific private denylist can add terms that must remain private.
-5. **Deployment approval.** The `deploy` job runs in the protected `github-pages` environment and requires the owner's
-   approval before a new build becomes live.
+5. **Automatic deployment.** The `deploy` job needs the `build` job, so a failed test, manifest check or leak scan stops
+   it. A push to `main` that passes deploys with no further click, so a push to `main` is publication.
 
 ## Deployment workflow
 
@@ -52,8 +52,7 @@ are opened directly from disk. `python build.py check` verifies releases and sta
 2. Commit and push to `main`.
 3. GitHub Actions runs the tests, builds the site (verifying every release manifest) and
    uploads the result.
-4. While the `github-pages` environment requires a reviewer, approve the deployment on the run page in
-   the Actions tab (Review deployments → `github-pages` → Approve and deploy).
+4. If those pass, the `deploy` job publishes the build to the `github-pages` environment.
 5. Check <https://as-stated.github.io/> and a nested page (for example a case record) over HTTPS.
 
 Pull requests run the tests and build but never deploy.
@@ -80,7 +79,7 @@ Only after the owner decides to publish a specific record:
 2. Add the matching SHA-256 release statement under `content/published/releases/`.
 3. Run tests and a production build with the release-specific private denylist.
 4. Review the diff, commit and push to `main`.
-5. Approve the resulting `github-pages` deployment in GitHub.
+5. Check that the resulting deployment succeeded and that the record is live.
 
 Nothing in the private research archive is copied here automatically.
 

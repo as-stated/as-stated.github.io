@@ -232,6 +232,8 @@ class BuildTests(unittest.TestCase):
     def test_methodology_states_how_releases_are_controlled(self):
         page = (self.out_p / "methodology/index.html").read_text(encoding="utf-8")
         self.assertIn("exact SHA-256 manifests", page)
+        self.assertIn("The owner approves each release.", page)
+        self.assertNotIn("protected", page)
 
     def test_every_author_position_renders(self):
         seen = {r["author_position"]["position"] for r in self.content.latest_all()}

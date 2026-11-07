@@ -1,8 +1,7 @@
 # Builds the site and deploys it to GitHub Pages.
 # The site is built from the PUBLISHED channel. Real releases use immutable versioned data plus exact SHA-256 release
 # manifests. Tests generate their own data at run time. TRUST_FINGERPRINTS stays "none": real releases use no signing
-# key. Live deployment waits for the owner's approval in the protected
-# github-pages environment.
+# key. The deploy job needs the build job, so it runs only after the tests, manifest checks and leak scan pass.
 name: Build and deploy
 on:
   push:
@@ -44,7 +43,7 @@ jobs:
       pages: write
       id-token: write
     environment:
-      name: github-pages  # protected: the owner must approve each deployment
+      name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
