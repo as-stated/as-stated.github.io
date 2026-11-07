@@ -526,7 +526,7 @@ class LayoutTests(unittest.TestCase):
 
 class ProductionLayoutTests(LayoutTests):
     """Layout of the production build (published channel, optional pages off)."""
-    PAGES = ["", "cases/", "cases/TA-2026-001/", "methodology/", "definitions/", "about/", "404.html"]
+    PAGES = ["", "cases/", "cases/TA-2026-001/", "cases/TA-2026-002/", "cases/TA-2026-003/", "methodology/", "definitions/", "about/", "404.html"]
 
     @classmethod
     def project_root(cls):
@@ -536,8 +536,8 @@ class ProductionLayoutTests(LayoutTests):
         self.assertIsNotNone(self.results, self.raw)
         f = next(x for x in self.results if "filter" in x)
         self.assertTrue(f["formVisible"])
-        self.assertEqual(f["filter"], "none")
-        self.assertEqual(f["shown"], 2)
+        self.assertEqual(f["filter"], "construction")
+        self.assertEqual(f["shown"], 1)
 
 
 class ProductionTests(unittest.TestCase):
@@ -558,8 +558,9 @@ class ProductionTests(unittest.TestCase):
 
     def test_builds_from_the_published_channel_only(self):
         self.assertEqual(self.content.channel, "published")
-        self.assertIn("TA-2026-001", self.content.records)
-        self.assertTrue((self.out / "data/records/TA-2026-001/v1.0.json").exists())
+        self.assertEqual(set(self.content.records), {"TA-2026-001", "TA-2026-002", "TA-2026-003"})
+        for rid in self.content.records:
+            self.assertTrue((self.out / f"data/records/{rid}/v1.0.json").exists())
 
     def test_navigation_is_cases_methodology_definitions_about(self):
         nav = re.search(r'<nav class="nav"[^>]*>(.*?)</nav>', (self.out / "index.html").read_text(encoding="utf-8")).group(1)
@@ -592,14 +593,19 @@ class ProductionTests(unittest.TestCase):
             if path.is_file() and not ignored & set(path.relative_to(ROOT).parts):
                 self.assertNotRegex(path.read_text(encoding="utf-8", errors="replace"), BANNED_TREE, str(path))
 
-    def test_cases_page_contains_the_real_record(self):
+    def test_cases_page_contains_the_real_records(self):
         cases = (self.out / "cases/index.html").read_text(encoding="utf-8")
         home = (self.out / "index.html").read_text(encoding="utf-8")
-        self.assertIn("Stability and strategy-proofness for matching with constraints", cases)
-        self.assertIn("TA-2026-001", cases)
-        self.assertIn("Kamada", cases)
+        for rid, title, author in [
+            ("TA-2026-001", "Stability and strategy-proofness for matching with constraints", "Kamada"),
+            ("TA-2026-002", "Safe implementation", "Gavan"),
+            ("TA-2026-003", "A Qualitative Theory of Large Games with Strategic Complementarities", "Balbus"),
+        ]:
+            self.assertIn(rid, cases)
+            self.assertIn(title, cases)
+            self.assertIn(author, cases)
+            self.assertIn(title, home)
         self.assertNotIn("No case records have been released yet.", cases)
-        self.assertIn("Stability and strategy-proofness for matching with constraints", home)
 
     def test_policies_live_on_the_methodology_page(self):
         m = (self.out / "methodology/index.html").read_text(encoding="utf-8")

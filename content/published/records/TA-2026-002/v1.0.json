@@ -1,0 +1,118 @@
+{
+  "public_id": "TA-2026-002",
+  "version": "1.0",
+  "released": "2026-11-07",
+  "status": "published",
+  "sample": false,
+  "kind": "defect",
+  "track": "mechanism_design",
+  "title": "Gavan and Penta (2025)",
+  "headline": "The mechanism displayed in the proof of Theorem 3 admits an unwanted Nash equilibrium in an admitted instance. The existential conclusion of Theorem 3 is not refuted.",
+  "work": {
+    "authors": [
+      "Malachy J. Gavan",
+      "Antonio Penta"
+    ],
+    "title": "Safe implementation",
+    "venue": "Theoretical Economics",
+    "year": 2025,
+    "volume": "20(4)",
+    "pages": "1285–1322",
+    "doi": "10.3982/TE5983"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Theorem 3 proof construction",
+      "kind": "construction",
+      "role": "main",
+      "page": "1299; 1310–1311",
+      "gist": "The four-rule message mechanism displayed in the proof implements the correspondence throughout the stated domain.",
+      "statement": "The four-rule message mechanism displayed in the proof of Theorem 3 implements F under the theorem's hypotheses for every admissible integer 1 ≤ k < n/2.",
+      "conditions": [
+        "at least three agents",
+        "1 ≤ k < n/2",
+        "strong comonotonicity",
+        "safe no-veto",
+        "the published priority-ordered Rules (i)–(iv)"
+      ],
+      "quantifiers": "Every admitted environment satisfying the hypotheses of Theorem 3 and every admissible safety level k.",
+      "result": {
+        "outcome": "defect_found",
+        "candidate_status": "confirmed",
+        "defect_class": "construction_or_algorithm_fails",
+        "affects": "lemma_or_proof_step",
+        "depth": "deep_audit",
+        "summary": "The displayed mechanism can select an outcome outside F at a pure Nash equilibrium.",
+        "witness": "With one state, outcomes {a,b}, F={b}, three agents and k=1, let agents 1 and 2 prefer b to a and agent 3 prefer a to b. At messages ((a,s,1),(a,s,1),(b,s,1)), the printed rules select a, outside F. The two agents who prefer b cannot profitably change the outcome by switching their report, and agent 3 already receives her preferred outcome.",
+        "tested": "The minimal three-agent witness was checked against the published Rules (i)–(iv), the theorem's stated assumptions and the legal unilateral reports. Historical finite checks and a separate informed AI validation corroborate the construction failure.",
+        "not_claimed": [
+          "The existential conclusion of Theorem 3 is not claimed to be false.",
+          "The record does not claim that no alternative mechanism can safely implement F.",
+          "The record does not publish or assess any private proposed correction."
+        ],
+        "repair": "none_proposed"
+      },
+      "vor_check": {
+        "level": "full",
+        "pages": "1298–1299, 1310–1311",
+        "detail": "The definitions, Theorem 3, the displayed Rules (i)–(iv) and the decisive proof step were checked on rendered pages of the publisher-hosted version of record."
+      },
+      "checks": [
+        {
+          "kind": "ai_recheck",
+          "date": "2026-10",
+          "result": "confirms",
+          "detail": "A separate informed AI validation checked the analytic failure family against the printed mechanism.",
+          "session": "informed"
+        },
+        {
+          "kind": "private_human_confirmation",
+          "date": "2026-10",
+          "result": "confirms",
+          "detail": "A qualifying human confirmation is recorded in the private research file. Its source and correspondence are not disclosed."
+        }
+      ],
+      "novelty": null
+    }
+  ],
+  "author_position": {
+    "position": "not_disclosed",
+    "summary": null
+  },
+  "correction": null,
+  "evidence": {
+    "package_doi": null,
+    "package_sha256": null,
+    "licence": "No public evidence package released.",
+    "files": []
+  },
+  "history": [
+    {
+      "date": "2026-10",
+      "type": "audit",
+      "label": "Construction defect identified and separately rechecked"
+    },
+    {
+      "date": "2026-10-31",
+      "type": "source",
+      "label": "Full published-version source check completed"
+    },
+    {
+      "date": "2026-11-07",
+      "type": "release",
+      "label": "Record version 1.0 released"
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2026-11-07",
+      "change": "First release."
+    }
+  ],
+  "statements": {
+    "ai_use": "AI systems were used for discovery and separate hostile rechecking. Confirmation also includes a qualifying human check recorded privately. Private correspondence is not disclosed, and AI agreement is not treated as human verification."
+  }
+}
