@@ -36,8 +36,9 @@ SUPPORT_KINDS = {
     "independent_reproduction": "Independently reproduced by the researcher",
     "external_human": "Verified by an external human",
     "author_agreement": "Written agreement by the authors",
+    "private_human_confirmation": "Qualifying human confirmation recorded privately",
 }
-HUMAN_KINDS = {"independent_reproduction", "external_human", "author_agreement"}
+HUMAN_KINDS = {"independent_reproduction", "external_human", "author_agreement", "private_human_confirmation"}
 DEFECT_CLASSES = {
     "statement_false": "Statement false as printed",
     "proof_invalid_statement_open": "Proof invalid; statement unresolved",
@@ -456,13 +457,15 @@ DEFECT_FAMILY = {
     "missing_or_hidden_assumption": ("assumption", None), "construction_or_algorithm_fails": ("construction", None),
 }
 HUMAN_ORDER = [("independent_reproduction", "Researcher"), ("external_human", "External"),
-               ("author_agreement", "Authors")]
+               ("author_agreement", "Authors"), ("private_human_confirmation", "Private human")]
 LADDER = [
     ("ai_recheck", "Separate AI recheck", "Not done", "An AI model in a new session. Never counted as a human check."),
     ("independent_reproduction", "Reproduced by the researcher", "Not done",
      "Re-derived by hand or with separately written code."),
     ("external_human", "External human verification", "Not done", "Someone outside the programme, in their own name."),
     ("author_agreement", "Written author agreement", "Not given", "The authors agreed in writing."),
+    ("private_human_confirmation", "Qualifying human confirmation (private)", "Not recorded",
+     "A human confirmation is recorded in the private research file without disclosing its source or correspondence."),
 ]
 POS_SHORT = {"agrees": "Authors agree", "partly_agrees": "Authors partly agree", "disagrees": "Authors disagree",
              "none_yet": "No public author position", "not_contacted": "Not contacted"}
@@ -767,7 +770,8 @@ def render_explorer(site):
 {claim_index(site, page, recs)}
 <p class="note">Finding labels are defined in <a href="{site.href(page, 'definitions/')}#findings">Definitions</a>.
 Verification shows which kinds of check confirmed a defect: the dashed "AI" tag is a separate AI recheck, which never
-counts as a human check; the three squares are the researcher, an external person and the authors. {E(SELECTION_STATEMENT)}</p>
+counts as a human check; human support may be the researcher, an external person, the authors, or a qualifying human
+confirmation recorded privately without identifying its source. {E(SELECTION_STATEMENT)}</p>
 </div>
 """
     site.add(page, layout(site, page, "Cases", body, "cases/", "Index of investigated claims", cls="cases"))
@@ -1025,7 +1029,7 @@ question appears by name only inside a record that is released for other, settle
 never named because of an unresolved question alone.</dd></div>
 <div class="def"><dt>Rejected</dt><dd>A check showed the suspected defect does not exist. Counted, never named.</dd></div>
 <div class="def"><dt id="withdrawn">Withdrawn</dt><dd>A released record we no longer stand behind. The page stays online with the reason.</dd></div></dl></section>
-<section id="checks"><h2>Kinds of check</h2><p>Verification is shown as four kinds of check. Only the last three are human checks.</p>
+<section id="checks"><h2>Kinds of check</h2><p>Verification distinguishes a separate AI recheck from four human-support categories. A private human confirmation records only that the confirmation standard was met; it does not disclose the source or correspondence.</p>
 <dl class="defs">{lad}</dl><p>Rerunning the original evidence package shows the package works; it is reported separately and is not counted as a check.</p></section>
 <section id="vor"><h2>Source check</h2><p>The decisive elements are the statement, every definition and assumption the finding relies on, the decisive step, and any supplement the claim depends on.</p><ul>{vor}</ul></section>
 <section id="authors"><h2>Author positions</h2><p>Author contact is not a publication requirement. When a written author position exists, it may be recorded as agreed, partly agreed or disagreed. A record may also state that the authors were not contacted. Private correspondence is published only with separate consent to its public use.</p></section>
