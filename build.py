@@ -434,7 +434,7 @@ TRACK_SHORT = {"game_theory": "Game theory", "mechanism_design": "Mechanism desi
 CLAIM_KINDS = {"theorem": "Theorem", "proposition": "Proposition", "lemma": "Lemma", "corollary": "Corollary",
                "remark": "Remark", "algorithm": "Algorithm", "construction": "Construction", "application": "Application"}
 ROLES = {"main": "main result", "supporting": "supporting result", "secondary": "secondary result",
-         "application": "application", "repair": "corrected version"}
+         "auxiliary": "auxiliary result", "application": "application", "repair": "corrected version"}
 FAMILIES = [
     ("none", "No defect found",
      "A deep audit within a stated scope found no defect. This is not a proof that the claim is correct."),
