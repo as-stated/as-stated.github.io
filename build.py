@@ -467,12 +467,12 @@ LADDER = [
     ("private_human_confirmation", "Qualifying human confirmation (private)", "Not recorded",
      "A human confirmation is recorded in the private research file without disclosing its source or correspondence."),
 ]
-POS_SHORT = {"agrees": "Authors agree", "partly_agrees": "Authors partly agree", "disagrees": "Authors disagree",
+POS_SHORT = {"agrees": "Author response agrees", "partly_agrees": "Author response partly agrees", "disagrees": "Author response disagrees",
              "none_yet": "No public author position", "not_contacted": "Not contacted"}
 POS_LONG = {
-    "agrees": "The authors agreed with the finding in writing.",
-    "partly_agrees": "The authors partly agreed with the finding in writing.",
-    "disagrees": "The authors disagree with the finding.",
+    "agrees": "A written author response agrees with the finding.",
+    "partly_agrees": "A written author response partly agrees with the finding.",
+    "disagrees": "A written author response disagrees with the finding.",
     "none_yet": "No public author position is recorded.",
     "not_disclosed": "Not disclosed.",
     "not_contacted": "The authors were not contacted; author notification is not a publication requirement.",
