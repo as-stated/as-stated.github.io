@@ -558,7 +558,7 @@ class ProductionTests(unittest.TestCase):
 
     def test_builds_from_the_published_channel_only(self):
         self.assertEqual(self.content.channel, "published")
-        self.assertEqual(set(self.content.records), {"TA-2026-001", "TA-2026-002", "TA-2026-003"})
+        self.assertEqual(set(self.content.records), {"TA-2026-001", "TA-2026-002", "TA-2026-003", "TA-2026-004"})
         for rid in self.content.records:
             self.assertTrue((self.out / f"data/records/{rid}/v1.0.json").exists())
 
