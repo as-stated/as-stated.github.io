@@ -54,9 +54,9 @@
         "repair_note": "Compactness of the relevant outsider fibre supplies the missing finite-subcover step and yields a uniform neighbourhood. A later public paper by Scalzo (2022) uses this compactness argument in an analogous proposition for exchange economies."
       },
       "vor_check": {
-        "level": "full",
-        "pages": "1147–1148",
-        "detail": "The Section 3 domain, alpha-blocking definition, coalitional deviation definition, Proposition 4.1 and the decisive open-graph proof step were checked against the rendered Springer Version of Record; Proposition 4.1 is on p. 1148."
+        "level": "partial",
+        "pages": "1148",
+        "detail": "The Proposition 4.1 statement and decisive proof step were rechecked against the official Springer Version of Record text at printed p. 1148. Rendered-page screenshot verification was not completed, so the source lock remains partial."
       },
       "checks": [
         {
@@ -96,7 +96,7 @@
     {
       "date": "2026-11-12",
       "type": "source",
-      "label": "Full rendered Version of Record check completed"
+      "label": "Version of Record text rechecked; exact Proposition 4.1 page pinpointed at p. 1148"
     },
     {
       "date": "2026-11-12",
