@@ -1,0 +1,4 @@
+# Build-time dependency. Pinned and hash-checked; installed with: pip install --require-hashes -r requirements.txt
+# latex2mathml converts the \( ... \) and \[ ... \] formulas in schema-2 records to static MathML.
+latex2mathml==3.80.0 \
+    --hash=sha256:2ddc8269896c1c29257267b74a050676692255def766feaddeab56e8831f1115
