@@ -1,0 +1,118 @@
+{
+  "public_id": "TA-2026-004",
+  "version": "1.0",
+  "released": "2026-11-12",
+  "status": "published",
+  "sample": false,
+  "kind": "defect",
+  "track": "game_theory",
+  "title": "Basile and Scalzo (2020)",
+  "headline": "Proposition 4.1 is false on the stated noncompact domain: open graph alone does not imply the coalitional deviation property.",
+  "work": {
+    "authors": [
+      "Achille Basile",
+      "Vincenzo Scalzo"
+    ],
+    "title": "Non-emptiness of the alpha-core: sufficient and necessary conditions",
+    "venue": "International Journal of Game Theory",
+    "year": 2020,
+    "volume": "49",
+    "pages": "1143–1153",
+    "doi": "10.1007/s00182-020-00736-y"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Proposition 4.1",
+      "kind": "proposition",
+      "role": "secondary",
+      "page": "1148",
+      "gist": "Open graph of every preference correspondence is claimed to imply the coalitional deviation property.",
+      "statement": "If every preference correspondence P_i has open graph, then the game satisfies the coalitional deviation property.",
+      "conditions": [
+        "finite player set",
+        "each strategy set is nonempty",
+        "each preference correspondence P_i has open graph",
+        "no compactness assumption is imposed by Proposition 4.1 or the Section 3 game domain"
+      ],
+      "quantifiers": "Every strategic-form game with non-ordered preferences admitted by the paper's Section 3 domain whose preference correspondences have open graph.",
+      "result": {
+        "outcome": "defect_found",
+        "candidate_status": "confirmed",
+        "defect_class": "statement_false",
+        "affects": "secondary_result",
+        "depth": "deep_audit",
+        "summary": "Pointwise openness along an entire blocking fibre does not yield one uniform product neighbourhood when the outsider fibre is noncompact.",
+        "witness": "Take two players with X1=X2=R. Let P1(z)={y: |y1-z1-2| < 1/(1+|y2|)} and P2(z)=∅. Both graphs are open. Every profile z is alpha-blocked by coalition {1}, using x1=z1+2. But a fixed proposed deviation x1=a blocks only profiles with z1=a-2, so no fixed deviation works throughout any open neighbourhood. The coalitional deviation property therefore fails.",
+        "tested": "A separate informed hostile-validation session checked the open-graph property, irreflexivity/asymmetry of the active relation, alpha-blocking of every profile, failure of the coalitional deviation property, and the role of noncompactness. The published statement and decisive proof step were then rechecked against the Springer Version of Record.",
+        "not_claimed": [
+          "Theorem 4.1 is not claimed to be false.",
+          "Theorem 4.2 is not claimed to be false.",
+          "Open graph is not claimed to be insufficient when the relevant outsider fibres are compact."
+        ],
+        "repair": "local_repair_proposed",
+        "repair_note": "Compactness of the relevant outsider fibre supplies the missing finite-subcover step and yields a uniform neighbourhood. A later public paper by Scalzo (2022) uses this compactness argument in an analogous proposition for exchange economies."
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "1148",
+        "detail": "The Proposition 4.1 statement and decisive proof step were rechecked against the official Springer Version of Record text at printed p. 1148. Rendered-page screenshot verification was not completed, so the source lock remains partial."
+      },
+      "checks": [
+        {
+          "kind": "ai_recheck",
+          "date": "2026-11",
+          "result": "confirms",
+          "detail": "A separate informed hostile-validation session reconstructed the noncompact two-player counterexample and attacked the proposed defect from multiple directions.",
+          "session": "informed"
+        },
+        {
+          "kind": "private_human_confirmation",
+          "date": "2026-11",
+          "result": "confirms",
+          "detail": "A qualifying human confirmation is recorded in the private research file. Its source and correspondence are not disclosed."
+        }
+      ],
+      "novelty": null
+    }
+  ],
+  "author_position": {
+    "position": "not_disclosed",
+    "summary": null
+  },
+  "correction": null,
+  "evidence": {
+    "package_doi": null,
+    "package_sha256": null,
+    "licence": "No public evidence package released.",
+    "files": []
+  },
+  "history": [
+    {
+      "date": "2026-11-09",
+      "type": "audit",
+      "label": "Exact counterexample identified and separately rechecked"
+    },
+    {
+      "date": "2026-11-12",
+      "type": "source",
+      "label": "Version of Record text rechecked; exact Proposition 4.1 page pinpointed at p. 1148"
+    },
+    {
+      "date": "2026-11-12",
+      "type": "release",
+      "label": "Record version 1.0 approved for release"
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2026-11-12",
+      "change": "First release."
+    }
+  ],
+  "statements": {
+    "ai_use": "AI systems were used for discovery and separate hostile rechecking. Confirmation also includes a qualifying human check recorded privately. Private correspondence is not disclosed, and AI agreement is not treated as human verification."
+  }
+}
