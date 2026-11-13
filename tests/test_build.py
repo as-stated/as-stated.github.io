@@ -747,8 +747,9 @@ class LayoutTests(unittest.TestCase):
         self.assertIsNotNone(self.results, self.raw)
         f = next(x for x in self.results if "filter" in x)
         self.assertTrue(f["formVisible"])
-        self.assertEqual(f["shown"], 3)
-        self.assertTrue(f["count"].startswith("3 of "))
+        # Four fixture claims have a construction defect: TEST-2000-002, -003, -017 and the schema-2 TEST-2000-020.
+        self.assertEqual(f["shown"], 4)
+        self.assertTrue(f["count"].startswith("4 of "))
 
 
 class ProductionLayoutTests(LayoutTests):
