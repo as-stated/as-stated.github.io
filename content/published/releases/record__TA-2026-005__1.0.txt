@@ -1,0 +1,5 @@
+as-stated-release v1
+kind: record
+id: TA-2026-005
+version: 1.0
+sha256: a9d78ca7399f79738d28db71cfa48e170c94dcf02b71a4f7f2beacbe258f563f
