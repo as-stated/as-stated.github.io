@@ -754,7 +754,7 @@ class LayoutTests(unittest.TestCase):
 
 class ProductionLayoutTests(LayoutTests):
     """Layout of the production build (published channel, optional pages off)."""
-    PAGES = ["", "cases/", "cases/TA-2026-001/", "cases/TA-2026-002/", "cases/TA-2026-003/", "methodology/", "definitions/", "about/", "404.html"]
+    PAGES = ["", "cases/", "cases/TA-2026-001/", "cases/TA-2026-002/", "cases/TA-2026-003/", "cases/TA-2026-004/", "cases/TA-2026-005/", "methodology/", "definitions/", "about/", "404.html"]
 
     @classmethod
     def project_root(cls):
@@ -765,7 +765,7 @@ class ProductionLayoutTests(LayoutTests):
         f = next(x for x in self.results if "filter" in x)
         self.assertTrue(f["formVisible"])
         self.assertEqual(f["filter"], "construction")
-        self.assertEqual(f["shown"], 1)
+        self.assertEqual(f["shown"], 2)
 
 
 class ProductionTests(unittest.TestCase):
@@ -786,7 +786,7 @@ class ProductionTests(unittest.TestCase):
 
     def test_builds_from_the_published_channel_only(self):
         self.assertEqual(self.content.channel, "published")
-        self.assertEqual(set(self.content.records), {"TA-2026-001", "TA-2026-002", "TA-2026-003", "TA-2026-004"})
+        self.assertEqual(set(self.content.records), {"TA-2026-001", "TA-2026-002", "TA-2026-003", "TA-2026-004", "TA-2026-005"})
         for rid in self.content.records:
             self.assertTrue((self.out / f"data/records/{rid}/v1.0.json").exists())
 
@@ -824,15 +824,21 @@ class ProductionTests(unittest.TestCase):
     def test_cases_page_contains_the_real_records(self):
         cases = (self.out / "cases/index.html").read_text(encoding="utf-8")
         home = (self.out / "index.html").read_text(encoding="utf-8")
-        for rid, title, author in [
+        records = [
             ("TA-2026-001", "Stability and strategy-proofness for matching with constraints", "Kamada"),
             ("TA-2026-002", "Safe implementation", "Gavan"),
             ("TA-2026-003", "A Qualitative Theory of Large Games with Strategic Complementarities", "Balbus"),
-        ]:
+            ("TA-2026-004", "Non-emptiness of the alpha-core: sufficient and necessary conditions", "Basile"),
+            ("TA-2026-005", "Symbiotic Positioning, Navigation, and Timing via Game Theory and Reinforcement Learning", "Siraj"),
+        ]
+        for rid, title, author in records:
             self.assertIn(rid, cases)
             self.assertIn(title, cases)
             self.assertIn(author, cases)
+        # The home page intentionally shows only the four most recent paper groups.
+        for _, title, _ in records[1:]:
             self.assertIn(title, home)
+        self.assertNotIn(records[0][1], home)
         self.assertNotIn("No case records have been released yet.", cases)
 
     def test_policies_live_on_the_methodology_page(self):
