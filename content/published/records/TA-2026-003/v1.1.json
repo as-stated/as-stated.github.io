@@ -1,0 +1,176 @@
+{
+  "public_id": "TA-2026-003",
+  "version": "1.1",
+  "schema": 2,
+  "released": "2026-11-13",
+  "status": "published",
+  "sample": false,
+  "kind": "defect",
+  "track": "game_theory",
+  "title": "Balbus et al. (2019)",
+  "headline": "Theorem 1(i) is false under the order assumptions as printed, and the appendix contains an independent function-space defect.",
+  "work": {
+    "authors": [
+      "Łukasz Balbus",
+      "Paweł Dziewulski",
+      "Kevin Reffett",
+      "Łukasz Woźny"
+    ],
+    "title": "A Qualitative Theory of Large Games with Strategic Complementarities",
+    "venue": "Economic Theory",
+    "year": 2019,
+    "volume": "67",
+    "pages": "497–523",
+    "doi": "10.1007/s00199-017-1075-7"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Theorem 1(i)",
+      "kind": "theorem",
+      "role": "main",
+      "page": "503–504",
+      "gist": "Under Assumption 1, greatest and least distributional equilibria exist.",
+      "statement": "Under Assumption 1, there exists a greatest and a least distributional equilibrium of the game.",
+      "conditions": [
+        "compact perfect Hausdorff type space with a regular singleton-null probability measure",
+        "weakly measurable complete-sublattice-valued feasible actions",
+        "the printed partial-order condition that pair comparison implies action comparison",
+        "quasisupermodularity, single-crossing differences and the stated Carathéodory condition"
+      ],
+      "quantifiers": "Every game admitted by the standing framework and Assumption 1.",
+      "result": {
+        "outcome": "defect_found",
+        "status": "confirmed",
+        "defect_class": "statement_false",
+        "affects": "main_result",
+        "depth": "deep_audit",
+        "summary": "The literal one-way order condition admits a game satisfying Assumption 1 with no distributional equilibrium.",
+        "witness": "Take types \\([0,1]\\) with Lebesgue probability, actions \\(\\{0,1\\}\\), a constant feasible-action set, and equality as the partial order on type-action pairs. Let \\(p\\) be the mass choosing action 1. Make action 1 uniquely optimal when \\(p<1/2\\) and action 0 uniquely optimal when \\(p\\ge 1/2\\). Equality is permitted by the printed one-way order condition and makes the induced stochastic order equality, so the single-crossing condition is vacuous. Any equilibrium with \\(p<1/2\\) would force \\(p=1\\); any equilibrium with \\(p\\ge 1/2\\) would force \\(p=0\\). Hence no distributional equilibrium exists.",
+        "argument": "With equality as the order, the single-crossing condition is vacuous, so each best reply depends only on \\(p\\). Every candidate value is ruled out: \\(p<1/2\\) forces \\(p=1\\), and \\(p\\ge 1/2\\) forces \\(p=0\\).",
+        "not_claimed": [
+          "The record does not claim that the authors' intended stronger order condition is false.",
+          "Applications that independently impose a product or same-type action order are not claimed to fail.",
+          "No downstream paper is claimed to be incorrect without checking its own assumptions."
+        ],
+        "repair": "local_repair_proposed",
+        "repair_note": "A same-type fiber condition requiring action order to imply pair order excludes the counterexample and supplies a comparison used in the proof. The appendix chain-completeness argument still needs a separate valid justification."
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "503–504",
+        "detail": "The canonical source lock is partial because the historical decisive check used extracted final publisher text rather than a complete rendered-page verification. The theorem wording and order assumptions were rechecked on the publisher-hosted article during release preparation."
+      },
+      "evidence": [
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-10",
+          "session": "informed",
+          "detail": "A separate informed hostile-validation session reconstructed the assumptions, tested rescue attempts and confirmed the exact counterexample. The exact assumption matrix, the induced stochastic order, strict best replies and the equilibrium contradiction were checked; a strengthened four-action witness also defeats the rescue via greatest and least feasible distributions or chain completeness."
+        }
+      ],
+      "author_response": {
+        "position": "agrees",
+        "responder": "some",
+        "basis": "original",
+        "counts": true
+      }
+    },
+    {
+      "id": "c2",
+      "label": "Lemma A1 proof: function-space step",
+      "kind": "lemma",
+      "role": "auxiliary",
+      "page": "519",
+      "gist": "The proof treats M(X)-M(X), where M(X) contains bounded measurable isotone functions, as a Riesz subspace of C(X).",
+      "statement": "In the proof of Lemma A1, \\(M(X)-M(X)\\) is asserted to be a Riesz subspace of the continuous functions \\(C(X)\\).",
+      "conditions": [
+        "X is a compact Hausdorff partially ordered space",
+        "\\(M(X)\\) is defined as the bounded measurable isotone real-valued functions on \\(X\\)"
+      ],
+      "quantifiers": "The appendix argument is presented for the stated general class of compact ordered spaces and regular measures.",
+      "result": {
+        "outcome": "defect_found",
+        "status": "confirmed",
+        "defect_class": "missing_or_hidden_assumption",
+        "affects": "lemma_or_proof_step",
+        "depth": "deep_audit",
+        "summary": "Measurability and isotonicity do not imply continuity, so the asserted inclusion in \\(C(X)\\) does not follow.",
+        "witness": "Under the equality order, every bounded measurable function is isotone. Discontinuous indicator functions therefore belong to \\(M(X)\\), so \\(M(X)\\) and \\(M(X)-M(X)\\) need not be contained in \\(C(X)\\). The Stone–Weierstrass step cannot be justified from the displayed definition as written.",
+        "argument": "The Stone–Weierstrass step needs the functions in \\(M(X)\\) to be continuous. The displayed definition requires only measurability and boundedness, so the step rests on an assumption the paper does not state.",
+        "not_claimed": [
+          "This defect alone is not claimed to falsify the conclusion of Lemma A1.",
+          "The record does not claim that no alternative proof of the relevant measure-order result exists.",
+          "The record does not publish or rely on any private proposed correction."
+        ],
+        "repair": "local_repair_proposed",
+        "repair_note": "The function class or the proof must be strengthened so that the functions used in the Stone-Weierstrass argument are continuous; a complete repair of the constrained-measure chain-completeness argument is not claimed here."
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "519",
+        "detail": "The canonical source lock is partial because the historical check used extracted final publisher text. The publisher-hosted article was rechecked during release preparation and still defines M(X) as measurable and bounded before asserting the subspace inclusion."
+      },
+      "evidence": [
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-10",
+          "session": "informed",
+          "detail": "A separate informed hostile-validation session confirmed the mismatch between the displayed definition of M(X) and the continuity required by the proof."
+        }
+      ],
+      "author_response": {
+        "position": "agrees",
+        "responder": "some",
+        "basis": "original",
+        "counts": true
+      }
+    }
+  ],
+  "correction": null,
+  "related": [],
+  "evidence": {
+    "package_doi": null,
+    "package_sha256": null,
+    "licence": "No public evidence package released.",
+    "files": []
+  },
+  "history": [
+    {
+      "date": "2026-10",
+      "type": "audit",
+      "label": "Theorem-level counterexample and appendix defect identified and separately rechecked"
+    },
+    {
+      "date": "2026-10",
+      "type": "source",
+      "label": "Published-source text checked; canonical VOR level remains partial"
+    },
+    {
+      "date": "2026-11-07",
+      "type": "release",
+      "label": "Record version 1.0 released"
+    },
+    {
+      "date": "2026-11-13",
+      "type": "correction",
+      "label": "Verification description corrected in version 1.1"
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2026-11-07",
+      "change": "First release."
+    },
+    {
+      "version": "1.1",
+      "date": "2026-11-13",
+      "change": "Corrected the verification description. The counted support is a separate-session hostile AI recheck and written author agreement; the written author agreement is shown as the author response. No change to the mathematical finding."
+    }
+  ],
+  "statements": {
+    "ai_use": "AI systems were used for discovery and separate hostile rechecking. Written author agreement is also recorded. Private correspondence is not disclosed, and AI agreement is not treated as human verification."
+  }
+}

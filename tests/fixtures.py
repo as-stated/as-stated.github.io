@@ -132,6 +132,90 @@ def records():
     ]
 
 
+# ---------------------------------------------------------------- schema 2 (open and confirmed findings, math, responses)
+def ev(kind, date="2000-01", session=None, identity=None):
+    e = {"type": kind, "date": date, "detail": f"Test detail for {kind}, with \\(y_1\\) checked."}
+    if session:
+        e["session"] = session
+    if identity:
+        e["identity"] = identity
+    return e
+
+
+def response(position, counts=False, basis="none", responder=None, covers=None, assessment=None):
+    r = {"position": position, "counts": counts, "basis": basis}
+    if position in {"agrees", "partly_agrees", "disagrees"}:
+        r["responder"] = responder or "all"
+        r["covers"] = covers or "Test covers statement with \\(P_i\\)."
+    if assessment:
+        r["assessment"] = assessment
+    return r
+
+
+def defect2(n, index, status, evidence, response_, defect_class=FALSE, affects=MAIN, repair="none_proposed", level="partial"):
+    result = {"outcome": "defect_found", "status": status, "defect_class": defect_class, "affects": affects,
+              "depth": "deep_audit", "summary": f"Test summary {n}.{index} with \\(P_{index}\\) failing.",
+              "witness": f"Test witness \\(x_{index} = 1\\) and \\[\\frac{{1}}{{1+|y_2|}} < 1.\\]",
+              "argument": f"Test argument {n}.{index}: \\(\\mathbb{{R}}^n\\) is not compact.",
+              "not_claimed": [f"Test non-claim {n}.{index} about \\(T\\)."], "repair": repair}
+    if repair != "none_proposed":
+        result["repair_note"] = f"Test repair note \\(\\varnothing\\)."
+    return {"id": f"c{index}", "label": f"Theorem {n}.{index}", "kind": "theorem", "role": "main", "page": str(index),
+            "gist": f"Test gist with \\(P_{index}\\).", "statement": f"If \\(P_{index}\\) has open graph, then \\(X\\) holds.",
+            "conditions": [f"Test condition \\(x_{index} \\ge 0\\)."], "quantifiers": "Test quantifiers.",
+            "result": result, "vor_check": {"level": level, "pages": str(index), "detail": "Test source check."},
+            "evidence": list(evidence), "author_response": response_}
+
+
+def record2(n, released, track, claims, related=(), changelog=None):
+    kind = "defect" if any(c["result"]["outcome"] == "defect_found" for c in claims) else "negative"
+    work = {"authors": [f"Author A{n}", f"Author B{n}"], "title": f"Test work {n}", "venue": "Test Venue", "year": 2000,
+            "volume": "1", "pages": "1-2", "doi": f"10.0000/test.{n:04d}"}
+    return {
+        "public_id": f"TEST-2000-{n:03d}", "version": "1.0", "schema": 2, "released": released, "status": "published",
+        "sample": False, "kind": kind, "track": track, "title": f"Test paper {n}", "headline": f"Test headline {n}.",
+        "work": work, "claims": claims, "correction": None, "related": list(related),
+        "evidence": {"package_doi": None, "package_sha256": None, "licence": "No public evidence package released.", "files": []},
+        "history": [{"date": "2000-01", "type": "audit", "label": "Test audit completed"},
+                    {"date": released, "type": "release", "label": "Record version 1.0 released"}],
+        "challenges": [], "changelog": changelog or [{"version": "1.0", "date": released, "change": "First release."}],
+        "statements": {"ai_use": "Test statement of how AI was used."},
+    }
+
+
+def records_v2():
+    """Schema-2 records: an Open finding on AI evidence alone with no reply, a Confirmed finding with a counted written
+    agreement, an Open finding the authors disagree with, an Open finding with an agreement that does not count, and a
+    negative audit beside an unresolved claim. Every math field contains \\( \\) or \\[ \\] mathematics."""
+    related = [{"type": "related_work", "citation": "Test follow-up paper (2001).", "doi": "10.0000/followup.0001",
+                "note": "Test note."}]
+    return [
+        record2(19, "2000-06-01", GT, [defect2(19, 1, "open", [ev("hostile_ai_recheck", session="informed")], response("no_reply"))]),
+        record2(20, "2000-06-02", MD, [defect2(20, 1, "confirmed",
+                                               [ev("hostile_ai_recheck", session="blind"), ev("researcher_reproduction")],
+                                               response("agrees", True, "original", "one_of_two"), BUILD, MAIN, "local_repair_proposed")],
+                related=related),
+        record2(21, "2000-06-03", GT, [defect2(21, 1, "open", [ev("hostile_ai_recheck", session="informed")],
+                                               response("disagrees", responder="all", assessment="The counterargument fails at \\(p=1/2\\)."))]),
+        record2(22, "2000-06-04", MS, [defect2(22, 1, "open", [ev("hostile_ai_recheck", session="blind")],
+                                               response("agrees", False, "secondary_record", "some"), FALSE, SECOND)]),
+        record2(23, "2000-06-05", MS, [
+            {"id": "c1", "label": "Theorem 23.1", "kind": "theorem", "role": "main", "page": "1", "gist": "Negative gist.",
+             "statement": "For every \\(n\\), \\(\\sum_{i=1}^n i = n(n+1)/2\\).", "conditions": [], "quantifiers": "Test quantifiers.",
+             "result": {"outcome": "no_defect_found", "depth": "deep_audit", "summary": "No defect in the stated scope.",
+                        "search_scope": "Test scope \\(n \\le 10\\).", "limits": "Test limits."},
+             "vor_check": {"level": "full", "pages": "1", "detail": "Test source check."}, "evidence": [],
+             "author_response": response("reviewing")},
+            {"id": "c2", "label": "Lemma 23.2", "kind": "lemma", "role": "supporting", "page": "2", "gist": "Unresolved gist.",
+             "statement": "Test unresolved statement \\(Y\\).", "conditions": [], "quantifiers": "Test quantifiers.",
+             "result": {"outcome": "unresolved", "unresolved_reason": "source_limited", "summary": "Not settled.",
+                        "detail": "The needed version is not available.", "limits": "Not counted as a defect."},
+             "vor_check": {"level": "none", "pages": "2", "detail": "Test source check."}, "evidence": [],
+             "author_response": response("not_contacted")},
+        ]),
+    ]
+
+
 class _Records:
     """Just enough of build.Content for released_stats."""
 
@@ -164,8 +248,8 @@ def snapshot(build, items, name, as_of, released):
     conf = rs["confirmed"]
     totals = {
         "M01": rs["papers"] + x["screened"], "M02": rs["papers"] + x["papers"], "M03": rs["claims"] + x["claims"], "M04": rs["deep"] + x["deep"],
-        "M05": conf + rs["unresolved"] + x["unres"] + x["open"] + x["rejected"],
-        "M06": {"open": x["open"], "confirmed": conf, "unresolved": rs["unresolved"] + x["unres"], "rejected": x["rejected"],
+        "M05": conf + rs["open"] + rs["unresolved"] + x["unres"] + x["open"] + x["rejected"],
+        "M06": {"open": rs["open"] + x["open"], "confirmed": conf, "unresolved": rs["unresolved"] + x["unres"], "rejected": x["rejected"],
                 "open_ai_supported": x["open_ai"], "confirmed_previously_reported": rs["previously_reported"]},
         "M07": {"vor_full": rs["vor_neg"]["full"] + x["neg_full"], "vor_partial": rs["vor_neg"]["partial"] + x["neg_part"], "vor_none": rs["vor_neg"]["none"]},
         "M08": {"blind": rs["ai_blind"], "informed": rs["ai_informed"]}, "M09": rs["indep"], "M10": rs["external"], "M11": dict(rs["vor_conf"]),
@@ -232,7 +316,8 @@ def make_project(build, dst):
     config["pages"] = {"statistics": True, "updates": True}
     (dst / "site.json").write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
     croot = dst / "content" / "published"
-    items = records()
+    shutil.copy2(ROOT / "mathml.py", dst / "mathml.py")
+    items = records() + records_v2()
     for r in items:
         _dump(croot / "records" / r["public_id"] / f"v{r['version']}.json", r)
     _dump(croot / "snapshots" / "2000-03.json", snapshot(build, items, "2000-03", "2000-03-31", "2000-04-05"))

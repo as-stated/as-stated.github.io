@@ -192,7 +192,7 @@ class BuildTests(unittest.TestCase):
             if versions[-1]["kind"] == "negative":
                 self.assertIn(build.NEGATIVE_CAVEAT, page, rid)
             else:
-                self.assertIn("Does not establish", page, rid)
+                self.assertIn("What is not claimed", page, rid)
 
     def test_archived_versions_point_to_current(self):
         page = (self.out_p / "cases/TEST-2000-002/v1.0/index.html").read_text(encoding="utf-8")
@@ -227,7 +227,9 @@ class BuildTests(unittest.TestCase):
         self.assertTrue(unresolved)
         rs = build.released_stats(self.content, "2099-12-31")
         self.assertEqual(rs["unresolved"], len(unresolved))
-        self.assertEqual(rs["confirmed"], sum(c["result"]["outcome"] == "defect_found" for r in recs for c in r["claims"]))
+        defects = sum(c["result"]["outcome"] == "defect_found" for r in recs for c in r["claims"])
+        self.assertEqual(rs["candidates"], defects)
+        self.assertEqual(rs["confirmed"] + rs["open"], defects)
 
     def test_methodology_states_how_releases_are_controlled(self):
         page = (self.out_p / "methodology/index.html").read_text(encoding="utf-8")
@@ -236,11 +238,236 @@ class BuildTests(unittest.TestCase):
         self.assertNotIn("protected", page)
 
     def test_every_author_position_renders(self):
-        seen = {r["author_position"]["position"] for r in self.content.latest_all()}
-        self.assertLessEqual({"agrees", "partly_agrees", "disagrees", "none_yet", "not_contacted", "previously_corrected"}, seen)
+        seen = set()
         for r in self.content.latest_all():
             page = (self.out / "cases" / r["public_id"] / "index.html").read_text(encoding="utf-8")
-            self.assertIn(build.POS_LONG[r["author_position"]["position"]], page, r["public_id"])
+            for c in r["claims"]:
+                pos = build.claim_view(r, c)["response"]["position"]
+                seen.add(pos)
+                if r.get("schema") != 2:
+                    label = build.POS_LONG[pos]
+                elif pos in build.RESPONSE_VERB:
+                    label = build.RESPONSE_VERB[pos][0]
+                else:
+                    label = build.POSITIONS_V2[pos]
+                self.assertIn(label, page, (r["public_id"], pos))
+        self.assertTrue({"agrees", "partly_agrees", "disagrees", "reviewing", "no_reply", "not_contacted"} <= seen)
+
+    # ------------------------------------------------------------ schema 2: status, evidence, responses, math, privacy
+    def load_with_edit(self, rid, fn, expect):
+        """Edit one schema-2 record in a fresh copy of the test project, refresh its manifests, and expect a refusal."""
+        root = self.tmp / ("edit_" + re.sub(r"\W", "_", rid + expect)[:60])
+        if root.exists():
+            shutil.rmtree(root)
+        proj = fixtures.make_project(build, root)
+        edit_json(proj / PUBLISHED / "records" / rid / "v1.0.json", fn)
+        fixtures.write_manifests(build, proj)
+        with self.assertRaisesRegex(build.BuildError, re.escape(expect)):
+            build.Content("published", proj).load()
+
+    def build_with_edit(self, rid, fn, expect):
+        """As load_with_edit, but through the whole build, so the leak scan runs too."""
+        root = self.tmp / ("bedit_" + re.sub(r"\W", "_", rid + expect)[:60])
+        if root.exists():
+            shutil.rmtree(root)
+        proj = fixtures.make_project(build, root)
+        edit_json(proj / PUBLISHED / "records" / rid / "v1.0.json", fn)
+        fixtures.write_manifests(build, proj)
+        with self.assertRaisesRegex(build.BuildError, re.escape(expect)):
+            build.build(None, self.tmp / ("bout_" + root.name), root=proj)
+
+    def page_text(self, rid):
+        return (self.out / "cases" / rid / "index.html").read_text(encoding="utf-8")
+
+    def test_open_findings_are_publishable_and_labelled_open(self):
+        page = self.page_text("TEST-2000-019")
+        self.assertIn('class="status status-open"', page)
+        self.assertIn("Survived a separate-session hostile AI recheck", page)
+        cases = (self.out / "cases" / "index.html").read_text(encoding="utf-8")
+        self.assertIn('class="vt status-open">Open<', cases)
+        self.assertNotIn("Not done", cases)
+
+    def test_confirmed_is_optional_and_needs_two_kinds_with_one_human(self):
+        page = self.page_text("TEST-2000-020")
+        self.assertIn('class="status status-confirmed"', page)
+        self.assertIn("The researcher re-derived it independently.", page)
+        self.assertIn("One of the two authors also agreed in writing", page)
+
+        def only_ai(r):
+            r["claims"][0]["evidence"] = [e for e in r["claims"][0]["evidence"] if e["type"] == "hostile_ai_recheck"]
+            r["claims"][0]["author_response"] = {"position": "no_reply", "counts": False, "basis": "none"}
+        self.load_with_edit("TEST-2000-020", only_ai, "confirmed needs two kinds")
+
+    def test_only_checks_that_happened_are_listed(self):
+        for rid in ["TEST-2000-019", "TEST-2000-021"]:
+            page = self.page_text(rid)
+            for absent in ["Not done", "Not given", "Not recorded", "External check", "Written author agreement"]:
+                self.assertNotIn(absent, page, (rid, absent))
+            self.assertIn('<ul class="evidence">', page)
+        evidence = self.page_text("TEST-2000-020").split('<ul class="evidence">')[1].split("</ul>")[0]
+        self.assertIn("Separate-session hostile AI recheck", evidence)
+        self.assertIn("Reproduced by the researcher", evidence)
+        self.assertNotIn("Written author agreement", evidence)
+
+    def test_author_position_is_independent_of_whether_it_counts(self):
+        page = self.page_text("TEST-2000-022")
+        self.assertIn("Some of the authors agree.", page)
+        self.assertIn("Recorded from a secondary account of the reply. It does not count as written agreement.", page)
+        self.assertIn('class="status status-open"', page)
+        self.assertNotIn("agreed in writing", page)
+        page = self.page_text("TEST-2000-021")
+        self.assertIn("Our assessment:", page)
+        self.assertIn("The authors disagree.", page)
+
+    def test_author_agreement_cannot_be_evidence_or_count_from_a_secondary_record(self):
+        def as_evidence(r):
+            r["claims"][0]["evidence"].append({"type": "author_agreement", "date": "2000-01", "detail": "x"})
+        self.load_with_edit("TEST-2000-022", as_evidence, "not recognised")
+
+        def counted_secondary(r):
+            r["claims"][0]["author_response"]["counts"] = True
+        self.load_with_edit("TEST-2000-022", counted_secondary, "counts only as an agreement")
+
+    def test_math_is_native_mathml_with_a_tex_annotation_and_no_script(self):
+        page = self.page_text("TEST-2000-019")
+        self.assertIn('<math display="inline"><semantics>', page)
+        self.assertIn('<annotation encoding="application/x-tex">P_1</annotation>', page)
+        self.assertIn('<span class="math-display" tabindex="0"><math display="block">', page)
+        self.assertNotIn("\\(", page)
+        self.assertNotIn("\\[", page)
+        self.assertNotRegex(page, r'<script[^>]*src="https?:')
+        self.assertNotIn("mathjax", page.lower())
+        self.assertNotIn("katex", page.lower())
+
+    def test_malformed_math_fails_the_build_naming_the_record(self):
+        def bad(r):
+            r["claims"][0]["statement"] = "If \\(P_1 holds then done."
+        self.load_with_edit("TEST-2000-019", bad, "Theorem 19.1: statement: '\\(' is never closed")
+
+    def test_private_identifiers_are_refused_by_the_leak_scan(self):
+        def leak(r):
+            r["claims"][0]["result"]["witness"] = "Taken from W-0034 in the private ledger."
+        self.build_with_edit("TEST-2000-019", leak, "leak scan failed")
+
+    def test_schema_one_text_is_never_read_as_mathematics(self):
+        text = "The sum is \\(x\\) in schema one prose."
+        self.assertEqual(build.rich({"schema": 1}, text, "x"), build.E(text))
+
+    def test_unknown_schema_is_refused(self):
+        def unknown(r):
+            r["schema"] = 3
+        self.load_with_edit("TEST-2000-019", unknown, "unknown schema")
+
+    def test_related_work_needs_a_real_doi(self):
+        def fake(r):
+            r["related"][0]["doi"] = "VERIFY"
+        self.load_with_edit("TEST-2000-020", fake, "related DOI is missing or malformed")
+
+    def test_methodology_and_definitions_state_open_and_confirmed_without_old_policy(self):
+        for name in ["methodology/index.html", "definitions/index.html", "about/index.html"]:
+            text = (self.out / name).read_text(encoding="utf-8")
+            for banned in ["Only confirmed defects", "every published defect has also", "awaiting a human",
+                           "within 90 days", "stays open until", "A defect is published only after a human check"]:
+                self.assertNotIn(banned, text, (name, banned))
+        d = (self.out / "definitions/index.html").read_text(encoding="utf-8")
+        self.assertIn("does not mean that the mathematical question is unresolved", d)
+        self.assertIn("optional, stronger evidentiary label", d)
+        self.assertIn("It is not required for publication.", d)
+
+    def test_author_response_without_covers_builds(self):
+        """The public response records position and responder; a paraphrase of the correspondence is optional."""
+        root = self.tmp / "no_covers"
+        if root.exists():
+            shutil.rmtree(root)
+        proj = fixtures.make_project(build, root)
+        path = proj / PUBLISHED / "records" / "TEST-2000-022" / "v1.0.json"
+        edit_json(path, lambda r: r["claims"][0]["author_response"].pop("covers"))
+        fixtures.write_manifests(build, proj)
+        build.Content("published", proj).load()
+        page = (self.out / "cases" / "TEST-2000-022" / "index.html").read_text(encoding="utf-8")
+        self.assertIn("Some of the authors agree.", page)
+
+    def test_missing_nested_field_is_refused_with_a_message_not_a_traceback(self):
+        def no_ai_use(r):
+            del r["statements"]["ai_use"]
+        self.load_with_edit("TEST-2000-019", no_ai_use, "malformed record")
+
+    def test_math_delimiters_in_a_plain_history_field_are_refused(self):
+        def plain(r):
+            r["changelog"][0]["change"] = "First release with \\(x\\)."
+        self.load_with_edit("TEST-2000-019", plain, "math delimiters are allowed only in mathematical fields")
+
+    def test_external_checks_are_checked_not_verified(self):
+        d = (self.out / "definitions/index.html").read_text(encoding="utf-8")
+        self.assertNotIn("Verified by an external human", d)
+        self.assertIn("checked by an external human", d)
+        self.assertIn("not an independent check", d)
+        for name in ["index.html", "cases/index.html"]:
+            text = (self.out / name).read_text(encoding="utf-8")
+            self.assertNotIn("applicable research standard", text, name)
+
+    def test_response_fields_belong_only_to_the_positions_that_use_them(self):
+        def covers_on_reviewing(r):
+            r["claims"][0]["author_response"] = {"position": "reviewing", "counts": False, "basis": "none", "covers": "x"}
+        self.load_with_edit("TEST-2000-022", covers_on_reviewing, "has no responder, covers or assessment")
+
+        def assessment_on_agreement(r):
+            r["claims"][0]["author_response"]["assessment"] = "Our view."
+        self.load_with_edit("TEST-2000-022", assessment_on_agreement, "an assessment is only for a disagreeing")
+
+    def test_unrecognised_nested_fields_are_refused_not_published(self):
+        def stray(r):
+            r["claims"][0]["result"]["private_note"] = "Taken from correspondence."
+        self.load_with_edit("TEST-2000-019", stray, "unknown fields ['private_note']")
+
+        def stray_work(r):
+            r["work"]["secret"] = "x"
+        self.load_with_edit("TEST-2000-019", stray_work, "work: unknown fields")
+
+    def test_pages_have_no_duplicate_anchors(self):
+        for name in ["definitions/index.html", "methodology/index.html", "cases/TEST-2000-020/index.html"]:
+            text = (self.out / name).read_text(encoding="utf-8")
+            ids = re.findall(r'\sid="([^"]+)"', text)
+            self.assertEqual(len(ids), len(set(ids)), (name, sorted({i for i in ids if ids.count(i) > 1})))
+
+    def test_index_status_states_what_confirmed_rests_on(self):
+        """A Confirmed label must show the counted human support; an Open finding must not list agreement it does not count."""
+        cases = (self.out / "cases" / "index.html").read_text(encoding="utf-8")
+        cells = re.findall(r'<td class="ix-ver"[^>]*>(.*?)</td>', cases, re.S)
+        self.assertTrue(cells)
+        confirmed = [c for c in cells if ">Confirmed<" in c]
+        opened = [c for c in cells if ">Open<" in c]
+        self.assertTrue(any("author agreement" in c.lower() for c in confirmed), confirmed)
+        for cell in opened:
+            self.assertNotIn("author agreement", cell.lower())
+        self.assertTrue(any("AI recheck + researcher reproduction + author agreement" in c for c in confirmed), confirmed)
+        self.assertTrue(any("AI recheck" in cell for cell in cells))
+
+    def test_challenge_text_and_stray_evidence_or_correction_fields_are_refused(self):
+        def challenge_with_text(r):
+            r["challenges"] = [{"type": "challenge", "date": "2000-06", "by": "A reader", "outcome": "Under review",
+                                "response": "Private rebuttal text."}]
+        self.load_with_edit("TEST-2000-019", challenge_with_text, "challenge: unknown fields ['response']")
+
+        def stray_evidence(r):
+            r["evidence"]["secret"] = "x"
+        self.load_with_edit("TEST-2000-019", stray_evidence, "evidence: unknown fields ['secret']")
+
+        def stray_correction(r):
+            r["correction"] = {"type": "corrigendum", "doi": "10.0000/x", "date": "2000-06", "relation": "after_notification",
+                               "attribution": "none_stated", "claims": ["c1"], "note": "Note.", "private": "y"}
+        self.load_with_edit("TEST-2000-019", stray_correction, "correction: unknown fields ['private']")
+
+    def test_unknown_outcome_is_named_as_such(self):
+        def unknown(r):
+            r["claims"][0]["result"]["outcome"] = "maybe"
+        self.load_with_edit("TEST-2000-019", unknown, "bad outcome 'maybe'")
+
+    def test_status_filter_is_offered_and_rows_carry_it(self):
+        cases = (self.out_p / "cases/index.html").read_text(encoding="utf-8")
+        self.assertIn('id="f-status"', cases)
+        self.assertIn('data-status="open"', cases)
+        self.assertIn('data-status="confirmed"', cases)
 
     def test_generated_data_is_deterministic(self):
         again = fixtures.make_project(build, self.tmp / "again")
@@ -284,7 +511,7 @@ class ReleaseGateTests(unittest.TestCase):
         return build.Content("published", self.root).load()
 
     def test_untouched_copy_loads(self):
-        self.assertEqual(len(self.load().verified), 25)
+        self.assertEqual(len(self.load().verified), len(list((self.root / PUBLISHED / "releases").glob("*.txt"))))
 
     def test_edited_record_is_refused(self):
         f = self.root / PUBLISHED / "records/TEST-2000-004/v1.0.json"
@@ -520,8 +747,9 @@ class LayoutTests(unittest.TestCase):
         self.assertIsNotNone(self.results, self.raw)
         f = next(x for x in self.results if "filter" in x)
         self.assertTrue(f["formVisible"])
-        self.assertEqual(f["shown"], 3)
-        self.assertTrue(f["count"].startswith("3 of "))
+        # Four fixture claims have a construction defect: TEST-2000-002, -003, -017 and the schema-2 TEST-2000-020.
+        self.assertEqual(f["shown"], 4)
+        self.assertTrue(f["count"].startswith("4 of "))
 
 
 class ProductionLayoutTests(LayoutTests):

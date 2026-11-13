@@ -9,6 +9,12 @@ Commands
 Publication rule enforced here: every released data file needs a release statement naming its exact
 SHA-256, and any file flagged as not real is refused. Real releases use no separate signing key, so
 --expect-trust accepts only 'none'. Tests generate their own data at run time (tests/fixtures.py).
+
+Two record schemas. Schema 1 (no "schema" key) is the frozen format of records already released; its data is never
+reinterpreted. Schema 2 adds Open/Confirmed status, per-claim evidence and author responses, and mathematics written
+as \\( ... \\) (inline) or \\[ ... \\] (display), converted at build time by mathml.py using the pinned latex2mathml.
+What this module checks is schema, truthful labels, manifests, privacy and math safety. Whether a finding meets the
+research standard is decided upstream, and checked against the private ledger by the projection checker.
 """
 import argparse
 import hashlib
@@ -21,6 +27,8 @@ from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT))
+import mathml  # noqa: E402  (build-time math for schema 2; needs the pinned latex2mathml)
 NAMESPACE = "as-stated-release"
 CHANNEL = "published"
 
@@ -31,14 +39,26 @@ TRACKS = {
     "matching_social_choice": "Matching and social choice",
 }
 KINDS = {"defect", "negative"}
+# Evidence types (schema 2). Author agreement is not evidence on a case page: it is the author response, and it counts
+# toward the optional Confirmed label only when the response says so.
 SUPPORT_KINDS = {
-    "ai_recheck": "Rechecked by a separate AI session",
-    "independent_reproduction": "Independently reproduced by the researcher",
-    "external_human": "Verified by an external human",
-    "author_agreement": "Written agreement by the authors",
-    "private_human_confirmation": "Qualifying human confirmation recorded privately",
+    "hostile_ai_recheck": "Separate-session hostile AI recheck",
+    "researcher_reproduction": "Reproduced by the researcher",
+    "external_check": "External check",
+    "author_agreement": "Written author agreement",
+    "private_human_confirmation": "Human confirmation recorded privately (source not disclosed)",
 }
-HUMAN_KINDS = {"independent_reproduction", "external_human", "author_agreement", "private_human_confirmation"}
+EVIDENCE_SHORT = {
+    "hostile_ai_recheck": "AI recheck", "researcher_reproduction": "researcher reproduction",
+    "external_check": "external check", "author_agreement": "author agreement",
+    "private_human_confirmation": "private human confirmation",
+}
+# Schema-1 check kinds, mapped to the names above.
+V1_EVIDENCE = {"ai_recheck": "hostile_ai_recheck", "independent_reproduction": "researcher_reproduction",
+               "external_human": "external_check", "author_agreement": "author_agreement",
+               "private_human_confirmation": "private_human_confirmation"}
+HUMAN_KINDS = {"researcher_reproduction", "external_check", "author_agreement", "private_human_confirmation"}
+EVIDENCE_TYPES_V2 = {"hostile_ai_recheck", "researcher_reproduction", "external_check", "private_human_confirmation"}
 DEFECT_CLASSES = {
     "statement_false": "Statement false as printed",
     "proof_invalid_statement_open": "Proof invalid; statement unresolved",
@@ -68,6 +88,16 @@ POSITIONS = {
     "not_contacted": "Not contacted",
     "previously_corrected": "Not contacted: already corrected before the audit",
 }
+# Author positions (schema 2). Position and whether it counts as verification support are separate fields.
+POSITIONS_V2 = {"agrees": "Agrees", "partly_agrees": "Partly agrees", "disagrees": "Disagrees",
+                "reviewing": "Reviewing; no substantive position yet", "no_reply": "No reply recorded",
+                "not_contacted": "Not contacted"}
+RESPONDERS = {"all": "The authors", "one_of_two": "One of the two authors", "some": "Some of the authors"}
+# (plural, singular) verb forms for an active response
+RESPONSE_VERB = {"agrees": ("agree", "agrees"), "partly_agrees": ("partly agree", "partly agrees"),
+                 "disagrees": ("disagree", "disagrees")}
+RESPONSE_BASES = {"original": "from the authors' own written reply", "secondary_record": "from a secondary record of the reply",
+                  "none": "no reply recorded"}
 UNRESOLVED_REASONS = {"source_limited": "source not available", "disputed_reading": "reading of the source disputed"}
 REPAIRS = {
     "none_proposed": "No repair proposed",
@@ -88,7 +118,8 @@ SNAPSHOT_KEYS = {"snapshot", "as_of", "released", "metrics_version", "sample", "
                  "unresolved_reasons", "examined_by_track", "activity"}
 # Generic patterns only. Project-specific private terms go in a denylist file kept outside this repository.
 LEAK_PATTERNS = [r"Dropbox|OneDrive|Google Drive|iCloud Drive", r"[A-Za-z]:\\\\?Users", r"/Users/", r"/home/\w",
-                 r"\.env\b", r"BEGIN [A-Z ]*PRIVATE KEY", r"\bgh[pousr]_[A-Za-z0-9]{20,}", r"github_pat_\w{20,}"]
+                 r"\.env\b", r"BEGIN [A-Z ]*PRIVATE KEY", r"\bgh[pousr]_[A-Za-z0-9]{20,}", r"github_pat_\w{20,}",
+                 r"\b[WK]-\d{4}\b", r"TA-PRIVATE"]
 MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September",
                "October", "November", "December"]
 
@@ -169,7 +200,7 @@ class Content:
         for f in sorted(rdir.glob("*/v*.json")) if rdir.exists() else []:
             rid, version = f.parent.name, f.stem[1:]
             rec = self.released("record", rid, version, f)
-            validate_record(rec, rid, version)
+            validate_any(rec, rid, version)
             self.records.setdefault(rid, []).append(rec)
         for rid in self.records:
             self.records[rid].sort(key=lambda r: vkey(r["version"]))
@@ -202,7 +233,8 @@ def _require(cond, msg):
 
 
 def support_kinds(claim):
-    return {c["kind"] for c in claim.get("checks", []) if c.get("result") == "confirms"}
+    """Schema 1: the evidence kinds that confirm a claim, under the schema-2 names."""
+    return {V1_EVIDENCE[c["kind"]] for c in claim.get("checks", []) if c.get("result") == "confirms"}
 
 
 def validate_record(rec, rid, version):
@@ -236,7 +268,7 @@ def validate_record(rec, rid, version):
         _require(c["vor_check"]["level"] in {"full", "partial"},
                  f"{where}: {c['label']}: named records need a full or partial version-of-record check")
         for k in c.get("checks", []):
-            _require(k["kind"] in SUPPORT_KINDS, f"{where}: {c['label']}: unknown check kind {k['kind']}")
+            _require(k["kind"] in V1_EVIDENCE, f"{where}: {c['label']}: unknown check kind {k['kind']}")
         if res["outcome"] == "defect_found":
             defect_claims += 1
             _require(res.get("candidate_status") == "confirmed",
@@ -262,6 +294,205 @@ def validate_record(rec, rid, version):
     _require(rec["author_position"]["position"] in POSITIONS, f"{where}: bad author position")
 
 
+RECORD_KEYS_V2 = (RECORD_KEYS - {"author_position"}) | {"schema", "related"}
+WORK_KEYS_V2 = {"authors", "title", "venue", "year", "volume", "pages", "doi"}
+RESULT_KEYS_V2 = {
+    "defect_found": {"outcome", "status", "defect_class", "affects", "depth", "summary", "witness", "argument",
+                     "not_claimed", "repair", "repair_note", "previously_reported"},
+    "no_defect_found": {"outcome", "depth", "summary", "search_scope", "limits"},
+    "unresolved": {"outcome", "unresolved_reason", "summary", "detail", "limits"},
+}
+
+
+def _keys(obj, allowed, where):
+    """Refuse keys the renderer does not know about: nothing unrecognised reaches the published JSON or the page."""
+    unknown = set(obj) - allowed
+    _require(not unknown, f"{where}: unknown fields {sorted(unknown)}")
+CLAIM_KEYS_V2 = {"id", "label", "kind", "role", "page", "gist", "statement", "conditions", "quantifiers",
+                 "result", "vor_check", "evidence", "author_response", "novelty"}
+EVIDENCE_KEYS_V2 = {"type", "date", "detail", "session", "identity"}
+RESPONSE_KEYS_V2 = {"position", "responder", "basis", "counts", "covers", "assessment"}
+DATE_RE = r"\d{4}-\d{2}(-\d{2})?"
+DOI_RE = re.compile(r"10\.\d{4,9}/\S+")
+
+
+def validate_any(rec, rid, version):
+    """Schema 1 is the frozen format of released records; schema 2 is the current format. Anything else is refused."""
+    if "schema" not in rec:
+        return validate_record(rec, rid, version)
+    _require(rec["schema"] == 2, f"record {rid} v{version}: unknown schema {rec['schema']!r}")
+    try:
+        return validate_record_v2(rec, rid, version)
+    except mathml.MathError as exc:  # malformed or unsafe mathematics refuses the build like any other error
+        raise BuildError(str(exc)) from None
+    except (KeyError, TypeError, AttributeError, IndexError) as exc:
+        raise BuildError(f"record {rid} v{version}: malformed record ({type(exc).__name__}: {exc})") from None
+
+
+def validate_record_v2(rec, rid, version):
+    where = f"record {rid} v{version}"
+    unknown = set(rec) - RECORD_KEYS_V2
+    _require(not unknown, f"{where}: unknown fields {sorted(unknown)}")
+    missing = RECORD_KEYS_V2 - set(rec)
+    _require(not missing, f"{where}: missing fields {sorted(missing)}")
+    _require(rec["public_id"] == rid and rec["version"] == version, f"{where}: id or version does not match its path")
+    _require(re.fullmatch(r"[A-Z]{2,4}-\d{4}-\d{3}", rid) is not None, f"{where}: malformed public id")
+    _require(rec["sample"] is False, f"{where}: sample flag is {rec['sample']}: only real content may be released")
+    _require(rec["kind"] in KINDS, f"{where}: bad kind")
+    _require(rec["track"] in TRACKS, f"{where}: bad track")
+    _require(rec["status"] in {"published", "withdrawn"}, f"{where}: bad status")
+    _require(re.fullmatch(r"\d{4}-\d{2}-\d{2}", rec["released"]) is not None, f"{where}: bad release date")
+    _keys(rec["work"], WORK_KEYS_V2, f"{where}: work")
+    _keys(rec["statements"], {"ai_use"}, f"{where}: statements")
+    for h in rec["history"]:
+        _keys(h, {"date", "type", "label"}, f"{where}: history item")
+    for ch in rec["changelog"]:
+        _keys(ch, {"version", "date", "change", "our_correction"}, f"{where}: changelog item")
+    for ch in rec["challenges"]:
+        _keys(ch, {"type", "date", "by", "outcome"}, f"{where}: challenge")
+    mathml.check(rec["title"], f"{where}: title", math=False)
+    mathml.check(rec["headline"], f"{where}: headline", math=False)
+    for key, value in rec["work"].items():
+        if isinstance(value, str):
+            mathml.check(value, f"{where}: work.{key}", math=False)
+    _require(rec["claims"], f"{where}: no claims")
+    ids = [c.get("id") for c in rec["claims"]]
+    _require(all(ids) and len(set(ids)) == len(ids), f"{where}: every claim needs a unique id")
+    settled = [c for c in rec["claims"] if c["result"]["outcome"] in {"defect_found", "no_defect_found"}]
+    defect_claims = 0
+    for c in rec["claims"]:
+        validate_claim_v2(c, where, settled)
+        defect_claims += c["result"]["outcome"] == "defect_found"
+    _require((rec["kind"] == "defect") == (defect_claims > 0), f"{where}: kind does not match its claims")
+    corr = rec.get("correction")
+    if corr:
+        _require(corr["relation"] in {"after_notification", "before_audit", "during_audit_before_notification"},
+                 f"{where}: bad correction relation")
+        _require(corr["attribution"] in {"credits_programme", "none_stated"}, f"{where}: bad correction attribution")
+        mathml.check(corr["note"], f"{where}: correction note", math=False)
+        _require(re.fullmatch(DATE_RE, corr["date"]) is not None, f"{where}: correction date must be YYYY-MM or YYYY-MM-DD")
+    _keys(rec["evidence"], {"package_doi", "package_sha256", "licence", "files"}, f"{where}: evidence")
+    for f in rec["evidence"]["files"]:
+        _keys(f, {"name", "sha256"}, f"{where}: evidence file")
+    if rec.get("correction"):
+        _keys(rec["correction"], {"type", "doi", "date", "relation", "attribution", "claims", "note"}, f"{where}: correction")
+    for item in rec["related"]:
+        _require(set(item) == {"type", "citation", "doi", "note"}, f"{where}: related item fields")
+        _require(item["type"] == "related_work", f"{where}: bad related type")
+        mathml.check(item["citation"], f"{where}: related citation", math=False)
+        mathml.check(item["note"], f"{where}: related note", math=False)
+        _require(item["doi"] is None or DOI_RE.fullmatch(item["doi"]), f"{where}: related DOI is missing or malformed")
+    mathml.check(rec["statements"]["ai_use"], f"{where}: ai_use", math=False)
+    for author in rec["work"]["authors"]:
+        mathml.check(author, f"{where}: author", math=False)
+    for h in rec["history"]:
+        mathml.check(h["label"], f"{where}: history label", math=False)
+    for ch in rec["changelog"]:
+        mathml.check(ch["change"], f"{where}: changelog entry", math=False)
+    for ch in rec["challenges"]:
+        mathml.check(ch["by"], f"{where}: challenge author", math=False)
+        mathml.check(ch["outcome"], f"{where}: challenge outcome", math=False)
+
+
+def validate_claim_v2(c, record_where, settled):
+    where = f"{record_where}: {c.get('label', '?')}"
+    unknown = set(c) - CLAIM_KEYS_V2
+    _require(not unknown, f"{where}: unknown fields {sorted(unknown)}")
+    missing = (CLAIM_KEYS_V2 - {"novelty"}) - set(c)
+    _require(not missing, f"{where}: missing fields {sorted(missing)}")
+    _require(c["kind"] in CLAIM_KINDS and c["role"] in ROLES, f"{where}: bad claim kind or role")
+    mathml.check(c["label"], f"{where}: label", math=False)
+    mathml.check(c["page"], f"{where}: page", math=False)
+    for field in ("gist", "statement", "quantifiers"):
+        mathml.check(c[field], f"{where}: {field}", math=True)
+    _require(isinstance(c["conditions"], list), f"{where}: conditions must be a list")
+    for x in c["conditions"]:
+        mathml.check(x, f"{where}: condition", math=True)
+    vor = c["vor_check"]
+    _require(vor.get("level") in VOR_LEVELS, f"{where}: bad VOR level")
+    _keys(vor, {"level", "pages", "detail"}, f"{where}: source check")
+    mathml.check(vor["pages"], f"{where}: source pages", math=False)
+    mathml.check(vor["detail"], f"{where}: source check", math=False)
+    res = c["result"]
+    _require(res.get("outcome") in RESULT_KEYS_V2, f"{where}: bad outcome {res.get('outcome')!r}")
+    _keys(res, RESULT_KEYS_V2[res["outcome"]], f"{where}: result")
+    mathml.check(res["summary"], f"{where}: summary", math=True)
+    outcome = res["outcome"]
+    if outcome == "unresolved":
+        _require(settled, f"{where}: an unresolved claim cannot be the only claim in a record")
+        _require(res.get("unresolved_reason") in UNRESOLVED_REASONS and res.get("detail") and res.get("limits"),
+                 f"{where}: an unresolved claim needs a reason, a description and its limits")
+        mathml.check(res["detail"], f"{where}: detail", math=True)
+        mathml.check(res["limits"], f"{where}: limits", math=True)
+    elif outcome == "no_defect_found":
+        _require(res.get("depth") == "deep_audit", f"{where}: named negative audits must be deep audits")
+        _require(res.get("search_scope") and res.get("limits"), f"{where}: a negative audit needs a search scope and limits")
+        mathml.check(res["search_scope"], f"{where}: search scope", math=True)
+        mathml.check(res["limits"], f"{where}: limits", math=True)
+        _require(vor["level"] in {"full", "partial"}, f"{where}: named records need a full or partial source check")
+    elif outcome == "defect_found":
+        _require(res.get("status") in {"open", "confirmed"}, f"{where}: a defect's status must be open or confirmed")
+        _require(res.get("defect_class") in DEFECT_CLASSES, f"{where}: bad defect class")
+        _require(res.get("affects") in AFFECTS, f"{where}: bad 'affects'")
+        _require(res.get("depth") == "deep_audit", f"{where}: named defects must come from a deep audit")
+        for key in ("witness", "argument"):
+            _require(res.get(key), f"{where}: a defect needs '{key}'")
+            mathml.check(res[key], f"{where}: {key}", math=True)
+        _require(res.get("not_claimed"), f"{where}: a defect needs a 'not claimed' list")
+        for x in res["not_claimed"]:
+            mathml.check(x, f"{where}: not claimed", math=True)
+        _require(res.get("repair") in REPAIRS, f"{where}: bad repair value")
+        if res.get("repair_note"):
+            mathml.check(res["repair_note"], f"{where}: repair note", math=True)
+        _require(vor["level"] in {"full", "partial"}, f"{where}: named records need a full or partial source check")
+    else:
+        raise BuildError(f"{where}: outcome {outcome!r} cannot be published as a named record")
+
+    evidence = c["evidence"]
+    _require(isinstance(evidence, list), f"{where}: evidence must be a list")
+    for e in evidence:
+        _require(set(e) <= EVIDENCE_KEYS_V2 and {"type", "date", "detail"} <= set(e),
+                 f"{where}: evidence item needs type, date and detail")
+        _require(e["type"] in EVIDENCE_TYPES_V2, f"{where}: evidence type {e['type']!r} is not recognised "
+                 "(author agreement belongs in author_response)")
+        _require(re.fullmatch(DATE_RE, e["date"]) is not None, f"{where}: evidence date must be YYYY-MM or YYYY-MM-DD")
+        mathml.check(e["detail"], f"{where}: evidence detail", math=True)
+        if e["type"] == "hostile_ai_recheck":
+            _require(e.get("session") in {"blind", "informed"}, f"{where}: an AI recheck needs its session type")
+        if e["type"] == "external_check":
+            _require(e.get("identity") in {"named", "anonymous"}, f"{where}: an external check needs its identity")
+    types = {e["type"] for e in evidence}
+
+    ar = c["author_response"]
+    _require(set(ar) <= RESPONSE_KEYS_V2 and {"position", "counts", "basis"} <= set(ar),
+             f"{where}: author response needs position, basis and counts")
+    _require(ar["position"] in POSITIONS_V2, f"{where}: bad author position {ar['position']!r}")
+    _require(ar["basis"] in RESPONSE_BASES, f"{where}: bad author response basis")
+    _require(isinstance(ar["counts"], bool), f"{where}: counts must be true or false")
+    active = ar["position"] in {"agrees", "partly_agrees", "disagrees"}
+    if active:
+        _require(ar.get("responder") in RESPONDERS, f"{where}: an author response needs its responder")
+    else:
+        _require(not ({"responder", "covers", "assessment"} & set(ar)),
+                 f"{where}: a {ar['position']} response has no responder, covers or assessment")
+    if ar.get("covers") is not None:
+        mathml.check(ar["covers"], f"{where}: covers", math=True)
+    if ar["position"] in {"disagrees", "partly_agrees"}:
+        _require(ar.get("assessment"), f"{where}: a disagreeing or partly agreeing response needs our assessment of it")
+    if ar.get("assessment") is not None:
+        _require(ar["position"] in {"disagrees", "partly_agrees"}, f"{where}: an assessment is only for a disagreeing or partly agreeing response")
+        mathml.check(ar["assessment"], f"{where}: assessment", math=True)
+    _require(ar["counts"] == (ar["position"] == "agrees" and ar["basis"] == "original"),
+             f"{where}: an author response counts only as an agreement recorded from the authors' own written reply")
+
+    if outcome == "defect_found":
+        _require("hostile_ai_recheck" in types, f"{where}: a defect needs a separate-session hostile AI recheck")
+        if res["status"] == "confirmed":
+            kinds = types | ({"author_agreement"} if ar["counts"] else set())
+            _require(len(kinds) >= 2 and kinds & HUMAN_KINDS,
+                     f"{where}: confirmed needs two kinds of evidence, at least one by a human")
+
+
 def validate_snapshot_shape(snap, stem):
     unknown = set(snap) - SNAPSHOT_KEYS
     _require(not unknown, f"snapshot {stem}: unknown fields {sorted(unknown)}")
@@ -273,58 +504,65 @@ def validate_snapshot_shape(snap, stem):
 
 
 def released_stats(content, as_of):
-    """Counts computable from the records released on or before as_of."""
+    """Counts computable from the records released on or before as_of, read through claim_view."""
     recs = content.latest_all(as_of)
-    s = {"papers": len(recs), "claims": 0, "deep": 0, "confirmed": 0, "negative": 0, "candidates": 0,
+    s = {"papers": len(recs), "claims": 0, "deep": 0, "confirmed": 0, "open": 0, "negative": 0, "candidates": 0,
          "ai_blind": 0, "ai_informed": 0, "indep": 0, "external": 0,
          "vor_conf": {"full": 0, "partial": 0, "none": 0}, "vor_neg": {"full": 0, "partial": 0, "none": 0},
          "positions": {"agreed": 0, "partly_agreed": 0, "disagreed": 0, "none_yet": 0}, "notified": 0,
          "unresolved": 0, "previously_reported": 0, "calibration": 0,
          "corrections": {"credits_programme": 0, "none_stated": 0}, "our_corrections": 0,
          "papers_by_track": {t: 0 for t in TRACKS}, "claims_by_track": {t: 0 for t in TRACKS},
-         "outcome_by_track": {t: {"confirmed": 0, "negative": 0} for t in TRACKS},
+         "outcome_by_track": {t: {"confirmed": 0, "open": 0, "negative": 0} for t in TRACKS},
          "defect_class": {}, "affects": {}}
-    pos_map = {"agrees": "agreed", "partly_agrees": "partly_agreed", "disagrees": "disagreed", "none_yet": "none_yet"}
+    pos_map = {"agrees": "agreed", "partly_agrees": "partly_agreed", "disagrees": "disagreed",
+               "reviewing": "none_yet", "no_reply": "none_yet", "none_yet": "none_yet"}
     for r in recs:
         s["papers_by_track"][r["track"]] += 1
-        notified = r["author_position"]["position"] in {"agrees", "partly_agrees", "disagrees", "none_yet"}
-        s["notified"] += notified
+        paper_notified = False
         for c in r["claims"]:
+            view = claim_view(r, c)
+            pos = view["response"]["position"]
+            paper_notified = paper_notified or pos in {"agrees", "partly_agrees", "disagrees", "reviewing", "no_reply", "none_yet"}
             s["claims"] += 1
             s["claims_by_track"][r["track"]] += 1
             s["deep"] += c["result"].get("depth") == "deep_audit"
             lvl = c["vor_check"]["level"]
-            if c["result"]["outcome"] == "unresolved":
+            if view["outcome"] == "unresolved":
                 s["unresolved"] += 1
-            elif c["result"]["outcome"] == "defect_found":
+            elif view["outcome"] == "defect_found":
                 s["candidates"] += 1
-                s["confirmed"] += 1
-                if c["result"].get("previously_reported"):
-                    s["previously_reported"] += 1
-                    s["calibration"] += 1
-                s["outcome_by_track"][r["track"]]["confirmed"] += 1
-                s["vor_conf"][lvl] += 1
                 dc = DEFECT_CLASSES[c["result"]["defect_class"]]
                 s["defect_class"][dc] = s["defect_class"].get(dc, 0) + 1
                 af = "Main result" if c["result"]["affects"] == "main_result" else "Other"
                 s["affects"][af] = s["affects"].get(af, 0) + 1
-                sessions = {k.get("session") for k in c["checks"] if k["kind"] == "ai_recheck" and k["result"] == "confirms"}
+                if view["status"] != "confirmed":
+                    s["open"] += 1
+                    s["outcome_by_track"][r["track"]]["open"] += 1
+                    continue
+                # Everything below describes confirmed findings only: Open findings are not counted as confirmed.
+                s["confirmed"] += 1
+                s["outcome_by_track"][r["track"]]["confirmed"] += 1
+                if c["result"].get("previously_reported"):
+                    s["previously_reported"] += 1
+                    s["calibration"] += 1
+                sessions = {e.get("session") for e in view["evidence"] if e["type"] == "hostile_ai_recheck"}
                 s["ai_blind"] += "blind" in sessions
                 s["ai_informed"] += ("informed" in sessions and "blind" not in sessions)
-                kinds = support_kinds(c)
-                s["indep"] += "independent_reproduction" in kinds
-                s["external"] += "external_human" in kinds
-                if notified:
-                    p = r["author_position"]["position"]
-                    if p in pos_map:
-                        s["positions"][pos_map[p]] += 1
-                corr = r.get("correction")
-                if corr and corr["relation"] == "after_notification" and corr["date"] <= as_of:
-                    s["corrections"][corr["attribution"]] += 1
+                types = {e["type"] for e in view["evidence"]}
+                s["indep"] += "researcher_reproduction" in types
+                s["external"] += "external_check" in types
+                if pos in pos_map:
+                    s["positions"][pos_map[pos]] += 1
+                s["vor_conf"][lvl] += 1
             else:
                 s["negative"] += 1
                 s["outcome_by_track"][r["track"]]["negative"] += 1
                 s["vor_neg"][lvl] += 1
+        s["notified"] += paper_notified
+        corr = r.get("correction")
+        if corr and corr["relation"] == "after_notification" and corr["date"] <= as_of:
+            s["corrections"][corr["attribution"]] += 1
         s["our_corrections"] += sum(1 for ch in r["changelog"] if ch.get("our_correction"))
     return s
 
@@ -366,7 +604,7 @@ def check_statistics(content):
         checks = [
             ("M01", t["M01"], rs["papers"]), ("M02", t["M02"], rs["papers"]), ("M03", t["M03"], rs["claims"]),
             ("M04", t["M04"], rs["deep"]), ("M05", t["M05"], rs["candidates"] + rs["unresolved"]),
-            ("M06 confirmed", conf, rs["confirmed"]), ("M06 unresolved", m06["unresolved"], rs["unresolved"]),
+            ("M06 confirmed", conf, rs["confirmed"]), ("M06 open", m06["open"], rs["open"]), ("M06 unresolved", m06["unresolved"], rs["unresolved"]),
             ("M07", m07, rs["negative"]), ("M08 blind", t["M08"]["blind"], rs["ai_blind"]),
             ("M08 informed", t["M08"]["informed"], rs["ai_informed"]), ("M09", t["M09"], rs["indep"]),
             ("M10", t["M10"], rs["external"]), ("M12", t["M12"], rs["notified"]),
@@ -456,19 +694,10 @@ DEFECT_FAMILY = {
     "citation_or_dependency_gap": ("proof", "unsupported citation"),
     "missing_or_hidden_assumption": ("assumption", None), "construction_or_algorithm_fails": ("construction", None),
 }
-HUMAN_ORDER = [("independent_reproduction", "Researcher"), ("external_human", "External"),
-               ("author_agreement", "Authors"), ("private_human_confirmation", "Private human")]
-LADDER = [
-    ("ai_recheck", "Separate AI recheck", "Not done", "An AI model in a new session. Never counted as a human check."),
-    ("independent_reproduction", "Reproduced by the researcher", "Not done",
-     "Re-derived by hand or with separately written code."),
-    ("external_human", "External human verification", "Not done", "Someone outside the programme, in their own name."),
-    ("author_agreement", "Written author agreement", "Not given", "The authors agreed in writing."),
-    ("private_human_confirmation", "Qualifying human confirmation (private)", "Not recorded",
-     "A human confirmation is recorded in the private research file without disclosing its source or correspondence."),
-]
-POS_SHORT = {"agrees": "Author response agrees", "partly_agrees": "Author response partly agrees", "disagrees": "Author response disagrees",
-             "none_yet": "No public author position", "not_contacted": "Not contacted"}
+POS_SHORT = {"agrees": "Author response agrees", "partly_agrees": "Author response partly agrees",
+             "disagrees": "Author response disagrees", "reviewing": "Authors reviewing",
+             "no_reply": "No author reply recorded", "none_yet": "No public author position",
+             "not_contacted": "Not contacted"}
 POS_LONG = {
     "agrees": "A written author response agrees with the finding.",
     "partly_agrees": "A written author response partly agrees with the finding.",
@@ -482,11 +711,11 @@ VOR_SHORT = {"full": "full source check", "partial": "partial source check", "no
 METHOD_STEPS = [
     ("Select", "Papers are chosen deliberately. Many are screened from their metadata; fewer are investigated claim by claim."),
     ("State the claim exactly", "Every definition, assumption and quantifier is taken from the published version."),
-    ("Try to break it", "Search for counterexamples and for steps in the proof that fail."),
+    ("Try to break it", "A separate-session hostile AI recheck tries to refute the candidate finding."),
     ("Try to rescue it", "Look for the intended reading and for a repair before reporting a problem."),
-    ("Confirm", "A defect counts only after two different kinds of check, at least one of them by a human."),
-    ("Author contact", "Contact is optional. Substantive responses already available are considered, while private correspondence stays private."),
-    ("Release and maintain", "Each real release has an exact SHA-256 manifest. Responses, corrections and our own errors become new, dated versions."),
+    ("Check the source", "The decisive statement, definitions and proof step are checked against the published version."),
+    ("Ask the authors", "A technical note may be sent. Their reply is recorded whatever it says; no reply does not block publication."),
+    ("Publish and maintain", "Each finding is published as Open, or as Confirmed when that optional standard is met. Releases are immutable; corrections are new versions."),
 ]
 
 
@@ -534,28 +763,9 @@ def doi_html(site, doi):
     return f'<a class="mono" href="https://doi.org/{E(doi)}">doi:{E(doi)}</a>'
 
 
-def vstrip(c):
-    """Compact verification summary for the index: four slots (AI separated from the three human kinds) plus words."""
-    r = c["result"]
-    src = VOR_SHORT[c["vor_check"]["level"]]
-    if r["outcome"] == "no_defect_found":
-        rerun = " · rerun passes" if (c.get("reproduction") or {}).get("result") == "pass" else ""
-        return f'<span class="vt">Deep audit{rerun}</span><span class="vs-sub">{E(src)}</span>'
-    if r["outcome"] == "unresolved":
-        return f'<span class="vt">Not settled</span><span class="vs-sub">{E(src)}</span>'
-    kinds = support_kinds(c)
-    humans = [lbl for k, lbl in HUMAN_ORDER if k in kinds]
-    aria = "; ".join(f"{SUPPORT_KINDS[k].lower()}: {'yes' if k in kinds else 'no'}"
-                     for k in ["ai_recheck"] + [k for k, _ in HUMAN_ORDER])
-    boxes = (f'<span class="vs" role="img" aria-label="{E("Checks. " + aria)}">'
-             f'<i class="vb-ai{" on" if "ai_recheck" in kinds else ""}" title="Separate AI recheck (not a human check)">AI</i>'
-             + "".join(f'<i class="vb{" on" if k in kinds else ""}" title="{E(SUPPORT_KINDS[k])}"></i>' for k, _ in HUMAN_ORDER)
-             + "</span>")
-    return (f'<span class="vline">{boxes}<span class="vt">{E(" + ".join(humans))}</span></span>'
-            f'<span class="vs-sub">{E(src)}</span>')
-
 
 def development(rec, c):
+    view = claim_view(rec, c)
     out = []
     corr = rec.get("correction")
     if corr and c["id"] in corr.get("claims", []):
@@ -566,8 +776,8 @@ def development(rec, c):
             out.append(f"{corr['type'].capitalize()} {fmt_month(corr['date'])}{credit}")
     if c.get("role") == "repair" and corr:
         out.append(f"Audit of the {corr['type']}")
-    if c["result"]["outcome"] == "defect_found":
-        p = POS_SHORT.get(rec["author_position"]["position"])
+    if view["outcome"] == "defect_found":
+        p = POS_SHORT.get(view["response"]["position"])
         if p:
             out.append(p)
     return out
@@ -594,15 +804,19 @@ def paper_group(site, page, rec):
             f'</div></th></tr>')
     rows = []
     for c in rec["claims"]:
+        view = claim_view(rec, c)
         fam = family(c)[0]
-        text = f"{group_text} {c['label']} {c['gist']} {c['result'].get('summary', '')}".lower()
+        status = view["status"] or ""
+        where = f"{rid} {c['id']}"
+        text = f"{group_text} {c['label']} {mathml.plain(c['gist'])} {mathml.plain(c['result'].get('summary', ''))}".lower()
         rows.append(
-            f'<tr class="ix-row" data-fam="{fam}" data-kind="{E(c["kind"])}" data-text="{E(text)}">'
+            f'<tr class="ix-row" data-fam="{fam}" data-kind="{E(c["kind"])}" data-status="{status}" data-text="{E(text)}">'
             f'<td class="ix-claim" data-label="Claim"><a class="ix-label" href="{link}#{E(c["id"])}">{E(c["label"])}</a>'
             f'<span class="ix-kind">{E(CLAIM_KINDS[c["kind"]])} · {E(ROLES[c["role"]])}</span>'
-            f'<span class="ix-gist">{E(c["gist"])}</span></td>'
-            f'<td class="ix-find" data-label="Finding">{finding_badge(c)}<span class="ix-sum">{E(c["result"]["summary"])}</span></td>'
-            f'<td class="ix-ver" data-label="Verification">{vstrip(c)}</td>'
+            f'<span class="ix-gist">{rich(rec, c["gist"], where + " gist")}</span></td>'
+            f'<td class="ix-find" data-label="Finding">{finding_badge(c)}'
+            f'<span class="ix-sum">{rich(rec, c["result"]["summary"], where + " summary")}</span></td>'
+            f'<td class="ix-ver" data-label="Status">{status_cell(site, page, rec, c)}</td>'
             f'<td class="ix-dev" data-label="Development">{dev_html(rec, c)}</td></tr>')
     return f'<tbody class="ix-group" data-track="{E(rec["track"])}">{head}{"".join(rows)}</tbody>'
 
@@ -610,17 +824,23 @@ def paper_group(site, page, rec):
 def claim_index(site, page, recs):
     return ('<div class="ix-wrap"><table class="ix" id="case-index"><thead><tr>'
             '<th scope="col" class="c1">Claim</th><th scope="col" class="c2">Finding</th>'
-            '<th scope="col" class="c3">Verification</th><th scope="col" class="c4">Development</th></tr></thead>'
+            '<th scope="col" class="c3">Status</th><th scope="col" class="c4">Development</th></tr></thead>'
             + "".join(paper_group(site, page, r) for r in recs) + "</table></div>")
 
 
 def counts(recs):
-    k = {"papers": len(recs), "claims": 0, "none": 0, "defect": 0, "unresolved": 0}
+    k = {"papers": len(recs), "claims": 0, "none": 0, "defect": 0, "open": 0, "confirmed": 0, "unresolved": 0}
     for r in recs:
         for c in r["claims"]:
             k["claims"] += 1
-            o = c["result"]["outcome"]
-            k["none" if o == "no_defect_found" else "unresolved" if o == "unresolved" else "defect"] += 1
+            view = claim_view(r, c)
+            if view["outcome"] == "no_defect_found":
+                k["none"] += 1
+            elif view["outcome"] == "unresolved":
+                k["unresolved"] += 1
+            else:
+                k["defect"] += 1
+                k[view["status"]] += 1
     return k
 
 
@@ -688,7 +908,9 @@ def render_home(site):
     <p class="aside-v"><strong>{k['claims']}</strong> {'claim' if k['claims'] == 1 else 'claims'} in <strong>{k['papers']}</strong> {'paper' if k['papers'] == 1 else 'papers'}</p>
     <ul class="tally">
       <li><span class="fd fd-none"><i class="mk"></i>No defect found</span><span class="n">{k['none']}</span></li>
-      <li><span class="fd fd-false"><i class="mk"></i>Defect confirmed</span><span class="n">{k['defect']}</span></li>
+      <li><span class="fd fd-false"><i class="mk"></i>Defect found</span><span class="n">{k['defect']}</span></li>
+      <li class="sub"><span>Open</span><span class="n">{k['open']}</span></li>
+      <li class="sub"><span>Confirmed</span><span class="n">{k['confirmed']}</span></li>
       <li><span class="fd fd-unresolved"><i class="mk"></i>Unresolved</span><span class="n">{k['unresolved']}</span></li>
     </ul>
     <p class="aside-note">Papers are chosen deliberately, not sampled at random. These are counts of this programme's work, not error rates.{stats_link}</p>"""
@@ -700,7 +922,7 @@ def render_home(site):
     else:
         aside = f"""<p class="aside-k">Case records</p>
     <p class="aside-v">No case records have been released yet.</p>
-    <p class="aside-note">A record is published only after it meets the applicable research standard and the owner approves its exact content. <a href="{site.href(page, 'methodology/')}">How this works</a></p>"""
+    <p class="aside-note">A record is published only after the owner approves its exact content. <a href="{site.href(page, 'methodology/')}">How this works</a></p>"""
         recent = f"""<div class="sec-head"><h2>Case records</h2></div>
   <p class="sec-lede">No case records have been released yet. Released records will be listed here and on the
   <a href="{site.href(page, 'cases/')}">Cases</a> page, one row per investigated claim, grouped by paper.</p>"""
@@ -723,7 +945,7 @@ def render_home(site):
 <section class="wrap block two">
   <div><h2>Reading a finding</h2><ul class="legend">{legend_html()}</ul></div>
   <div><h2>How a claim is examined</h2><ol class="steps">{steps}</ol>
-  <p><a href="{site.href(page, 'methodology/')}">Methodology and confirmation standard</a></p></div>
+  <p><a href="{site.href(page, 'methodology/')}">Methodology and the Open and Confirmed statuses</a></p></div>
 </section>
 """
     site.add(page, layout(site, page, cfg["name"], body, "", cfg["descriptor"], cls="home"))
@@ -746,7 +968,7 @@ def render_explorer(site):
 <div class="wrap page-head">
   <h1>Cases</h1>
   <p class="lede">No case records have been released yet.</p>
-  <p class="small muted">A record is published only after it meets the applicable research standard and the owner approves its exact content. Released records will appear here, one row per investigated claim, grouped by paper.
+  <p class="small muted">A record is published only after the owner approves its exact content. Released records will appear here, one row per investigated claim, grouped by paper.
   See the <a href="{site.href(page, 'methodology/')}">methodology</a>.</p>
 </div>
 """
@@ -757,21 +979,21 @@ def render_explorer(site):
   <h1>Cases</h1>
   <p class="lede">Every investigated claim, grouped by paper, most recently updated first. {k['claims']} claims in
   {k['papers']} papers.</p>
-  <p class="small muted">A record is published only after it meets the applicable research standard and the owner approves its exact content. Candidates still under review and rejected candidates {counted}.</p>
+  <p class="small muted">A record is published only after the owner approves its exact content. Candidates still under review and rejected candidates {counted}.</p>
 </div>
 <div class="wrap">
 <form class="filters" id="filters" hidden>
   <label class="f-search"><span class="sr">Search</span><input type="search" id="f-text" placeholder="Search papers, authors, claims"></label>
   <label><span class="f-l">Finding</span><select id="f-fam"><option value="">All</option>{o_f}</select></label>
+  <label><span class="f-l">Status</span><select id="f-status"><option value="">All</option><option value="open">Open</option><option value="confirmed">Confirmed</option></select></label>
   <label><span class="f-l">Claim type</span><select id="f-kind"><option value="">All</option>{o_k}</select></label>
   <label><span class="f-l">Field</span><select id="f-track"><option value="">All</option>{o_t}</select></label>
   <span class="count" id="f-count" aria-live="polite"></span>
 </form>
 {claim_index(site, page, recs)}
 <p class="note">Finding labels are defined in <a href="{site.href(page, 'definitions/')}#findings">Definitions</a>.
-Verification shows which kinds of check confirmed a defect: the dashed "AI" tag is a separate AI recheck, which never
-counts as a human check; human support may be the researcher, an external person, the authors, or a qualifying human
-confirmation recorded privately without identifying its source. {E(SELECTION_STATEMENT)}</p>
+Status is Open or Confirmed, as defined there; each case page states the basis for its status and lists only the checks that took place.
+The authors' responses are recorded separately from those checks. {E(SELECTION_STATEMENT)}</p>
 </div>
 """
     site.add(page, layout(site, page, "Cases", body, "cases/", "Index of investigated claims", cls="cases"))
@@ -781,84 +1003,79 @@ def blk(label, html_text, cls=""):
     return f'<div class="blk {cls}"><h3 class="blk-l">{E(label)}</h3><div class="blk-c">{html_text}</div></div>'
 
 
-def ladder(c):
-    by_kind = {}
-    for k in c.get("checks", []):
-        if k.get("result") == "confirms":
-            by_kind.setdefault(k["kind"], []).append(k)
-    items = []
-    for kind, label, absent, note in LADDER:
-        got = by_kind.get(kind)
-        if got:
-            det = "".join(f'<span class="ld">{E(fmt_month(x["date"]))}{(" · " + E(x["session"])) if x.get("session") else ""}. '
-                          f'{E(x["detail"])}</span>' for x in got)
-            items.append(f'<li class="on{" ai" if kind == "ai_recheck" else ""}"><span class="lk">{E(label)}</span>{det}</li>')
-        else:
-            items.append(f'<li class="off{" ai" if kind == "ai_recheck" else ""}"><span class="lk">{E(label)}</span><span class="ld">{E(absent)}.</span></li>')
-    kinds = support_kinds(c)
-    humans = len(kinds & HUMAN_KINDS)
-    note = (f"Confirmed: {len(kinds)} kinds of check, {humans} by a human. The standard requires two kinds, at least one by a human."
-            if c["result"]["outcome"] == "defect_found" else "")
-    return f'<ul class="ladder">{"".join(items)}</ul>' + (f'<p class="ladder-note">{E(note)}</p>' if note else "")
-
 
 def render_claim(site, page, rec, c, i, n):
+    view = claim_view(rec, c)
     res = c["result"]
+    where = f"{rec['public_id']} {c['id']}"
     fam = family(c)[0]
     meta = [f"Claim {i} of {n}" if n > 1 else "Claim", CLAIM_KINDS[c["kind"]].lower(), ROLES[c["role"]], f"p. {c['page']}"]
     stmt_meta = ""
     if c.get("conditions"):
-        stmt_meta += f"<dt>Assumptions</dt><dd>{'; '.join(E(x) for x in c['conditions'])}</dd>"
+        stmt_meta += f"<dt>Assumptions</dt><dd>{'; '.join(rich(rec, x, where + ' condition') for x in c['conditions'])}</dd>"
     if c.get("quantifiers"):
-        stmt_meta += f"<dt>Scope of the claim</dt><dd>{E(c['quantifiers'])}</dd>"
-    parts = []
+        stmt_meta += f"<dt>Scope of the claim</dt><dd>{rich(rec, c['quantifiers'], where + ' quantifiers')}</dd>"
     v = c["vor_check"]
-    vor_html = f'<strong>{E(VOR_LEVELS[v["level"]].split(":")[0])} check</strong>, pp. {E(v["pages"])}. {E(v["detail"])}'
-    rep = c.get("reproduction") or {}
-    rep_html = f'{E(rep.get("result", "").capitalize())}. {E(rep.get("detail", ""))}' if rep else ""
+    plural = "pp." if re.search(r"[\u2013,;]", v["pages"]) else "p."
+    source = (f'<strong>{E(VOR_LEVELS[v["level"]].split(":")[0])}</strong> source check, {plural} {E(v["pages"])}. '
+              f'{rich(rec, v["detail"], where + " source check")}')
+    parts = [blk("Source check", f"<p>{source}</p>")]
+    _, _, q = family(c)
+    qh = f' <span class="fd-q">{E(q)}</span>' if q else ""
+    badge = finding_badge(c, qualifier=False) + qh
+    if view["status"]:
+        badge += " " + status_html(site, page, view["status"])
+    finding = f'<p class="verdict">{badge}</p>'
+    basis = basis_text(view)
+    if basis:
+        finding += f'<p class="basis">{E(basis)}</p>'
+    finding += f"<p>{rich(rec, res['summary'], where + ' summary')}</p>"
+    parts.append(blk("Finding", finding))
+    verdict_note = ""
     if res["outcome"] == "defect_found":
-        parts.append(blk("What was found", f"<p>{E(res['witness'])}</p>"))
-        parts.append(blk("What was tested", f"<p>{E(res['tested'])}</p>"))
-        parts.append(blk("Does not establish", "<ul>" + "".join(f"<li>{E(x)}</li>" for x in res["not_claimed"]) + "</ul>"))
+        parts.append(blk("Counterexample", f"<p>{rich(rec, res['witness'], where + ' witness')}</p>"))
+        if res.get("argument"):
+            parts.append(blk("Why it works", f"<p>{rich(rec, res['argument'], where + ' argument')}</p>"))
+        parts.append(blk("What is not claimed", "<ul>" + "".join(
+            f"<li>{rich(rec, x, where + ' not claimed')}</li>" for x in res["not_claimed"]) + "</ul>"))
         repair = E(REPAIRS.get(res.get("repair"), ""))
         if res.get("repair_note"):
-            repair += ". " + E(res["repair_note"])
+            repair += ". " + rich(rec, res["repair_note"], where + " repair note")
         parts.append(blk("Repair", f"<p>{repair}</p>"))
-        parts.append(blk("Verification", ladder(c)))
-        parts.append(blk("Source", f"<p>{vor_html}</p>"))
-        if rep_html:
-            parts.append(blk("Evidence rerun", f"<p>{rep_html}</p>"))
-        if c.get("novelty"):
-            parts.append(blk("Earlier reports", f"<p>{E(c['novelty'])}</p>"))
-        verdict_note = ""
+        checked = ""
+        if res.get("tested"):
+            checked += f"<p>{rich(rec, res['tested'], where + ' tested')}</p>"
+        checked += evidence_list(rec, view, where)
+        if checked:
+            parts.append(blk("How it was checked", checked))
     elif res["outcome"] == "no_defect_found":
         verdict_note = f'<p class="caveat">{E(NEGATIVE_CAVEAT)}</p>'
-        parts.append(blk("What was tested", f"<p>{E(res['search_scope'])}</p>"))
-        parts.append(blk("Limits", f"<p>{E(res['limits'])}</p>"))
-        parts.append(blk("Source", f"<p>{vor_html}</p>"))
-        if rep_html:
-            parts.append(blk("Evidence rerun", f"<p>{rep_html}</p>"))
-        if c.get("checks"):
-            parts.append(blk("Other checks", "<ul>" + "".join(
-                f"<li>{E(SUPPORT_KINDS[k['kind']])}, {E(fmt_month(k['date']))}. {E(k['detail'])}</li>" for k in c["checks"]) + "</ul>"))
+        parts.append(blk("What was tested", f"<p>{rich(rec, res['search_scope'], where + ' search scope')}</p>"))
+        parts.append(blk("Limits", f"<p>{rich(rec, res['limits'], where + ' limits')}</p>"))
+        if view["evidence"]:
+            parts.append(blk("How it was checked", evidence_list(rec, view, where)))
     else:
         verdict_note = ('<p class="caveat caveat-open">This question is not settled. It is not counted as a defect, and the '
                         'record will be revised if the missing source becomes available.</p>')
-        parts.append(blk("What is known", f"<p>{E(res['detail'])}</p>"))
-        parts.append(blk("Why unresolved", f"<p>{E(res['limits'])}</p>"))
-        parts.append(blk("Source", f"<p>{vor_html}</p>"))
-    _, label, q = family(c)
-    qh = f'<span class="fd-q">{E(q)}</span>' if q else ""
+        parts.append(blk("What is known", f"<p>{rich(rec, res['detail'], where + ' detail')}</p>"))
+        parts.append(blk("Why unresolved", f"<p>{rich(rec, res['limits'], where + ' limits')}</p>"))
+    rep = c.get("reproduction") or {}
+    if rep:
+        parts.append(blk("Evidence rerun", f"<p>{E(rep.get('result', '').capitalize())}. {E(rep.get('detail', ''))}</p>"))
+    if c.get("novelty"):
+        parts.append(blk("Earlier reports", f"<p>{rich(rec, c['novelty'], where + ' novelty')}</p>"))
+    parts.append(blk("Author response", author_html(rec, view, where)))
+    meta_dl = f'<dl class="stmt-meta">{stmt_meta}</dl>' if stmt_meta else ""
+    stmt = (f'<figure class="stmt"><blockquote><p><span class="stmt-l">{E(c["label"])}.</span> '
+            f'<span class="stmt-t">{rich(rec, c["statement"], where + " statement")}</span></p></blockquote>'
+            f'{meta_dl}</figure>')
     return f"""
 <section class="claim fam-{fam}" id="{E(c['id'])}">
   <header class="claim-head">
     <p class="claim-meta">{' · '.join(E(x) for x in meta)}</p>
     <h2>{E(c['label'])}</h2>
-    <p class="verdict">{finding_badge(c, qualifier=False)}{qh}</p>
-    <p class="verdict-sum">{E(res['summary'])}</p>
   </header>
-  <figure class="stmt"><blockquote><p><span class="stmt-l">{E(c['label'])}.</span> <span class="stmt-t">{E(c['statement'])}</span></p></blockquote>
-  {f'<dl class="stmt-meta">{stmt_meta}</dl>' if stmt_meta else ''}</figure>
+  {stmt}
   {verdict_note}
   <div class="blks">{''.join(parts)}</div>
 </section>"""
@@ -873,22 +1090,18 @@ def render_record(site, rec, frozen=False):
     digest = next(d for k, i, v, d in site.c.verified if k == "record" and i == rid and v == ver)
     claims = rec["claims"]
     n = len(claims)
-    pos = rec["author_position"]
     corr = rec.get("correction")
-    # Overview of claims in this paper
+    views = [claim_view(rec, c) for c in claims]
     overview = ""
     if n > 1:
         rows = "".join(
             f'<tr><td class="ov-n">{i}</td><td><a href="#{E(c["id"])}">{E(c["label"])}</a>'
             f'<span class="ov-kind">{E(CLAIM_KINDS[c["kind"]])} · {E(ROLES[c["role"]])}</span></td>'
-            f'<td>{finding_badge(c)}</td><td class="ov-ver">{vstrip(c)}</td></tr>'
+            f'<td>{finding_badge(c)}</td><td class="ov-ver">{status_cell(site, page, rec, c)}</td></tr>'
             for i, c in enumerate(claims, start=1))
         overview = (f'<section class="overview" aria-label="Claims in this paper"><h2 class="ov-h">{n} claims investigated in this paper</h2>'
                     f'<table class="ov"><tbody>{rows}</tbody></table></section>')
-    # Responses and corrections: compact
-    resp = [f"<dt>Authors</dt><dd>{E(POS_LONG[pos['position']])}"
-            + (f'<blockquote class="resp">{E(pos["summary"])}</blockquote><span class="resp-src">Summary published with the authors\' consent.</span>'
-               if pos.get("summary") else "") + "</dd>"]
+    resp = []
     if corr:
         if corr["relation"] == "before_audit":
             ctext = (f"{corr['type'].capitalize()} published in {fmt_month(corr['date'])}, before this audit "
@@ -901,6 +1114,10 @@ def render_record(site, rec, frozen=False):
         resp.append(f"<dt>Correction</dt><dd>{ctext}</dd>")
     else:
         resp.append("<dt>Correction</dt><dd>None published.</dd>")
+    for item in rec.get("related", []):
+        link = doi_html(site, item["doi"]) if item.get("doi") else ""
+        note = f" {E(item['note'])}" if item.get("note") else ""
+        resp.append(f"<dt>Related work</dt><dd>{E(item['citation'])} {link}.{note}</dd>")
     for ch in rec.get("challenges", []):
         resp.append(f"<dt>{E(ch['type'].capitalize())}</dt><dd>{E(fmt_date(ch['date']))}, by {E(ch['by'])}. {E(ch['outcome'])}.</dd>")
     hist = "".join(f'<li><span class="h-d">{E(fmt_date(x["date"]))}</span><span class="h-t">{E(x["label"])}</span></li>'
@@ -911,9 +1128,7 @@ def render_record(site, rec, frozen=False):
         f'{" <strong>Our correction.</strong>" if ch.get("our_correction") else ""}</span></li>'
         for ch in rec["changelog"])
     files = "".join(f'<li class="mono">{E(f["name"])}</li>' for f in rec["evidence"]["files"])
-    evidence_package = (doi_html(site, rec["evidence"]["package_doi"])
-                        if rec["evidence"].get("package_doi")
-                        else '<span class="muted">No public evidence package released.</span>')
+    evidence_package = doi_html(site, rec["evidence"]["package_doi"]) if rec["evidence"].get("package_doi") else ""
     url = cfg["base_url"].rstrip("/") + f"/cases/{rid}/v{ver}/"
     cite = f"{cfg['owner']} ({rec['released'][:4]}). Case record {rid}, version {ver}: {rec['title']}. {cfg['name']}. {url}"
     bib = (f"@misc{{{rid.replace('-', '_')}_v{ver.replace('.', '_')},\n  author = {{{cfg['owner']}}},\n"
@@ -924,11 +1139,9 @@ def render_record(site, rec, frozen=False):
         notes += (f'<p class="notice">Archived version {E(ver)}. The current version is '
                   f'<a href="{site.href(page, "cases/" + rid + "/")}">{E(current["version"])}</a>.</p>')
     fams = [family(c)[0] for c in claims]
-    status = []
-    if pos["position"] in POS_SHORT:
-        status.append(POS_SHORT[pos["position"]])
-    if corr:
-        status.append(development(rec, next(c for c in claims if c["id"] in corr.get("claims", [c["id"]])))[0])
+    open_n = sum(1 for v in views if v["status"] == "open")
+    conf_n = sum(1 for v in views if v["status"] == "confirmed")
+    status_fact = " · ".join(x for x in [f"{open_n} Open" if open_n else "", f"{conf_n} Confirmed" if conf_n else ""] if x)
     body = f"""
 <div class="wrap case">
 <nav class="crumbs" aria-label="Breadcrumb"><a href="{site.href(page, 'cases/')}">Cases</a><span aria-hidden="true">/</span><span>{E(rid)}</span></nav>
@@ -937,19 +1150,18 @@ def render_record(site, rec, frozen=False):
   <p class="eyebrow">Case record · {E(TRACKS[rec['track']])}</p>
   <h1>{E(w['title'])}</h1>
   <p class="byline">{E(author_list(w['authors']))} · {venue_line(w)} · {doi_html(site, w['doi'])}</p>
-  <p class="lede">{E(rec['headline'])}</p>
+  <p class="lede">{rich(rec, rec['headline'], rid + ' headline')}</p>
   <ul class="case-facts">
     <li><span class="cf-k">Findings</span>{''.join(f'<i class="mk-dot fd-{f}" title="{E(FAMILY_LABEL[f])}"></i>' for f in fams)}<span class="cf-v">{n} claim{"s" if n != 1 else ""}</span></li>
+    {f'<li><span class="cf-k">Status</span><span class="cf-v">{E(status_fact)}</span></li>' if status_fact else ''}
     <li><span class="cf-k">Updated</span><span class="cf-v">{E(fmt_date(rec['released']))} · version {E(ver)}</span></li>
-    {''.join(f'<li><span class="cf-k">Authors</span><span class="cf-v">{E(s)}</span></li>' for s in status[:1])}
-    {''.join(f'<li><span class="cf-k">Correction</span><span class="cf-v">{E(s)}</span></li>' for s in status[1:2])}
   </ul>
 </header>
 <div class="case-grid">
 <article class="case-main">
   {overview}
   {''.join(render_claim(site, page, rec, c, i, n) for i, c in enumerate(claims, start=1))}
-  <section class="after" id="responses"><h2>Authors and corrections</h2><dl class="rd">{''.join(resp)}</dl></section>
+  <section class="after" id="corrections"><h2>Corrections and related work</h2><dl class="rd">{''.join(resp)}</dl></section>
   <section class="after" id="history"><h2>History</h2><ol class="hist">{hist}</ol></section>
   <section class="after" id="versions"><h2>Versions</h2><ol class="hist">{vers}</ol>
   <p class="note">Released versions are never edited; each keeps its own address.</p></section>
@@ -958,8 +1170,8 @@ def render_record(site, rec, frozen=False):
 <aside class="case-aside" aria-label="Record details">
   <dl class="side">
     <dt>Record</dt><dd><span class="mono">{E(rid)}</span>, version {E(ver)}<br>released {E(fmt_date(rec['released']))}</dd>
-    <dt>Evidence package</dt><dd>{evidence_package}<br>
-      <span class="small muted">{E(rec['evidence']['licence'])}</span><ul class="files">{files}</ul></dd>
+    <dt>Evidence package</dt><dd>{evidence_package}{"<br>" if evidence_package else ""}
+      <span class="small muted">{E(rec['evidence']['licence'])}</span>{f'<ul class="files">{files}</ul>' if files else ''}</dd>
     <dt id="verification">Release verification</dt><dd class="small">Release manifest. Record file SHA-256
       <span class="mono hash" title="{E(digest)}">{E(digest[:16])}…</span> verified when the site was built.
       The owner approves each release. Automated tests and a privacy scan must pass before it deploys.
@@ -986,7 +1198,7 @@ METRIC_ROWS = [
     ("M07", "Deep audits that found no defect", "claim", "Deeply audited claims with no candidate defect ever raised, by source check.", "monthly"),
     ("M08", "Confirmed: rechecked by a separate AI session", "claim", "Confirmed claims with a confirming AI recheck in a separate session.", "monthly"),
     ("M09", "Confirmed: reproduced by the researcher", "claim", "Re-derived by hand or with separately written code. Package reruns do not count.", "monthly"),
-    ("M10", "Confirmed: verified by an external human", "claim", "Verified by someone outside the programme.", "monthly"),
+    ("M10", "Confirmed: checked by an external human", "claim", "Checked by someone outside the programme.", "monthly"),
     ("M11", "Confirmed: source check", "claim", "Confirmed claims by full, partial or no check against the published version.", "monthly"),
     ("M12", "Papers whose authors were contacted", "paper", "Contact is optional and is not a publication requirement.", "quarterly"),
     ("M13", "Authors' position on confirmed findings", "claim", "Confirmed claims in papers whose authors were contacted, by the authors' latest written position.", "quarterly"),
@@ -1008,31 +1220,43 @@ def render_definitions(site):
     metrics = "".join(f'<tr id="m-{i.lower()}"><td class="mono">{i}</td><td>{E(lbl)}</td><td>{E(u)}</td><td>{E(d)}</td><td>{E(c)}</td></tr>'
                       for i, lbl, u, d, c in METRIC_ROWS)
     vor = "".join(f"<li>{E(v)}</li>" for v in VOR_LEVELS.values())
-    lad = "".join(f"<div class=\"def\"><dt>{E(lbl)}</dt><dd>{E(note)}</dd></div>" for _, lbl, _, note in LADDER)
+    kinds = [
+        ("hostile_ai_recheck", "An AI model in a new session tries to refute the candidate. Never counted as a human check."),
+        ("researcher_reproduction", "Re-derived by hand or with separately written code."),
+        ("external_check", "Checked by someone outside the programme, named or anonymous."),
+        ("author_agreement", "An author agrees in writing that the identified issue is correct. Under the confirmation standard this is a "
+                             "human kind of support, but it is the authors' own statement about their paper, not an independent check. "
+                             "It is shown as the author response and counts toward Confirmed only when the original written reply is on file."),
+        ("private_human_confirmation", "A human confirmation recorded in the private research file, without disclosing its source."),
+    ]
+    kind_list = "".join(f'<div class="def"><dt>{E(SUPPORT_KINDS[k])}</dt><dd>{E(d)}</dd></div>' for k, d in kinds)
     body = f"""
 <div class="wrap page-head"><h1>Definitions</h1>
 <p class="lede">The vocabulary used in every record and statistic. Metric definitions version {E(site.cfg['metrics_version'])}.</p></div>
 <div class="wrap reading">
-<nav class="toc" aria-label="On this page"><a href="#findings">Findings</a><a href="#statuses">Statuses</a><a href="#checks">Checks</a>
-<a href="#vor">Source check</a><a href="#authors">Author positions</a><a href="#corrections">Corrections</a><a href="#metrics">Metrics</a></nav>
+<nav class="toc" aria-label="On this page"><a href="#findings">Findings</a><a href="#open-and-confirmed">Open and Confirmed</a><a href="#statuses">Statuses</a><a href="#checks">Checks</a>
+<a href="#vor">Source check</a><a href="#authors">Author responses</a><a href="#corrections">Corrections</a><a href="#metrics">Metrics</a></nav>
 <div class="prose">
 <section id="findings"><h2>Findings</h2><p>Each investigated claim has exactly one finding. A paper with several claims can have
 several different findings; there is no verdict on a paper as a whole.</p><dl class="defs">{fams}</dl>
 <p>A short qualifier sometimes follows the label:</p><ul>{quals}</ul>
 <p>Records also say which result a defect affects and what the finding does <em>not</em> establish.</p></section>
-<section id="statuses"><h2>Statuses of a candidate defect</h2><dl class="defs">
+<section id="open-and-confirmed"><h2>Open and Confirmed</h2>
+<dl class="defs">
+<div class="def"><dt id="open">Open</dt><dd>A published finding that has not received the optional, stronger Confirmed label. Open does not mean that the mathematical question is unresolved; that is what Unresolved means. Each case page states the basis on which its finding was published.</dd></div>
+<div class="def"><dt id="confirmed">Confirmed</dt><dd>An optional, stronger evidentiary label. It additionally requires at least two different kinds of check, at least one of them by a human, and no refuting check left unaddressed. It is not required for publication.</dd></div>
+</dl></section>
+<section id="statuses"><h2>Other statuses</h2><dl class="defs">
 <div class="def"><dt id="candidate">Candidate</dt><dd>Any possible defect reported by any check. Most candidates come from AI-assisted discovery runs and are never published by name.</dd></div>
-<div class="def"><dt>Open</dt><dd>Not yet settled. A candidate supported only by AI rechecks stays open until a human has checked it.</dd></div>
-<div class="def"><dt id="confirmed">Confirmed</dt><dd>At least two confirming checks of different kinds, at least one by a human, and no refuting check left unaddressed. Only confirmed defects are published as defects.</dd></div>
-<div class="def"><dt>Unresolved</dt><dd>Checks were completed but could not settle the question. Never counted as a defect or as rejected. An unresolved
+<div class="def"><dt id="unresolved">Unresolved</dt><dd>Checks were completed but could not settle the question. Never counted as a defect or as rejected. An unresolved
 question appears by name only inside a record that is released for other, settled claims in the same paper; a paper is
 never named because of an unresolved question alone.</dd></div>
 <div class="def"><dt>Rejected</dt><dd>A check showed the suspected defect does not exist. Counted, never named.</dd></div>
 <div class="def"><dt id="withdrawn">Withdrawn</dt><dd>A released record we no longer stand behind. The page stays online with the reason.</dd></div></dl></section>
-<section id="checks"><h2>Kinds of check</h2><p>Verification distinguishes a separate AI recheck from four human-support categories. A private human confirmation records only that the confirmation standard was met; it does not disclose the source or correspondence.</p>
-<dl class="defs">{lad}</dl><p>Rerunning the original evidence package shows the package works; it is reported separately and is not counted as a check.</p></section>
+<section id="checks"><h2>Kinds of check</h2><p>A case page lists only the checks that actually took place. The kinds are:</p>
+<dl class="defs">{kind_list}</dl><p>Rerunning the original evidence package shows the package works; it is reported separately and is not counted as a check.</p></section>
 <section id="vor"><h2>Source check</h2><p>The decisive elements are the statement, every definition and assumption the finding relies on, the decisive step, and any supplement the claim depends on.</p><ul>{vor}</ul></section>
-<section id="authors"><h2>Author positions</h2><p>Author contact is not a publication requirement. When a written author position exists, it may be recorded as agreed, partly agreed or disagreed. A record may also state that the authors were not contacted. Private correspondence is published only with separate consent to its public use.</p></section>
+<section id="authors"><h2>Author responses</h2><p>Each claim records the authors' position: agrees, partly agrees, disagrees, reviewing, no reply, or not contacted. A response is shown whatever it says. Whether it counts toward the Confirmed label is recorded separately. Contact and reply are not publication requirements. Private correspondence is published only with separate consent to its public use.</p></section>
 <section id="corrections"><h2>Corrections</h2><p>A correction is described as crediting this audit only if its own text says so. A correction published before the audit marks the finding as previously reported; it is not an outcome of this audit.</p></section>
 </div></div>
 <div class="wrap"><section id="metrics" class="block"><h2>Metrics</h2><div class="table-wrap"><table class="data rtable metrics"><thead><tr><th scope=col>ID</th><th scope=col>Label</th><th scope=col>Unit</th><th scope=col>Counting rule</th><th scope=col>Updated</th></tr></thead><tbody>{metrics}</tbody></table></div>
@@ -1045,12 +1269,12 @@ def render_methodology(site):
     page = "methodology/index.html"
     keys_line = "Real releases use exact SHA-256 manifests."
     steps = "".join(f"<li><strong>{E(a)}.</strong> {E(b)}</li>" for a, b in METHOD_STEPS)
-    toc = [("question", "The question"), ("process", "Process"), ("standard", "Confirmation standard"),
-           ("findings", "Findings"), ("verification", "Verification"), ("negative", "Negative audits"),
-           ("source", "Source check"), ("authors", "Author contact"), ("ai", "How AI is used"),
-           ("responses", "Author responses"), ("corrections", "Corrections and withdrawals"),
+    toc = [("question", "The question"), ("process", "Process"), ("standard", "Open and Confirmed"),
+           ("findings", "Findings"), ("verification", "Checks and evidence"), ("negative", "Negative audits"),
+           ("source", "Source check"), ("authors", "Author responses"), ("ai", "How AI is used"),
+           ("responses", "Author responses: policy"), ("corrections", "Corrections and withdrawals"),
            ("challenges", "Challenges and replications"), ("selection", "Selection and statistics"),
-           ("release", "How releases are approved"), ("not", "What we do not do")]
+           ("release", "How releases are approved"), ("not", "What we do not do"), ("changes", "Changes")]
     body = f"""
 <div class="wrap page-head"><p class="eyebrow">Methodology version {E(site.cfg['methodology_version'])}</p><h1>Methodology</h1>
 <p class="lede">How a published claim becomes a case record, and what each part of a record means.</p></div>
@@ -1062,18 +1286,18 @@ The claim may be a theorem, proposition, lemma, corollary, remark, algorithm, co
 theory, mechanism design, matching and social choice, or related fields. The unit of investigation is the single claim,
 read exactly as stated. A paper is not given a verdict as a whole.</p></section>
 <section id="process"><h2>Process</h2><ol class="proc">{steps}</ol></section>
-<section id="standard"><h2>Confirmation standard</h2><p class="callout">A suspected defect is <strong>confirmed</strong> only
-after at least two confirming checks of different kinds, at least one of them by a human, and with no refuting check left
-unaddressed. Rerunning the original evidence package does not count as a check.</p>
-<p>Only confirmed defects are published as defects. Candidates supported only by AI rechecks are counted in the statistics
-as open, not named.</p></section>
+<section id="standard"><h2>Open and Confirmed</h2><p class="callout">Every published finding is either <strong>Open</strong> or
+<strong>Confirmed</strong>. A finding is published as Open when it has survived a separate-session hostile AI recheck and a
+source review of the published version. <strong>Confirmed</strong> is an optional, stronger evidentiary label: it also
+requires at least two different kinds of check, at least one of them by a human, and no refuting check left unaddressed.</p>
+<p>Human checking is not a condition of publication, and no publication waits for an author's reply. Open is not a
+judgement that the mathematics is unsettled; a question that could not be settled is <em>Unresolved</em>, a separate status.</p></section>
 <section id="findings"><h2>Findings</h2><p>Each investigated claim receives one of six findings.</p>
 <ul class="legend">{legend_html()}</ul></section>
-<section id="verification"><h2>Verification</h2><p>Each confirmed defect lists the kinds of check that confirmed it:
-a separate AI recheck, a reproduction by the researcher, an external human verification, and written agreement by the
-authors. The case index shows the AI recheck as a small dashed "AI" tag, set apart from three squares for the human
-checks, because AI agreement is not independent human confirmation. Each record also states how far the finding was checked against the
-published version of the paper.</p></section>
+<section id="verification"><h2>Checks and evidence</h2><p>Each case page lists the checks that actually took place, and nothing
+else. A check can be a separate-session hostile AI recheck, a reproduction by the researcher, an external check, a
+human confirmation recorded privately, or an author's written agreement. Each record also states how far the finding was checked
+against the published version of the paper.</p></section>
 <section id="negative"><h2>Negative audits</h2><p>{E(NEGATIVE_CAVEAT_GENERAL)} Each negative audit states what was
 tested and its limits. Only deep audits are published by name; lighter screens appear only in counts.</p></section>
 <section id="source"><h2>Source check</h2><p>Findings are checked against the version of record. Each claim states whether every
@@ -1081,15 +1305,14 @@ decisive element was checked on rendered pages of the published version (full), 
 needed version could not be obtained. A question that depends on an unobtainable version is reported as unresolved, not as
 a defect. It is shown only inside a record released for other, settled claims in the same paper, and the record is
 revised if the missing version becomes available.</p></section>
-<section id="authors"><h2>Author contact</h2><p>Author notification, a waiting period and author consent are not publication gates.
-The researcher may contact authors as part of the research process, especially when a possible defect is found, and any
-substantive response already available is considered when preparing the record. Private correspondence remains private
-unless separately approved for public use. A concrete journal, correction or collaboration strategy may still justify a
-case-specific hold.</p></section>
-<section id="ai"><h2>How AI is used</h2><p>AI models search for counterexamples, write test code and recheck results in
-separate sessions. They do not decide what is published. Every published defect has also been checked by a human, and the
-researcher makes every editorial decision. Each record states how AI was used in that case.</p></section>
-<section id="responses"><h2>Author responses</h2><ul>
+<section id="authors"><h2>Author responses</h2><p>Each claim records the authors' position, and the position is shown whatever
+it is. Whether a written agreement counts toward Confirmed is recorded separately, and an author's response is never described
+as verification. Author contact is not a publication requirement. Author notification, a waiting period and author consent are not publication gates.</p></section>
+<section id="ai"><h2>How AI is used</h2><p>AI models search for counterexamples, check candidate findings in separate sessions
+and help write test code. They do not decide what is published. Each finding is checked against the published version, and the
+researcher makes every editorial decision. Human checks are recorded when they happen; they are optional, not a condition of
+publication. Each record states how AI was used in that case.</p></section>
+<section id="responses"><h2>Author responses: policy</h2><ul>
 <li>Author contact is optional and is not required before or after publication.</li>
 <li>If a substantive written response already exists, it is considered in the record and may motivate further checking.</li>
 <li>An author's disagreement is evidence to assess, not a veto over publication.</li>
@@ -1115,6 +1338,11 @@ before it deploys.</p>
 <section id="not"><h2>What we do not do</h2><ul><li>Publish anonymous or unchecked allegations.</li>
 <li>Rank journals, fields or authors.</li><li>Report error rates for published research.</li>
 <li>Name a paper because a candidate was rejected or remains unresolved.</li></ul></section>
+<section id="changes"><h2>Changes</h2><p class="small">Version 2.0, 13 November 2026. Case pages now state Open or Confirmed,
+give the basis for that status, and list only the checks that took place. Author responses are recorded per claim and kept
+separate from verification. Mathematics is typeset from its TeX source at build time. Earlier versions of this page said that
+only confirmed defects are published, and that every published defect had been checked by a human. Those statements are withdrawn:
+neither is a requirement of publication.</p></section>
 </div></div>
 """
     site.add(page, layout(site, page, "Methodology", body, "methodology/", indexable=True, cls="methodology"))
@@ -1180,7 +1408,7 @@ def render_statistics(site):
         found = "".join([
             row("M05", "Candidate defects raised", t["M05"], "cumulative"),
             row("M06", "Confirmed", conf, f"of {t['M05']}; {m06['confirmed_previously_reported']} previously reported elsewhere"),
-            row("M06", "Open", m06["open"], f"of {t['M05']}; {m06['open_ai_supported']} supported by AI only, awaiting a human check"),
+            row("M06", "Open", m06["open"], f"of {t['M05']}; {m06['open_ai_supported']} supported by AI only; not yet Confirmed"),
             row("M06", "Unresolved", m06["unresolved"], f"of {t['M05']}; " + E(", ".join(f"{v} {k.replace('_', ' ')}" for k, v in snap['unresolved_reasons'].items()))),
             row("M06", "Rejected after checking", m06["rejected"], f"of {t['M05']}"),
             row("M07", "Deep audits that found no defect", m07,
@@ -1188,14 +1416,14 @@ def render_statistics(site):
         survived = "".join([
             row("M08", "Rechecked by a separate AI session", f"{sum(t['M08'].values())} of {conf}", f"{t['M08']['blind']} blind, {t['M08']['informed']} informed; not a human check"),
             row("M09", "Reproduced by the researcher", f"{t['M09']} of {conf}"),
-            row("M10", "Verified by an external human", f"{t['M10']} of {conf}"),
+            row("M10", "Checked by an external human", f"{t['M10']} of {conf}"),
             row("M11", "Source check full / partial / none", f"{t['M11']['full']} / {t['M11']['partial']} / {t['M11']['none']}", f"of {conf}")])
         after = "".join([
             row("M12", "Papers whose authors were contacted", t["M12"], f"as of {E(fmt_date(snap['as_of']))}"),
             row("M13", "Authors agreed", f"{m13['agreed']} of {pop13}", "confirmed defects in papers whose authors were contacted"),
             row("M13", "Authors partly agreed", f"{m13['partly_agreed']} of {pop13}"),
             row("M13", "Authors disagree", f"{m13['disagreed']} of {pop13}"),
-            row("M13", "No substantive reply within 90 days", f"{m13['none_yet']} of {pop13}"),
+            row("M13", "No reply recorded", f"{m13['none_yet']} of {pop13}"),
             row("M14", "Corrections after author contact", corr,
                 f"{rs['corrections']['credits_programme']} credit this audit, {rs['corrections']['none_stated']} state no attribution")])
         publ = "".join([
@@ -1310,7 +1538,8 @@ a repair exists; often the claim survives serious attempts to break it. All of t
 are hard, and correcting them is part of scholarship. A record is not a verdict on the people who wrote the paper.</p></section>
 <section id="who"><h2>Who</h2><p>{E(cfg['owner'])}. {cfg['owner_bio']}</p></section>
 <section id="disclosure"><h2>Disclosure</h2><p><strong>Human-led, AI-assisted, independent research.</strong> AI models
-are used for discovery and for separate rechecks. A defect is published only after a human check, and the researcher makes
+are used for discovery and for separate hostile rechecks. Each finding is checked against the published version of the source before
+publication, and the researcher makes
 every editorial decision. {E(cfg['name'])} is independent personal research. It is not conducted on behalf of any employer
 and is not affiliated with, commissioned by or endorsed by the journals, publishers or authors whose work is examined.
 Records are current assessments, not final authority.</p></section>
@@ -1329,6 +1558,126 @@ def render_404(site):
     body = (f'<div class="wrap page-head"><h1>Page not found</h1><p class="lede">Released records keep their addresses. '
             f'Try the <a href="{site.href(page, "cases/")}">case index</a>.</p></div>')
     site.add(page, layout(site, page, "Page not found", body))
+
+
+def rich(rec, text, where):
+    """Text for one field. Schema-2 fields may hold \\( \\) and \\[ \\] mathematics; schema-1 text is escaped as written."""
+    if rec.get("schema") == 2:
+        return mathml.render(text, where, math=True)
+    return E(text)
+
+
+def claim_view(rec, c):
+    """Facts about one claim, the same for schema 1 and schema 2: outcome, status, the evidence that happened and the
+    author response. Renderers and statistics read this. It records facts; it does not decide publication."""
+    res = c["result"]
+    v2 = rec.get("schema") == 2
+    status = (res["status"] if v2 else "confirmed") if res["outcome"] == "defect_found" else None
+    if v2:
+        evidence = [dict(e) for e in c["evidence"]]
+        ar = c["author_response"]
+        response = {"position": ar["position"], "responder": ar.get("responder"), "basis": ar["basis"],
+                    "counts": ar["counts"], "covers": ar.get("covers"), "assessment": ar.get("assessment"),
+                    "legacy": False, "summary": None}
+    else:
+        evidence = [{"type": V1_EVIDENCE[k["kind"]], "date": k["date"], "session": k.get("session"),
+                     "identity": None, "detail": k["detail"]}
+                    for k in c.get("checks", []) if k.get("result") == "confirms" and k["kind"] != "author_agreement"]
+        pos = rec["author_position"]
+        counts = any(k["kind"] == "author_agreement" and k.get("result") == "confirms" for k in c.get("checks", []))
+        response = {"position": pos["position"], "responder": None, "basis": "original" if counts else "none",
+                    "counts": counts, "covers": None, "assessment": None, "legacy": True, "summary": pos.get("summary")}
+    return {"outcome": res["outcome"], "status": status, "evidence": evidence, "response": response}
+
+
+AGREEMENT_SENTENCE = {
+    "all": "The authors also agreed in writing with the identified defect.",
+    "one_of_two": "One of the two authors also agreed in writing with the identified defect.",
+    "some": "Some of the authors also agreed in writing with the identified defect.",
+}
+
+
+def basis_text(view):
+    """The positive basis for a defect, in plain words, from what actually happened. Empty for other outcomes."""
+    if view["outcome"] != "defect_found":
+        return ""
+    types = {e["type"] for e in view["evidence"]}
+    parts = []
+    if "hostile_ai_recheck" in types:
+        parts.append("Survived a separate-session hostile AI recheck and a check against the published version.")
+    else:
+        parts.append("Checked against the published version.")
+    if "researcher_reproduction" in types:
+        parts.append("The researcher re-derived it independently.")
+    if "external_check" in types:
+        parts.append("An external check was made.")
+    resp = view["response"]
+    if resp["counts"]:
+        parts.append(AGREEMENT_SENTENCE.get(resp["responder"], "An author also agreed in writing with the identified defect."))
+    if "private_human_confirmation" in types:
+        parts.append("A human confirmation is recorded privately; its source is not disclosed.")
+    return " ".join(parts)
+
+
+def status_html(site, page, status):
+    label = {"open": "Open", "confirmed": "Confirmed"}[status]
+    return f'<a class="status status-{status}" href="{site.href(page, "definitions/")}#{status}">{label}</a>'
+
+
+def status_cell(site, page, rec, c):
+    """Index cell: Open or Confirmed, the evidence that happened, and the source-check level. No empty slots."""
+    view = claim_view(rec, c)
+    src = VOR_SHORT[c["vor_check"]["level"]]
+    if view["outcome"] == "no_defect_found":
+        rerun = " · rerun passes" if (c.get("reproduction") or {}).get("result") == "pass" else ""
+        return f'<span class="vt">Deep audit{rerun}</span><span class="vs-sub">{E(src)}</span>'
+    if view["outcome"] == "unresolved":
+        return f'<span class="vt">Not settled</span><span class="vs-sub">{E(src)}</span>'
+    names = [EVIDENCE_SHORT[e["type"]] for e in view["evidence"]]
+    if view["response"]["counts"]:
+        names.append(EVIDENCE_SHORT["author_agreement"])
+    label = {"open": "Open", "confirmed": "Confirmed"}[view["status"]]
+    detail = "; ".join(x for x in [" + ".join(dict.fromkeys(names)), src] if x)
+    return f'<span class="vt status-{view["status"]}">{label}</span><span class="vs-sub">{E(detail)}</span>'
+
+
+def evidence_list(rec, view, where):
+    """The checks that actually took place, one line each. Nothing is listed for checks that did not happen."""
+    items = []
+    for i, e in enumerate(view["evidence"]):
+        tags = [fmt_month(e["date"]) if e.get("date") else ""]
+        tags.append({"blind": "blind session", "informed": "informed session"}.get(e.get("session"), ""))
+        tags.append({"named": "named", "anonymous": "anonymous"}.get(e.get("identity"), ""))
+        tags = ", ".join(t for t in tags if t)
+        head = E(SUPPORT_KINDS[e["type"]]) + (f" · {E(tags)}" if tags else "")
+        items.append(f'<li><span class="ev-k">{head}</span><span class="ev-d">'
+                     f'{rich(rec, e["detail"], f"{where} evidence {i + 1}")}</span></li>')
+    return f'<ul class="evidence">{"".join(items)}</ul>' if items else ""
+
+
+def author_html(rec, view, where):
+    """Author response for one claim: position, who responded, what it covers. It never claims verification."""
+    resp = view["response"]
+    if resp["legacy"]:
+        out = f"<p>{E(POS_LONG[resp['position']])}</p>"
+        if resp.get("summary"):
+            out += (f'<blockquote class="resp">{E(resp["summary"])}</blockquote>'
+                    '<p class="resp-src">Quoted with the authors\' approval.</p>')
+        return out
+    pos = resp["position"]
+    if pos in RESPONSE_VERB and resp.get("responder") in RESPONDERS:
+        singular = resp["responder"] == "one_of_two"
+        line = f"{RESPONDERS[resp['responder']]} {RESPONSE_VERB[pos][1 if singular else 0]}."
+    else:
+        line = f"{POSITIONS_V2[pos]}."
+    out = f"<p>{E(line)}</p>"
+    if resp.get("covers"):
+        out += f'<p class="covers">Covers: {rich(rec, resp["covers"], where + " covers")}</p>'
+    if resp.get("assessment"):
+        out += f'<p class="covers">Our assessment: {rich(rec, resp["assessment"], where + " assessment")}</p>'
+    if resp["basis"] == "secondary_record":
+        out += '<p class="small muted">Recorded from a secondary account of the reply. It does not count as written agreement.</p>'
+    return out
 
 
 def scan_output(out_dir, denylist):

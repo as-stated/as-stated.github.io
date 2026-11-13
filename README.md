@@ -13,7 +13,9 @@ holds production code and real approved public data only.
 
 | Path | Purpose |
 | --- | --- |
-| `build.py` | Static site builder and release checker (Python 3.12+, standard library only). |
+| `build.py` | Static site builder and release checker (Python 3.12+; standard library plus the pinned latex2mathml). |
+| `mathml.py` | Build-time mathematics for schema-2 records: delimiter checks and validation of the converted MathML. |
+| `requirements.txt` | The one build dependency, pinned to an exact version and SHA-256 hash. |
 | `site.json` | Production configuration: name, descriptor, URLs, owner, channel, optional pages. |
 | `static/` | Stylesheet, script (filters and copy buttons; every page works without it), favicon. |
 | `content/published/` | Real, owner-approved records, each with an exact SHA-256 release manifest. |
@@ -22,7 +24,11 @@ holds production code and real approved public data only.
 
 ## Local use
 
-Requirements: Python 3.12 or later. A fresh clone needs nothing else.
+Requirements: Python 3.12 or later, and the pinned build dependency:
+
+```
+python -m pip install --require-hashes -r requirements.txt
+```
 The layout tests also need Microsoft Edge or Google Chrome; they are skipped if neither is installed.
 
 ```
@@ -70,6 +76,21 @@ Pull requests run the tests and build but never deploy.
 
 Tests call `tests/fixtures.py`, which builds a temporary project with generated records, statistics and
 manifests, and runs them through the same published channel the site uses. It stores nothing in this repository.
+
+## Schema 2 records and mathematics
+
+Released schema-1 records (no `"schema"` key) are never reinterpreted. New records set `"schema": 2`, which adds:
+
+- **Status.** Each defect is `open` or `confirmed`. Open is a published finding that has not received the optional
+  Confirmed label. Confirmed needs at least two kinds of evidence, one of them human. The build checks that label is
+  backed by the evidence; whether a finding meets the research standard is decided upstream, not here.
+- **Evidence and author responses.** `evidence` lists only checks that took place. A written author agreement is never
+  evidence: it is the claim's `author_response`, and `counts` is true only for an original written agreement.
+- **Mathematics.** Write `\( ... \)` for inline and `\[ ... \]` for display formulas in mathematical fields (statement,
+  conditions, quantifiers, gist, summary, witness, argument, not_claimed, repair_note, covers, assessment, evidence
+  detail). Other fields are plain text. Dollar signs are refused: write money in words. Formulas are converted at build
+  time by the pinned latex2mathml into MathML, with the TeX kept in an annotation. The build refuses delimiters that do not
+  balance, line breaks, unknown environments, links, styling, and any output outside MathML Core.
 
 ## Publishing a real record
 

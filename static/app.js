@@ -10,7 +10,7 @@
     form.hidden = false;
     var groups = Array.prototype.slice.call(index.querySelectorAll("tbody.ix-group"));
     var get = function (id) { return document.getElementById(id); };
-    var q = get("f-text"), fam = get("f-fam"), kind = get("f-kind"), track = get("f-track"), count = get("f-count");
+    var q = get("f-text"), fam = get("f-fam"), status = get("f-status"), kind = get("f-kind"), track = get("f-track"), count = get("f-count");
     var total = index.querySelectorAll("tr.ix-row").length;
     var apply = function () {
       var s = q.value.trim().toLowerCase();
@@ -20,7 +20,8 @@
         var shown = 0;
         Array.prototype.forEach.call(g.querySelectorAll("tr.ix-row"), function (r) {
           var ok = trackOk && (!s || r.dataset.text.indexOf(s) !== -1) &&
-            (!fam.value || r.dataset.fam === fam.value) && (!kind.value || r.dataset.kind === kind.value);
+            (!fam.value || r.dataset.fam === fam.value) && (!status.value || r.dataset.status === status.value) &&
+            (!kind.value || r.dataset.kind === kind.value);
           r.hidden = !ok;
           if (ok) { shown += 1; }
         });
@@ -31,7 +32,7 @@
       count.textContent = claims === total ? total + " claims in " + groups.length + " papers"
         : claims + " of " + total + " claims, in " + papers + " paper" + (papers === 1 ? "" : "s");
     };
-    [q, fam, kind, track].forEach(function (el) {
+    [q, fam, status, kind, track].forEach(function (el) {
       el.addEventListener("input", apply);
       el.addEventListener("change", apply);
     });

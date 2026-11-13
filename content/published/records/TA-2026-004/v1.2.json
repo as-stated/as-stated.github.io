@@ -1,0 +1,141 @@
+{
+  "public_id": "TA-2026-004",
+  "version": "1.2",
+  "schema": 2,
+  "released": "2026-11-13",
+  "status": "published",
+  "sample": false,
+  "kind": "defect",
+  "track": "game_theory",
+  "title": "Basile and Scalzo (2020)",
+  "headline": "Proposition 4.1 is false on the stated noncompact domain: open graph alone does not imply the coalitional deviation property.",
+  "work": {
+    "authors": [
+      "Achille Basile",
+      "Vincenzo Scalzo"
+    ],
+    "title": "Non-emptiness of the alpha-core: sufficient and necessary conditions",
+    "venue": "International Journal of Game Theory",
+    "year": 2020,
+    "volume": "49",
+    "pages": "1143–1153",
+    "doi": "10.1007/s00182-020-00736-y"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Proposition 4.1",
+      "kind": "proposition",
+      "role": "secondary",
+      "page": "1148",
+      "gist": "Open graph of every preference correspondence is claimed to imply the coalitional deviation property.",
+      "statement": "If every preference correspondence \\(P_i\\) has open graph, then the game satisfies the coalitional deviation property.",
+      "conditions": [
+        "finite player set",
+        "each strategy set is nonempty",
+        "each preference correspondence \\(P_i\\) has open graph",
+        "no compactness assumption is imposed by Proposition 4.1 or the Section 3 game domain"
+      ],
+      "quantifiers": "Every strategic-form game with non-ordered preferences admitted by the paper's Section 3 domain whose preference correspondences have open graph.",
+      "result": {
+        "outcome": "defect_found",
+        "status": "confirmed",
+        "defect_class": "statement_false",
+        "affects": "secondary_result",
+        "depth": "deep_audit",
+        "summary": "Pointwise openness along an entire blocking fibre does not yield one uniform product neighbourhood when the outsider fibre is noncompact.",
+        "witness": "Take two players with \\(X_1=X_2=\\mathbb{R}\\). Let \\(P_2(z)=\\varnothing\\) and \\[P_1(z)=\\left\\{\\,y : |y_1-z_1-2| < \\frac{1}{1+|y_2|}\\,\\right\\}.\\] Both graphs are open. Every profile \\(z\\) is \\(\\alpha\\)-blocked by coalition \\(\\{1\\}\\), using \\(x_1=z_1+2\\). But a fixed proposed deviation \\(x_1=a\\) blocks only profiles with \\(z_1=a-2\\), so no fixed deviation works throughout any open neighbourhood. The coalitional deviation property therefore fails.",
+        "argument": "For each profile, openness gives a neighbourhood on which the blocking deviation works. The neighbourhood is not uniform: a fixed deviation \\(x_1=a\\) works only on the slice \\(z_1=a-2\\), and the outsider fibre is noncompact, so no finite subcover yields one product neighbourhood.",
+        "not_claimed": [
+          "Theorem 4.1 is not claimed to be false.",
+          "Theorem 4.2 is not claimed to be false.",
+          "Open graph is not claimed to be insufficient when the relevant outsider fibres are compact."
+        ],
+        "repair": "local_repair_proposed",
+        "repair_note": "Compactness of the relevant outsider fibre supplies the missing finite-subcover step and yields a uniform neighbourhood. A later public paper by Scalzo (2022) uses this compactness argument in an analogous proposition for exchange economies."
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "1148",
+        "detail": "The Proposition 4.1 statement and decisive proof step were rechecked against the official Springer Version of Record text at printed p. 1148. Rendered-page screenshot verification was not completed, so the source lock remains partial."
+      },
+      "evidence": [
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-11",
+          "session": "informed",
+          "detail": "A separate informed hostile-validation session reconstructed the noncompact two-player counterexample and attacked the proposed defect from multiple directions. It checked the open-graph property, irreflexivity and asymmetry of the active relation, alpha-blocking of every profile, failure of the coalitional deviation property, and the role of noncompactness. The published statement and decisive proof step were then rechecked against the Springer Version of Record."
+        }
+      ],
+      "author_response": {
+        "position": "agrees",
+        "responder": "one_of_two",
+        "basis": "original",
+        "counts": true
+      }
+    }
+  ],
+  "correction": null,
+  "related": [
+    {
+      "type": "related_work",
+      "citation": "Vincenzo Scalzo (2022). Existence of alpha-core allocations in economies with non-ordered and discontinuous preferences. Economic Theory Bulletin 10(1), 1–12.",
+      "doi": "10.1007/s40505-022-00223-5",
+      "note": "Uses the compactness argument in an analogous proposition for exchange economies."
+    }
+  ],
+  "evidence": {
+    "package_doi": null,
+    "package_sha256": null,
+    "licence": "No public evidence package released.",
+    "files": []
+  },
+  "history": [
+    {
+      "date": "2026-11-09",
+      "type": "audit",
+      "label": "Exact counterexample identified and separately rechecked"
+    },
+    {
+      "date": "2026-11-12",
+      "type": "source",
+      "label": "Version of Record text rechecked; exact Proposition 4.1 page pinpointed at p. 1148"
+    },
+    {
+      "date": "2026-11-12",
+      "type": "release",
+      "label": "Record version 1.0 approved for release"
+    },
+    {
+      "date": "2026-11-12",
+      "type": "response",
+      "label": "Written author agreement recorded privately"
+    },
+    {
+      "date": "2026-11-13",
+      "type": "correction",
+      "label": "Verification description corrected in version 1.2"
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2026-11-12",
+      "change": "First release."
+    },
+    {
+      "version": "1.1",
+      "date": "2026-11-12",
+      "change": "Corrected the verification presentation to record written author agreement and the corresponding author position. No change to the mathematical finding."
+    },
+    {
+      "version": "1.2",
+      "date": "2026-11-13",
+      "change": "Corrected the verification description. The counted support is a separate-session hostile AI recheck and written author agreement; the written author agreement is shown as the author's response. The mathematics is typeset. No change to the mathematical finding."
+    }
+  ],
+  "statements": {
+    "ai_use": "AI systems were used for discovery and separate hostile rechecking. Written author agreement is also recorded. Private correspondence is not reproduced, and AI agreement is not treated as human verification."
+  }
+}
