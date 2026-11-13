@@ -1,0 +1,179 @@
+{
+  "public_id": "TA-2026-005",
+  "version": "1.0",
+  "schema": 2,
+  "released": "2026-11-13",
+  "status": "published",
+  "sample": false,
+  "kind": "defect",
+  "track": "game_theory",
+  "title": "Siraj et al. (2025)",
+  "headline": "The displayed E/2 potential is not exact in general, and the synchronous best-response algorithm can cycle.",
+  "work": {
+    "authors": [
+      "Md Sadman Siraj",
+      "Eirini Eleni Tsiropoulou",
+      "Symeon Papavassiliou",
+      "Jim Plusquellic"
+    ],
+    "title": "Symbiotic Positioning, Navigation, and Timing via Game Theory and Reinforcement Learning",
+    "venue": "IEEE Access",
+    "year": 2025,
+    "volume": "13",
+    "pages": "69532–69546",
+    "doi": "10.1109/ACCESS.2025.3561790"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Theorem 1",
+      "kind": "theorem",
+      "role": "main",
+      "page": "69538",
+      "gist": "The paper states that the SPNT game is an exact potential game with potential \\(\\Phi=E/2\\).",
+      "statement": "The non-cooperative game \\(G\\) is an exact potential game with potential function \\(\\Phi(s)=E(s)/2\\).",
+      "conditions": [
+        "players are the target and collaborator nodes in \\(\\mathcal N=\\mathcal U\\cup\\mathcal C\\)",
+        "each player's cost is the sum of squared ranging errors to its anchor, RIS and collaborator neighbours",
+        "the system error \\(E\\) is the sum of those local costs over strategic nodes",
+        "Theorem 1 states no restriction making fixed anchor or RIS error terms invariant across a player's strategies"
+      ],
+      "quantifiers": "The claim is stated for the non-cooperative SPNT game defined in Section IV, including the fixed-anchor, RIS and collaborator error terms in Equations (4) and (5).",
+      "result": {
+        "outcome": "defect_found",
+        "status": "open",
+        "defect_class": "statement_false",
+        "affects": "main_result",
+        "depth": "deep_audit",
+        "summary": "Halving the total system error correctly compensates for reciprocal strategic-player terms, but it also halves fixed anchor and RIS terms that appear only once in the system error.",
+        "witness": "Use two strategic players. For player 1 let \\(A=(0,0,0,0)\\) and \\(B=(2,0,0,0)\\), and hold player 2 at \\(C=(1,0,0,0)\\). Give the reciprocal collaborator link measured pseudorange 1, so its error is zero for player 1 at both \\(A\\) and \\(B\\). Give player 1 four fixed anchors \\(q_1=(0,3/2,0,0)\\), \\(q_2=(0,-3/2,0,0)\\), \\(q_3=(0,0,3/2,0)\\), \\(q_4=(2,0,-3/2,0)\\), with measured pseudoranges \\((3/2,3/2,3/2,5/2)\\). Player 1's fixed-anchor cost is 0 at \\(A\\) and 4 at \\(B\\), while the reciprocal collaborator term does not change. Thus \\(\\Delta U_1=4\\) but \\(\\Delta(E/2)=2\\).",
+        "argument": "For a unilateral move by player 1, reciprocal collaborator errors can enter \\(E\\) twice and are therefore correctly weighted by one half. Fixed anchor and RIS errors enter only player 1's local cost and therefore enter \\(E\\) once. Dividing all of \\(E\\) by two gives those fixed terms only half their required weight. The two-player witness isolates exactly this mismatch while keeping the collaborator-link error constant.",
+        "not_claimed": [
+          "The SPNT game has no exact potential function.",
+          "A Nash equilibrium does not exist.",
+          "The numerical results reported in the paper are incorrect."
+        ],
+        "repair": "local_repair_proposed",
+        "repair_note": "A natural repaired potential gives fixed anchor and RIS terms weight one and reciprocal collaborator terms weight one half, subject to the symmetry conditions needed for the collaborator-link errors to match across the two incident players."
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "69537–69538",
+        "detail": "The final IEEE Access Version of Record was rechecked directly. Equations (4) and (5), Definition 2, Theorem 1 and the decisive proof step remain in the published version. The check used the final publisher PDF text; no separate rendered-page screenshot was retained, so the source level is recorded as partial."
+      },
+      "evidence": [
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-10",
+          "session": "informed",
+          "detail": "A separate informed AI validation rebuilt the potential-function objection after the author's scope challenge and checked a genuine two-player construction. The exact arithmetic reproduces a player-cost change of 4 against a claimed-potential change of 2. The final published source was then rechecked and still states the same potential formula."
+        }
+      ],
+      "author_response": {
+        "position": "disagrees",
+        "responder": "some",
+        "basis": "original",
+        "counts": false,
+        "assessment": "The initial one-player example was challenged on scope. Rechecking the issue with two strategic players removes that objection: the reciprocal collaborator term can be held constant while player 1's fixed-anchor contribution changes, leaving the same factor-of-two mismatch in the claimed potential."
+      }
+    },
+    {
+      "id": "c2",
+      "label": "Algorithm 2 and the SBRD convergence claim",
+      "kind": "algorithm",
+      "role": "supporting",
+      "page": "69539",
+      "gist": "The paper states that synchronous best-response dynamics converges to a Nash equilibrium because the game is exact potential.",
+      "statement": "The ABRD and SBRD converge to a Nash equilibrium, given that the non-cooperative game \\(G\\) is an exact potential game.",
+      "conditions": [
+        "Algorithm 2 has all strategic nodes compute a best response against the preceding profile in the same iteration",
+        "no serialization, independent-set activation or global-potential acceptance step is stated",
+        "the convergence justification given in the text is exact potentiality"
+      ],
+      "quantifiers": "The convergence sentence is categorical for the ABRD and SBRD algorithms described in Section IV; the synchronous rule in Algorithm 2 updates all nodes from the previous profile.",
+      "result": {
+        "outcome": "defect_found",
+        "status": "open",
+        "defect_class": "construction_or_algorithm_fails",
+        "affects": "application_or_example",
+        "depth": "deep_audit",
+        "summary": "Exact potentiality controls unilateral improvement moves but does not guarantee that simultaneous best responses to the same old profile increase the potential.",
+        "witness": "Take two strategic nodes, each with strategies \\(A=(0,0,0,0)\\) and \\(B=(2,0,0,0)\\). Give each node the same four fixed anchors \\(q_1=(0,3/2,0,0)\\), \\(q_2=(0,-3/2,0,0)\\), \\(q_3=(0,0,3/2,0)\\), \\(q_4=(2,0,-3/2,0)\\), set every anchor pseudorange to 2, and set the reciprocal collaborator pseudorange to 2. The fixed-anchor cost is 1 at either \\(A\\) or \\(B\\); the mutual-link error is 4 when the two estimates coincide and 0 when they differ. The cost profiles are therefore \\(AA:(5,5)\\), \\(AB:(1,1)\\), \\(BA:(1,1)\\), \\(BB:(5,5)\\). All best responses are unique, so Algorithm 2 maps \\(AA\\to BB\\to AA\\to\\cdots\\), while \\(AB\\) and \\(BA\\) are Nash equilibria.",
+        "argument": "From \\(AA\\), each player's unilateral best response is \\(B\\), but when both make that best response simultaneously the new profile is \\(BB\\), where both again prefer \\(A\\). The same reasoning returns the process to \\(AA\\). On this instance the fixed-anchor contribution is the same at \\(A\\) and \\(B\\), so \\(E/2\\) does satisfy the unilateral exact-potential identity. The cycle therefore isolates the synchronous-update problem rather than relying on the Theorem 1 formula defect.",
+        "not_claimed": [
+          "The asynchronous best-response algorithm fails to converge under the usual finite exact-potential conditions.",
+          "The paper's simulated SBRD trajectories did not converge in the reported experiments.",
+          "No modified synchronous or batched update rule can converge."
+        ],
+        "repair": "local_repair_proposed",
+        "repair_note": "Use asynchronous single-player updates, serialize updates within a round, restrict simultaneous updates to interaction-independent players, or accept a joint update only when a valid global potential strictly improves."
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "69538–69539",
+        "detail": "The final IEEE Access Version of Record was rechecked directly. The published text still says that ABRD and SBRD converge to a Nash equilibrium because the game is exact potential, and Algorithm 2 still updates all nodes synchronously against the preceding profile. The check used the final publisher PDF text; no separate rendered-page screenshot was retained, so the source level is recorded as partial."
+      },
+      "evidence": [
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-10",
+          "session": "informed",
+          "detail": "A separate informed AI validation constructed the source-specific two-node cycle, verified it with exact arithmetic and reproduced it with an independent implementation. It also checked that the cycle occurs on an instance where the displayed E/2 function has the relevant unilateral potential property, so the synchronous-update defect is logically separate from the potential-formula defect."
+        }
+      ],
+      "author_response": {
+        "position": "disagrees",
+        "responder": "some",
+        "basis": "original",
+        "counts": false,
+        "assessment": "The response characterized the synchronous and asynchronous results as empirical convergence and performance comparisons. The final published text nevertheless makes a general convergence statement on p. 69539 and attributes it to exact potentiality. The explicit two-node instance satisfies the paper's ranging-error structure and makes Algorithm 2 cycle deterministically."
+      }
+    }
+  ],
+  "correction": null,
+  "related": [],
+  "evidence": {
+    "package_doi": null,
+    "package_sha256": null,
+    "licence": "No public evidence package released.",
+    "files": []
+  },
+  "history": [
+    {
+      "date": "2026-10-23",
+      "type": "audit",
+      "label": "Two candidate defects identified against the final published article"
+    },
+    {
+      "date": "2026-10-29",
+      "type": "response",
+      "label": "Written author disagreement recorded privately"
+    },
+    {
+      "date": "2026-10-29",
+      "type": "audit",
+      "label": "Author objections tested with two-player source-specific constructions"
+    },
+    {
+      "date": "2026-11-13",
+      "type": "source",
+      "label": "Final IEEE Version of Record rechecked and source limitations closed"
+    },
+    {
+      "date": "2026-11-13",
+      "type": "release",
+      "label": "Record version 1.0 approved for release as Open"
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2026-11-13",
+      "change": "First release. Both findings are Open: each survived a separate-session hostile AI recheck and a final Version-of-Record recheck; an author response disagrees with the findings."
+    }
+  ],
+  "statements": {
+    "ai_use": "AI systems were used for discovery, exact-arithmetic checking and a separate hostile recheck. The final IEEE Version of Record was rechecked against the target statements and counterexamples. A written author response disagrees with the findings; private correspondence is not reproduced."
+  }
+}
