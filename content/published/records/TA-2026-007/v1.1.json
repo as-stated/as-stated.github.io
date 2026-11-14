@@ -1,0 +1,140 @@
+{
+  "public_id": "TA-2026-007",
+  "version": "1.1",
+  "schema": 2,
+  "released": "2026-11-15",
+  "status": "published",
+  "sample": false,
+  "kind": "defect",
+  "track": "mechanism_design",
+  "title": "Nonbossy mechanisms: Mechanism design robust to secondary goals",
+  "headline": "Open finding: the single-item posted-price characterization fails at the extended zero-minus boundary.",
+  "work": {
+    "authors": [
+      "Renato Paes Leme",
+      "Jon Schneider",
+      "Hanrui Zhang"
+    ],
+    "title": "Nonbossy mechanisms: Mechanism design robust to secondary goals",
+    "venue": "Journal of Economic Theory",
+    "year": 2026,
+    "volume": "235",
+    "pages": "106187",
+    "doi": "10.1016/j.jet.2026.106187"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Theorem 4 and its Theorem 5 proof step",
+      "kind": "theorem",
+      "role": "secondary",
+      "page": "PDF p. 10 (Theorem 4)",
+      "gist": "The single-item PIC, numerical-IR and nonbossiness characterization fails at the extended 0-minus boundary.",
+      "statement": "Every primary-incentive-compatible, individually-rational and nonbossy single-item mechanism is a sequential posted-price mechanism.",
+      "conditions": [
+        "Type domain includes 0−.",
+        "Individual rationality is numerical.",
+        "Posted prices are nonnegative and universal rejection ends allocation."
+      ],
+      "quantifiers": "Every mechanism in the stated single-item class.",
+      "result": {
+        "outcome": "defect_found",
+        "status": "open",
+        "defect_class": "statement_false",
+        "affects": "secondary_result",
+        "depth": "deep_audit",
+        "summary": "A constant mechanism assigning bidder 1 the item at price zero is feasible, incentive-compatible, numerically individually rational and nonbossy, but not representable by a legal sequential posted-price mechanism at the all-0− profile.",
+        "witness": "At the all-0− profile the constant mechanism allocates to bidder 1. A legal sequential posted-price mechanism cannot induce that allocation with nonnegative prices after universal rejection.",
+        "argument": "The boundary outcome contradicts the sequential posted-price characterization while satisfying the listed mechanism properties.",
+        "not_claimed": [
+          "The general PIC plus nonbossiness robustness theorem is not challenged.",
+          "The full proof under tie-aware individual rationality is not assessed."
+        ],
+        "repair": "local_repair_proposed",
+        "repair_note": "A tie-aware boundary condition may avoid this witness; the broader characterization is not established."
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "PDF p. 10 (Theorem 4)",
+        "detail": "The publisher Version of Record decisive theorem page was rendered and checked; canonical source status remains partial."
+      },
+      "evidence": [
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-10-25",
+          "session": "informed",
+          "detail": "A fresh separate-session hostile review checked the boundary witness against the publisher article and relevant proof step."
+        }
+      ],
+      "author_response": {
+        "position": "agrees",
+        "responder": "one",
+        "basis": "original",
+        "counts": true,
+        "covers": "One author agrees with the identified boundary issue."
+      }
+    }
+  ],
+  "correction": null,
+  "related": [],
+  "evidence": {
+    "package_doi": null,
+    "package_sha256": null,
+    "licence": "No public evidence package released.",
+    "files": []
+  },
+  "technical_notes": [
+    {
+      "creator": "As Stated",
+      "date": "2026-10-25",
+      "version": "2.0",
+      "pages": 5,
+      "sha256": "ed3c482bd09de8bf7c5910ee438687659410c8619767688218552323804dfaac",
+      "rights": "CC BY 4.0 for this note; third-party material remains under its own rights.",
+      "path": "technical-notes/nonbossy-mechanisms/v2.0.pdf"
+    }
+  ],
+  "history": [
+    {
+      "date": "2026-10-25",
+      "type": "audit",
+      "label": "A fresh hostile review identified a boundary counterexample to the stated characterization."
+    },
+    {
+      "date": "2026-10-25",
+      "type": "author_contact",
+      "label": "The authors were contacted with the As Stated technical note."
+    },
+    {
+      "date": "2026-10-31",
+      "type": "author_response",
+      "label": "One author agreed with the identified boundary issue."
+    },
+    {
+      "date": "2026-11-15",
+      "type": "release",
+      "label": "Released as an Open finding with the exact archived As Stated technical note."
+    },
+    {
+      "date": "2026-11-15",
+      "type": "correction",
+      "label": "Corrected the claim classification to match the canonical secondary-result scope; the finding and Open status are unchanged."
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2026-11-15",
+      "change": "First release with the exact archived As Stated technical note; scientific status unchanged."
+    },
+    {
+      "version": "1.1",
+      "date": "2026-11-15",
+      "change": "Corrected the claim classification to secondary result to match canonical state; no change to finding, evidence or Open status."
+    }
+  ],
+  "statements": {
+    "ai_use": "AI systems contributed to discovery and separate hostile review. The finding remains Open."
+  }
+}
