@@ -92,6 +92,12 @@ Released schema-1 records (no `"schema"` key) are never reinterpreted. New recor
   time by the pinned latex2mathml into MathML, with the TeX kept in an annotation. The build refuses delimiters that do not
   balance, line breaks, unknown environments, links, styling, and any output outside MathML Core.
 
+Schema-2 records may also list versioned As Stated technical-note PDFs. Each entry gives its creator, date, version,
+SHA-256, rights statement, stable `technical-notes/.../vX.Y.pdf` path and optional page count. The build verifies the
+exact PDF bytes and renders one direct-open `Read technical note (PDF)` link with the date and, when known, page count.
+Other integrity and rights metadata remains in the record JSON and release manifest. The page remains useful without an
+inline PDF viewer; corrections use a new version and path.
+
 ## Publishing a real record
 
 Only after the owner decides to publish a specific record:

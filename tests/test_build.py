@@ -253,6 +253,12 @@ class BuildTests(unittest.TestCase):
                 self.assertIn(label, page, (r["public_id"], pos))
         self.assertTrue({"agrees", "partly_agrees", "disagrees", "reviewing", "no_reply", "not_contacted"} <= seen)
 
+    def test_single_author_response_uses_singular_verb(self):
+        rec = {"schema": 2}
+        view = {"response": {"legacy": False, "position": "agrees", "responder": "one",
+                              "basis": "original", "covers": None, "assessment": None}}
+        self.assertIn("One author agrees.", build.author_html(rec, view, "test"))
+
     # ------------------------------------------------------------ schema 2: status, evidence, responses, math, privacy
     def load_with_edit(self, rid, fn, expect):
         """Edit one schema-2 record in a fresh copy of the test project, refresh its manifests, and expect a refusal."""
@@ -423,6 +429,40 @@ class BuildTests(unittest.TestCase):
         def stray_work(r):
             r["work"]["secret"] = "x"
         self.load_with_edit("TEST-2000-019", stray_work, "work: unknown fields")
+
+    def test_technical_note_pdf_is_hash_checked_and_rendered_as_one_reader_link(self):
+        root = fixtures.make_project(build, self.tmp / "technical_note_project")
+        croot = root / PUBLISHED
+        pdf = b"%PDF-1.4\n% local fixture\n%%EOF\n"
+        public_path = "technical-notes/example-note/v1.0.pdf"
+        source = croot / "files" / public_path
+        source.parent.mkdir(parents=True, exist_ok=True)
+        source.write_bytes(pdf)
+        note = {"creator": "As Stated", "date": "2000-06-01", "version": "1.0", "pages": 2,
+                "sha256": build.sha256_bytes(pdf), "rights": "CC BY 4.0",
+                "path": public_path}
+        edit_json(croot / "records/TEST-2000-019/v1.0.json", lambda r: r.update(technical_notes=[note]))
+        fixtures.write_manifests(build, root)
+        _, _, out = build.build(None, self.tmp / "technical_note_out", pretty=True, root=root)
+        page = (out / "cases/TEST-2000-019/index.html").read_text(encoding="utf-8")
+        self.assertIn("As Stated technical note", page)
+        self.assertIn("Read technical note (PDF)", page)
+        self.assertEqual(page.count("Read technical note (PDF)"), 1)
+        self.assertNotIn("Download PDF", page)
+        self.assertNotIn('class="pdf-viewer"', page)
+        self.assertIn("1 June 2000 · 2 pages", page)
+        self.assertNotIn(note["sha256"], page)
+        technical_note_section = page.split('<section class="after technical-notes"', 1)[1].split("</section>", 1)[0]
+        self.assertNotIn("Creator", technical_note_section)
+        self.assertNotIn("Rights", technical_note_section)
+        self.assertNotIn("Version 1.0", technical_note_section)
+        self.assertEqual((out / public_path).read_bytes(), pdf)
+
+    def test_technical_note_rejects_non_versioned_or_internal_paths(self):
+        def internal_path(r):
+            r["technical_notes"] = [{"creator": "As Stated", "date": "2000-06-01", "version": "1.0",
+                                     "sha256": "0" * 64, "rights": "CC BY 4.0", "path": "files/W-0040.pdf"}]
+        self.load_with_edit("TEST-2000-019", internal_path, "stable public technical-notes path")
 
     def test_pages_have_no_duplicate_anchors(self):
         for name in ["definitions/index.html", "methodology/index.html", "cases/TEST-2000-020/index.html"]:
@@ -754,7 +794,7 @@ class LayoutTests(unittest.TestCase):
 
 class ProductionLayoutTests(LayoutTests):
     """Layout of the production build (published channel, optional pages off)."""
-    PAGES = ["", "cases/", "cases/TA-2026-001/", "cases/TA-2026-002/", "cases/TA-2026-003/", "cases/TA-2026-004/", "cases/TA-2026-005/", "methodology/", "definitions/", "about/", "404.html"]
+    PAGES = ["", "cases/", "cases/TA-2026-001/", "cases/TA-2026-002/", "cases/TA-2026-003/", "cases/TA-2026-004/", "cases/TA-2026-005/", "cases/TA-2026-006/", "cases/TA-2026-007/", "cases/TA-2026-008/", "cases/TA-2026-010/", "cases/TA-2026-012/", "cases/TA-2026-013/", "methodology/", "definitions/", "about/", "404.html"]
 
     @classmethod
     def project_root(cls):
@@ -786,7 +826,7 @@ class ProductionTests(unittest.TestCase):
 
     def test_builds_from_the_published_channel_only(self):
         self.assertEqual(self.content.channel, "published")
-        self.assertEqual(set(self.content.records), {"TA-2026-001", "TA-2026-002", "TA-2026-003", "TA-2026-004", "TA-2026-005"})
+        self.assertEqual(set(self.content.records), {"TA-2026-001", "TA-2026-002", "TA-2026-003", "TA-2026-004", "TA-2026-005", "TA-2026-006", "TA-2026-007", "TA-2026-008", "TA-2026-009", "TA-2026-010", "TA-2026-011", "TA-2026-012", "TA-2026-013"})
         for rid in self.content.records:
             self.assertTrue((self.out / f"data/records/{rid}/v1.0.json").exists())
 
@@ -798,7 +838,9 @@ class ProductionTests(unittest.TestCase):
         for path in ["statistics/index.html", "updates/index.html", "feed.xml"]:
             self.assertFalse((self.out / path).exists(), path)
         for name, text in self.pages().items():
-            self.assertNotRegex(text, r'href="[^"]*(statistics|updates)/|feed\.xml', name)
+            local_hrefs = re.findall(r'href="((?:\.\.?/|/)[^"]+)"', text)
+            for href in local_hrefs:
+                self.assertNotRegex(href, r'(^|/)(statistics|updates)/|feed\.xml', name)
 
     def test_no_generated_test_data_in_production(self):
         items = fixtures.records()
@@ -830,16 +872,53 @@ class ProductionTests(unittest.TestCase):
             ("TA-2026-003", "A Qualitative Theory of Large Games with Strategic Complementarities", "Balbus"),
             ("TA-2026-004", "Non-emptiness of the alpha-core: sufficient and necessary conditions", "Basile"),
             ("TA-2026-005", "Symbiotic Positioning, Navigation, and Timing via Game Theory and Reinforcement Learning", "Siraj"),
+            ("TA-2026-006", "Axiomatizations of the proportional division value", "Zou"),
+            ("TA-2026-007", "Nonbossy mechanisms: Mechanism design robust to secondary goals", "Paes Leme"),
+            ("TA-2026-008", "Peer Prediction for Learning Agents", "Feng"),
+            ("TA-2026-009", "Achieving Equilibrium Under Utility Heterogeneity", "Zhuhui Li"),
+            ("TA-2026-010", "AgentMixer: Multi-Agent Correlated Policy Factorization", "Zhiyuan Li"),
+            ("TA-2026-011", "Imperfect Synthetic Controls", "Powell"),
+            ("TA-2026-012", "Randomization-based confidence intervals for cluster randomized trials", "Rabideau"),
+            ("TA-2026-013", "Identification and multiply robust estimation in causal mediation analysis across principal strata", "Cheng"),
         ]
         for rid, title, author in records:
             self.assertIn(rid, cases)
             self.assertIn(title, cases)
             self.assertIn(author, cases)
-        # The home page intentionally shows only the four most recent paper groups.
-        for _, title, _ in records[1:]:
+        # The home page intentionally shows only the four most recently updated paper groups.
+        for i in [1, 2, 3, 5]:
+            title = records[i][1]
             self.assertIn(title, home)
         self.assertNotIn(records[0][1], home)
+        self.assertNotIn(records[4][1], home)
         self.assertNotIn("No case records have been released yet.", cases)
+
+    def test_public_technical_notes_have_one_simple_action_and_verified_assets(self):
+        expected = {
+            "TA-2026-002": ("v1.2", "technical-notes/safe-implementation/v2.0.pdf"),
+            "TA-2026-003": ("v1.2", "technical-notes/large-games-strategic-complementarities/v1.0.pdf"),
+            "TA-2026-004": ("v1.3", "technical-notes/alpha-core-nonemptiness/v1.0.pdf"),
+            "TA-2026-006": ("v1.0", "technical-notes/proportional-division-value/v1.0.pdf"),
+            "TA-2026-007": ("v1.0", "technical-notes/nonbossy-mechanisms/v2.0.pdf"),
+            "TA-2026-008": ("v1.0", "technical-notes/peer-prediction-learning-agents/v1.0.pdf"),
+            "TA-2026-009": ("v1.0", "technical-notes/utility-heterogeneity-bne/v1.0.pdf"),
+            "TA-2026-010": ("v1.0", "technical-notes/agentmixer/v1.0.pdf"),
+            "TA-2026-011": ("v1.0", "technical-notes/imperfect-synthetic-controls/v1.0.pdf"),
+            "TA-2026-012": ("v1.0", "technical-notes/randomization-confidence-intervals/v1.0.pdf"),
+            "TA-2026-013": ("v1.0", "technical-notes/principal-strata-mediation/v1.0.pdf"),
+        }
+        for rid, (version, path) in expected.items():
+            page = (self.out / "cases" / rid / "index.html").read_text(encoding="utf-8")
+            self.assertEqual(page.count("Read technical note (PDF)"), 1, rid)
+            self.assertNotIn("Download PDF", page, rid)
+            technical_note_section = page.split('<section class="after technical-notes"', 1)[1].split("</section>", 1)[0]
+            self.assertNotIn("SHA-256", technical_note_section, rid)
+            self.assertNotIn("Rights", technical_note_section, rid)
+            self.assertTrue((self.out / path).read_bytes().startswith(b"%PDF-"), path)
+            rec = json.loads((self.out / "data" / "records" / rid / f"{version}.json").read_text(encoding="utf-8"))
+            note = rec["technical_notes"][0]
+            self.assertEqual(note["path"], path)
+            self.assertEqual(build.sha256_bytes((self.out / path).read_bytes()), note["sha256"])
 
     def test_policies_live_on_the_methodology_page(self):
         m = (self.out / "methodology/index.html").read_text(encoding="utf-8")

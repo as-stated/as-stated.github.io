@@ -1,0 +1,119 @@
+{
+  "public_id": "TA-2026-013",
+  "version": "1.0",
+  "schema": 2,
+  "released": "2026-11-15",
+  "status": "published",
+  "sample": false,
+  "kind": "defect",
+  "track": "statistics",
+  "title": "Identification and multiply robust estimation in causal mediation analysis across principal strata",
+  "headline": "Open finding: The cross-fitted nonparametric estimator is consistent when any three of four nuisance groups are consistently estimated under Assumptions 1-6.",
+  "work": {
+    "authors": [
+      "Chao Cheng",
+      "Fan Li"
+    ],
+    "title": "Identification and multiply robust estimation in causal mediation analysis across principal strata",
+    "venue": "Journal of the Royal Statistical Society Series B",
+    "year": 2026,
+    "volume": "88",
+    "pages": "1-22",
+    "doi": "10.1093/jrsssb/qkaf037"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Theorem 5 first consistency clause",
+      "kind": "theorem",
+      "role": "main",
+      "page": "JRSSB 88(1), 1-22",
+      "gist": "The cross-fitted nonparametric estimator is consistent when any three of four nuisance groups are consistently estimated under Assumptions 1-6.",
+      "statement": "The cross-fitted nonparametric estimator is consistent when any three of four nuisance groups are consistently estimated under Assumptions 1-6.",
+      "conditions": [
+        "Cross-fitting and Assumptions 1-6.",
+        "Any three nuisance groups are consistently estimated; the fourth may be misspecified."
+      ],
+      "quantifiers": "All fold-specific learners satisfying the printed conditions.",
+      "result": {
+        "outcome": "defect_found",
+        "status": "open",
+        "defect_class": "missing_or_hidden_assumption",
+        "affects": "main_result",
+        "depth": "deep_audit",
+        "summary": "With three nuisances exactly correct and the fourth equal to sqrt(n), the cross-fitted score fails to concentrate and the estimator converges in distribution to N(0,1) rather than to zero.",
+        "witness": "With three nuisances exactly correct and the fourth equal to sqrt(n), the cross-fitted score fails to concentrate and the estimator converges in distribution to N(0,1) rather than to zero.",
+        "argument": "Exact score substitution, square-root-n nuisance witness, numerator/denominator limits, rescue attempts and minimal stability repair. Limits: Population multiple robustness, identification, Theorem 4 and the all-nuisances-consistent asymptotic-normality clause are not challenged.",
+        "not_claimed": [
+          "This is plausibly an omitted-hypothesis defect rather than failure of the intended stable-learner theorem."
+        ],
+        "repair": "none_proposed"
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "JRSSB 88(1), 1-22",
+        "detail": "Source verification is at the canonical partial level; the record does not overstate Version of Record verification."
+      },
+      "evidence": [
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-11-14",
+          "session": "informed",
+          "detail": "A fresh separate-session hostile validation supports the stated finding; its scope and limits are summarized above."
+        }
+      ],
+      "author_response": {
+        "position": "no_reply",
+        "basis": "none",
+        "counts": false
+      }
+    }
+  ],
+  "correction": null,
+  "related": [],
+  "evidence": {
+    "package_doi": null,
+    "package_sha256": null,
+    "licence": "No public evidence package released.",
+    "files": []
+  },
+  "technical_notes": [
+    {
+      "creator": "As Stated",
+      "date": "2026-11-14",
+      "version": "1.0",
+      "pages": 2,
+      "sha256": "6d3d009f3e49b469919c78540a5dec0f834b26437e9d36ce732a60db55beecbf",
+      "rights": "CC BY 4.0 for this note; third-party material remains under its own rights.",
+      "path": "technical-notes/principal-strata-mediation/v1.0.pdf"
+    }
+  ],
+  "history": [
+    {
+      "date": "2026-11-14",
+      "type": "audit",
+      "label": "The audit identified the stated finding."
+    },
+    {
+      "date": "2026-11-14",
+      "type": "author_contact",
+      "label": "The authors were contacted with the As Stated technical note."
+    },
+    {
+      "date": "2026-11-15",
+      "type": "release",
+      "label": "Released with the exact archived As Stated technical note; scientific status unchanged."
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2026-11-15",
+      "change": "First release with the exact archived As Stated technical note; scientific status unchanged."
+    }
+  ],
+  "statements": {
+    "ai_use": "AI systems contributed to the audit and separate hostile validation. The finding retains its canonical scientific status."
+  }
+}

@@ -37,6 +37,8 @@ TRACKS = {
     "game_theory": "Game theory",
     "mechanism_design": "Mechanism design",
     "matching_social_choice": "Matching and social choice",
+    "statistics": "Statistics",
+    "econometrics": "Econometrics",
 }
 KINDS = {"defect", "negative"}
 # Evidence types (schema 2). Author agreement is not evidence on a case page: it is the author response, and it counts
@@ -92,7 +94,7 @@ POSITIONS = {
 POSITIONS_V2 = {"agrees": "Agrees", "partly_agrees": "Partly agrees", "disagrees": "Disagrees",
                 "reviewing": "Reviewing; no substantive position yet", "no_reply": "No reply recorded",
                 "not_contacted": "Not contacted"}
-RESPONDERS = {"all": "The authors", "one_of_two": "One of the two authors", "some": "Some of the authors"}
+RESPONDERS = {"all": "The authors", "one": "One author", "one_of_two": "One of the two authors", "some": "Some of the authors"}
 # (plural, singular) verb forms for an active response
 RESPONSE_VERB = {"agrees": ("agree", "agrees"), "partly_agrees": ("partly agree", "partly agrees"),
                  "disagrees": ("disagree", "disagrees")}
@@ -294,7 +296,7 @@ def validate_record(rec, rid, version):
     _require(rec["author_position"]["position"] in POSITIONS, f"{where}: bad author position")
 
 
-RECORD_KEYS_V2 = (RECORD_KEYS - {"author_position"}) | {"schema", "related"}
+RECORD_KEYS_V2 = (RECORD_KEYS - {"author_position"}) | {"schema", "related", "technical_notes"}
 WORK_KEYS_V2 = {"authors", "title", "venue", "year", "volume", "pages", "doi"}
 RESULT_KEYS_V2 = {
     "defect_found": {"outcome", "status", "defect_class", "affects", "depth", "summary", "witness", "argument",
@@ -314,6 +316,8 @@ EVIDENCE_KEYS_V2 = {"type", "date", "detail", "session", "identity"}
 RESPONSE_KEYS_V2 = {"position", "responder", "basis", "counts", "covers", "assessment"}
 DATE_RE = r"\d{4}-\d{2}(-\d{2})?"
 DOI_RE = re.compile(r"10\.\d{4,9}/\S+")
+TECH_NOTE_PATH_RE = re.compile(r"technical-notes/[a-z0-9]+(?:-[a-z0-9]+)*/v\d+(?:\.\d+)*\.pdf")
+SHA256_RE = re.compile(r"[0-9a-f]{64}")
 
 
 def validate_any(rec, rid, version):
@@ -333,7 +337,7 @@ def validate_record_v2(rec, rid, version):
     where = f"record {rid} v{version}"
     unknown = set(rec) - RECORD_KEYS_V2
     _require(not unknown, f"{where}: unknown fields {sorted(unknown)}")
-    missing = RECORD_KEYS_V2 - set(rec)
+    missing = (RECORD_KEYS_V2 - {"technical_notes"}) - set(rec)
     _require(not missing, f"{where}: missing fields {sorted(missing)}")
     _require(rec["public_id"] == rid and rec["version"] == version, f"{where}: id or version does not match its path")
     _require(re.fullmatch(r"[A-Z]{2,4}-\d{4}-\d{3}", rid) is not None, f"{where}: malformed public id")
@@ -382,6 +386,31 @@ def validate_record_v2(rec, rid, version):
         mathml.check(item["citation"], f"{where}: related citation", math=False)
         mathml.check(item["note"], f"{where}: related note", math=False)
         _require(item["doi"] is None or DOI_RE.fullmatch(item["doi"]), f"{where}: related DOI is missing or malformed")
+    note_paths = set()
+    technical_notes = rec.get("technical_notes", [])
+    _require(isinstance(technical_notes, list), f"{where}: technical_notes must be a list")
+    for note in technical_notes:
+        required_note_keys = {"creator", "date", "version", "sha256", "rights", "path"}
+        _require(required_note_keys <= set(note) and set(note) <= required_note_keys | {"pages"},
+                 f"{where}: technical note needs creator, date, version, sha256, rights and path")
+        for key in ("creator", "rights"):
+            _require(isinstance(note[key], str) and note[key].strip(), f"{where}: technical note {key} is required")
+            mathml.check(note[key], f"{where}: technical note {key}", math=False)
+        _require(re.fullmatch(r"\d{4}-\d{2}-\d{2}", note["date"]) is not None,
+                 f"{where}: technical note date must be YYYY-MM-DD")
+        _require(re.fullmatch(r"\d+(?:\.\d+)*", note["version"]) is not None,
+                 f"{where}: technical note version must be numeric, such as 1.0")
+        _require(SHA256_RE.fullmatch(note["sha256"]) is not None,
+                 f"{where}: technical note SHA-256 must be 64 lowercase hexadecimal characters")
+        _require(TECH_NOTE_PATH_RE.fullmatch(note["path"]) is not None and not re.search(r"\b[WK]-\d{4}\b", note["path"]),
+                 f"{where}: technical note path must be a stable public technical-notes path")
+        _require(note["path"].endswith(f"/v{note['version']}.pdf"),
+                 f"{where}: technical note path must include its matching immutable version")
+        if "pages" in note:
+            _require(type(note["pages"]) is int and note["pages"] > 0,
+                     f"{where}: technical note pages must be a positive integer")
+        _require(note["path"] not in note_paths, f"{where}: duplicate technical note path")
+        note_paths.add(note["path"])
     mathml.check(rec["statements"]["ai_use"], f"{where}: ai_use", math=False)
     for author in rec["work"]["authors"]:
         mathml.check(author, f"{where}: author", math=False)
@@ -668,7 +697,8 @@ def page_on(site, name):
 def nav_items(site):
     return [(t, n) for t, n in NAV if t not in OPTIONAL_PAGES or page_on(site, OPTIONAL_PAGES[t])]
 TRACK_SHORT = {"game_theory": "Game theory", "mechanism_design": "Mechanism design",
-               "matching_social_choice": "Matching and social choice"}
+               "matching_social_choice": "Matching and social choice", "statistics": "Statistics",
+               "econometrics": "Econometrics"}
 CLAIM_KINDS = {"theorem": "Theorem", "proposition": "Proposition", "lemma": "Lemma", "corollary": "Corollary",
                "remark": "Remark", "algorithm": "Algorithm", "construction": "Construction", "application": "Application"}
 ROLES = {"main": "main result", "supporting": "supporting result", "secondary": "secondary result",
@@ -751,12 +781,14 @@ def author_list(names):
 
 def venue_line(w):
     vol = f" {w['volume']}" if w.get("volume") else ""
-    return f"<i>{E(w['venue'])}</i>{E(vol)} ({w['year']}), {E(w['pages'])}"
+    pages = f", {E(w['pages'])}" if w.get("pages") else ""
+    return f"<i>{E(w['venue'])}</i>{E(vol)} ({w['year']}){pages}"
 
 
 def citation_line(w):
     vol = f" {w['volume']}" if w.get("volume") else ""
-    return f"{author_list(w['authors'])} ({w['year']}). {w['title']}. {w['venue']}{vol}, {w['pages']}."
+    pages = f", {w['pages']}" if w.get("pages") else ""
+    return f"{author_list(w['authors'])} ({w['year']}). {w['title']}. {w['venue']}{vol}{pages}."
 
 
 def doi_html(site, doi):
@@ -1030,7 +1062,7 @@ def render_claim(site, page, rec, c, i, n):
     if basis:
         finding += f'<p class="basis">{E(basis)}</p>'
     finding += f"<p>{rich(rec, res['summary'], where + ' summary')}</p>"
-    parts.append(blk("Finding", finding))
+    parts.append(blk("As Stated finding", finding))
     verdict_note = ""
     if res["outcome"] == "defect_found":
         parts.append(blk("Counterexample", f"<p>{rich(rec, res['witness'], where + ' witness')}</p>"))
@@ -1128,6 +1160,21 @@ def render_record(site, rec, frozen=False):
         f'{" <strong>Our correction.</strong>" if ch.get("our_correction") else ""}</span></li>'
         for ch in rec["changelog"])
     files = "".join(f'<li class="mono">{E(f["name"])}</li>' for f in rec["evidence"]["files"])
+    technical_notes = []
+    note_entries = rec.get("technical_notes", [])
+    for note in note_entries:
+        pdf_url = site.href(page, note["path"])
+        note_meta = fmt_date(note["date"])
+        if note.get("pages"):
+            note_meta += f" · {note['pages']} pages"
+        if len(note_entries) > 1:
+            note_meta += f" · Version {E(note['version'])}"
+        technical_notes.append(f'''<article class="technical-note">
+  <p class="technical-note-meta">{E(note_meta)}</p>
+  <p><a class="pdf-link" href="{E(pdf_url)}">Read technical note (PDF)</a></p>
+</article>''')
+    technical_note_section = (f'<section class="after technical-notes" id="technical-notes"><h2>As Stated technical note</h2>'
+                              f'{"".join(technical_notes)}</section>' if technical_notes else "")
     evidence_package = doi_html(site, rec["evidence"]["package_doi"]) if rec["evidence"].get("package_doi") else ""
     url = cfg["base_url"].rstrip("/") + f"/cases/{rid}/v{ver}/"
     cite = f"{cfg['owner']} ({rec['released'][:4]}). Case record {rid}, version {ver}: {rec['title']}. {cfg['name']}. {url}"
@@ -1149,7 +1196,7 @@ def render_record(site, rec, frozen=False):
 <header class="case-head">
   <p class="eyebrow">Case record · {E(TRACKS[rec['track']])}</p>
   <h1>{E(w['title'])}</h1>
-  <p class="byline">{E(author_list(w['authors']))} · {venue_line(w)} · {doi_html(site, w['doi'])}</p>
+<p class="byline"><span class="source-kind">Original published paper</span><br>{E(author_list(w['authors']))} · {venue_line(w)} · {doi_html(site, w['doi'])}</p>
   <p class="lede">{rich(rec, rec['headline'], rid + ' headline')}</p>
   <ul class="case-facts">
     <li><span class="cf-k">Findings</span>{''.join(f'<i class="mk-dot fd-{f}" title="{E(FAMILY_LABEL[f])}"></i>' for f in fams)}<span class="cf-v">{n} claim{"s" if n != 1 else ""}</span></li>
@@ -1161,7 +1208,8 @@ def render_record(site, rec, frozen=False):
 <article class="case-main">
   {overview}
   {''.join(render_claim(site, page, rec, c, i, n) for i, c in enumerate(claims, start=1))}
-  <section class="after" id="corrections"><h2>Corrections and related work</h2><dl class="rd">{''.join(resp)}</dl></section>
+  {technical_note_section}
+  <section class="after" id="corrections"><h2>Author engagement and correction status</h2><dl class="rd">{''.join(resp)}</dl></section>
   <section class="after" id="history"><h2>History</h2><ol class="hist">{hist}</ol></section>
   <section class="after" id="versions"><h2>Versions</h2><ol class="hist">{vers}</ol>
   <p class="note">Released versions are never edited; each keeps its own address.</p></section>
@@ -1666,7 +1714,7 @@ def author_html(rec, view, where):
         return out
     pos = resp["position"]
     if pos in RESPONSE_VERB and resp.get("responder") in RESPONDERS:
-        singular = resp["responder"] == "one_of_two"
+        singular = resp["responder"] in {"one", "one_of_two"}
         line = f"{RESPONDERS[resp['responder']]} {RESPONSE_VERB[pos][1 if singular else 0]}."
     else:
         line = f"{POSITIONS_V2[pos]}."
@@ -1762,6 +1810,19 @@ def build(channel=None, out=None, pretty=False, denylist_file=None, root=ROOT, c
             dst = out / "data" / "records" / rid / f"v{v['version']}.json"
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(src, dst)
+            for note in v.get("technical_notes", []):
+                note_src = content.croot / "files" / note["path"]
+                _require(note_src.is_file(), f"record {rid} v{v['version']}: technical note PDF is missing")
+                note_bytes = note_src.read_bytes()
+                _require(note_bytes.startswith(b"%PDF-"), f"record {rid} v{v['version']}: technical note is not a PDF")
+                _require(sha256_bytes(note_bytes) == note["sha256"],
+                         f"record {rid} v{v['version']}: technical note SHA-256 does not match its immutable file")
+                note_dst = out / note["path"]
+                note_dst.parent.mkdir(parents=True, exist_ok=True)
+                if note_dst.exists():
+                    _require(note_dst.read_bytes() == note_bytes, f"technical note path reused with different bytes: {note['path']}")
+                else:
+                    note_dst.write_bytes(note_bytes)
     for s in content.snapshots:
         dst = out / "data" / "snapshots" / f"{s['snapshot']}.json"
         dst.parent.mkdir(parents=True, exist_ok=True)
