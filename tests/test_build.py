@@ -905,7 +905,7 @@ class ProductionTests(unittest.TestCase):
             "TA-2026-009": ("v1.0", "technical-notes/utility-heterogeneity-bne/v1.0.pdf"),
             "TA-2026-010": ("v1.1", "technical-notes/agentmixer/v1.0.pdf"),
             "TA-2026-011": ("v1.0", "technical-notes/imperfect-synthetic-controls/v1.0.pdf"),
-            "TA-2026-012": ("v1.1", "technical-notes/randomization-confidence-intervals/v1.0.pdf"),
+            "TA-2026-012": ("v1.2", "technical-notes/randomization-confidence-intervals/v1.0.pdf"),
             "TA-2026-013": ("v1.0", "technical-notes/principal-strata-mediation/v1.0.pdf"),
         }
         for rid, (version, path) in expected.items():
@@ -920,6 +920,18 @@ class ProductionTests(unittest.TestCase):
             note = rec["technical_notes"][0]
             self.assertEqual(note["path"], path)
             self.assertEqual(build.sha256_bytes((self.out / path).read_bytes()), note["sha256"])
+
+    def test_rabideau_wang_latest_reflects_author_clarification(self):
+        rec = self.content.latest("TA-2026-012")
+        claim = rec["claims"][0]
+        self.assertEqual(rec["version"], "1.2")
+        self.assertEqual(claim["result"]["defect_class"], "missing_or_hidden_assumption")
+        self.assertEqual(claim["author_response"]["position"], "partly_agrees")
+        self.assertEqual(claim["result"]["status"], "open")
+        page = (self.out / "cases/TA-2026-012/index.html").read_text(encoding="utf-8")
+        self.assertIn("Missing assumption", page)
+        self.assertIn("partly agree", page)
+        self.assertIn("genuine null-removing transformation", page)
 
     def test_policies_live_on_the_methodology_page(self):
         m = (self.out / "methodology/index.html").read_text(encoding="utf-8")
