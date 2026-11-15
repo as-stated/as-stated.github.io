@@ -898,6 +898,7 @@ class ProductionTests(unittest.TestCase):
             "TA-2026-002": ("v1.2", "technical-notes/safe-implementation/v2.0.pdf"),
             "TA-2026-003": ("v1.2", "technical-notes/large-games-strategic-complementarities/v1.0.pdf"),
             "TA-2026-004": ("v1.3", "technical-notes/alpha-core-nonemptiness/v1.0.pdf"),
+            "TA-2026-005": ("v1.2", "technical-notes/symbiotic-pnt/v1.0.pdf"),
             "TA-2026-006": ("v1.0", "technical-notes/proportional-division-value/v1.0.pdf"),
             "TA-2026-007": ("v1.1", "technical-notes/nonbossy-mechanisms/v2.0.pdf"),
             "TA-2026-008": ("v1.0", "technical-notes/peer-prediction-learning-agents/v1.0.pdf"),
