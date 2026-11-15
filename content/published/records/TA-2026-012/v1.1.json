@@ -1,0 +1,132 @@
+{
+  "public_id": "TA-2026-012",
+  "version": "1.1",
+  "schema": 2,
+  "released": "2026-11-15",
+  "status": "published",
+  "sample": false,
+  "kind": "defect",
+  "track": "statistics",
+  "title": "Randomization-based confidence intervals for cluster randomized trials",
+  "headline": "Open finding: Fixing the observed treatment assignment as an offset while permuting a second assignment produces an exact level-alpha test for every nonzero null and hence a valid randomization confidence interval for generic outcome and link functions.",
+  "work": {
+    "authors": [
+      "Dustin J. Rabideau",
+      "Rui Wang"
+    ],
+    "title": "Randomization-based confidence intervals for cluster randomized trials",
+    "venue": "Biostatistics",
+    "year": 2021,
+    "volume": "22",
+    "pages": "913-927",
+    "doi": "10.1093/biostatistics/kxaa007"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Section 2.2.1 nonzero-null exactness",
+      "kind": "theorem",
+      "role": "main",
+      "page": "Biostatistics 22(4), 913-927",
+      "gist": "Fixing the observed treatment assignment as an offset while permuting a second assignment produces an exact level-alpha test for every nonzero null and hence a valid randomization confidence interval for generic outcome and link functions.",
+      "statement": "Fixing the observed treatment assignment as an offset while permuting a second assignment produces an exact level-alpha test for every nonzero null and hence a valid randomization confidence interval for generic outcome and link functions.",
+      "conditions": [
+        "Cluster randomization under the Section 2.2.1 linked-mean model.",
+        "Nuisance parameters are treatment invariant as stated."
+      ],
+      "quantifiers": "Every null value theta_0 and generic outcome/link family described in Section 2.2.1.",
+      "result": {
+        "outcome": "defect_found",
+        "status": "open",
+        "defect_class": "statement_false",
+        "affects": "main_result",
+        "depth": "deep_audit",
+        "summary": "On an event of probability (4/5)^8 the true nonzero null has permutation p=1/35 and is excluded, giving 95% coverage at most 0.83222784.",
+        "witness": "On an event of probability (4/5)^8 the true nonzero null has permutation p=1/35 and is excluded, giving 95% coverage at most 0.83222784.",
+        "argument": "Eight-cluster finite-support NEF certificate, all 70 assignments, confidence-set inversion, rescue attempts and stepped-wedge propagation check. Limits: The theta_0=0 test and genuine null-removing transformation models survive; the later paper is not separately registered here.",
+        "not_claimed": [
+          "The failure concerns generic nonzero-null offset invariance, not all randomization tests."
+        ],
+        "repair": "none_proposed"
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "Biostatistics 22(4), 913-927",
+        "detail": "Source verification is at the canonical partial level; the record does not overstate Version of Record verification."
+      },
+      "evidence": [
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-11-14",
+          "session": "informed",
+          "detail": "A fresh separate-session hostile validation supports the stated finding; its scope and limits are summarized above."
+        }
+      ],
+      "author_response": {
+        "position": "disagrees",
+        "responder": "one_of_two",
+        "basis": "original",
+        "counts": false,
+        "covers": "One author replied that validity requires the model structure to be correctly specified and pointed to Section 2.2.3.",
+        "assessment": "The response does not identify a stronger assignment-invariance condition that excludes the finite witness, which was constructed inside the printed linked-mean model class with treatment-invariant nuisance structure. The issue therefore remains Open pending clarification."
+      }
+    }
+  ],
+  "correction": null,
+  "related": [],
+  "evidence": {
+    "package_doi": null,
+    "package_sha256": null,
+    "licence": "No public evidence package released.",
+    "files": []
+  },
+  "technical_notes": [
+    {
+      "creator": "As Stated",
+      "date": "2026-11-14",
+      "version": "1.0",
+      "pages": 2,
+      "sha256": "0607c38cfff8365e73867b4c59a4caa40c0f0bbfe4342b665508770c4cdac3ae",
+      "rights": "CC BY 4.0 for this note; third-party material remains under its own rights.",
+      "path": "technical-notes/randomization-confidence-intervals/v1.0.pdf"
+    }
+  ],
+  "history": [
+    {
+      "date": "2026-11-14",
+      "type": "audit",
+      "label": "The audit identified the stated finding."
+    },
+    {
+      "date": "2026-11-14",
+      "type": "author_contact",
+      "label": "The authors were contacted with the As Stated technical note."
+    },
+    {
+      "date": "2026-11-15",
+      "type": "release",
+      "label": "Released with the exact archived As Stated technical note; scientific status unchanged."
+    },
+    {
+      "date": "2026-11-15",
+      "type": "author_response",
+      "label": "One author replied that validity requires correct model specification and pointed to Section 2.2.3. The As Stated witness was constructed within the printed linked-mean model class, so the disagreement remains unresolved."
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2026-11-15",
+      "change": "First release with the exact archived As Stated technical note; scientific status unchanged."
+    },
+    {
+      "version": "1.1",
+      "date": "2026-11-15",
+      "change": "Recorded the substantive author response and As Stated's assessment of it; scientific status remains Open."
+    }
+  ],
+  "statements": {
+    "ai_use": "AI systems contributed to the audit and separate hostile validation. The finding retains its canonical scientific status."
+  }
+}
