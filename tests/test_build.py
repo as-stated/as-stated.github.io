@@ -886,11 +886,11 @@ class ProductionTests(unittest.TestCase):
             self.assertIn(title, cases)
             self.assertIn(author, cases)
         # The home page intentionally shows only the four most recently updated paper groups.
-        for i in [1, 2, 3, 5]:
+        for i in [1, 2, 3, 4]:
             title = records[i][1]
             self.assertIn(title, home)
         self.assertNotIn(records[0][1], home)
-        self.assertNotIn(records[4][1], home)
+        self.assertNotIn(records[5][1], home)
         self.assertNotIn("No case records have been released yet.", cases)
 
     def test_public_technical_notes_have_one_simple_action_and_verified_assets(self):
@@ -902,9 +902,9 @@ class ProductionTests(unittest.TestCase):
             "TA-2026-007": ("v1.1", "technical-notes/nonbossy-mechanisms/v2.0.pdf"),
             "TA-2026-008": ("v1.0", "technical-notes/peer-prediction-learning-agents/v1.0.pdf"),
             "TA-2026-009": ("v1.0", "technical-notes/utility-heterogeneity-bne/v1.0.pdf"),
-            "TA-2026-010": ("v1.0", "technical-notes/agentmixer/v1.0.pdf"),
+            "TA-2026-010": ("v1.1", "technical-notes/agentmixer/v1.0.pdf"),
             "TA-2026-011": ("v1.0", "technical-notes/imperfect-synthetic-controls/v1.0.pdf"),
-            "TA-2026-012": ("v1.0", "technical-notes/randomization-confidence-intervals/v1.0.pdf"),
+            "TA-2026-012": ("v1.1", "technical-notes/randomization-confidence-intervals/v1.0.pdf"),
             "TA-2026-013": ("v1.0", "technical-notes/principal-strata-mediation/v1.0.pdf"),
         }
         for rid, (version, path) in expected.items():
