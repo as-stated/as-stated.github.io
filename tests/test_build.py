@@ -911,7 +911,7 @@ class ProductionTests(unittest.TestCase):
             "TA-2026-012": ("v1.3", "technical-notes/randomization-confidence-intervals/v1.1.pdf"),
             "TA-2026-013": ("v1.1", "technical-notes/principal-strata-mediation/v1.1.pdf"),
             "TA-2026-014": ("v1.1", "technical-notes/paths-to-equilibrium/v1.1.pdf"),
-            "TA-2026-015": ("v1.0", "technical-notes/ancova-randomization-interval/v1.0.pdf"),
+            "TA-2026-015": ("v1.1", "technical-notes/ancova-randomization-interval/v1.1.pdf"),
         }
         for rid, (version, path) in expected.items():
             page = (self.out / "cases" / rid / "index.html").read_text(encoding="utf-8")
@@ -925,6 +925,11 @@ class ProductionTests(unittest.TestCase):
             note = rec["technical_notes"][0]
             self.assertEqual(note["path"], path)
             self.assertEqual(build.sha256_bytes((self.out / path).read_bytes()), note["sha256"])
+
+        prior_page = (self.out / "cases/TA-2026-015/v1.0/index.html").read_text(encoding="utf-8")
+        self.assertIn("Archived version 1.0. The current version is", prior_page)
+        self.assertTrue((self.out / "data/records/TA-2026-015/v1.0.json").is_file())
+        self.assertTrue((self.out / "technical-notes/ancova-randomization-interval/v1.0.pdf").is_file())
 
     def test_rabideau_wang_latest_reflects_author_clarification(self):
         rec = self.content.latest("TA-2026-012")
