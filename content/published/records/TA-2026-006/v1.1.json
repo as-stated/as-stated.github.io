@@ -1,0 +1,142 @@
+{
+  "public_id": "TA-2026-006",
+  "version": "1.1",
+  "schema": 2,
+  "released": "2026-11-16",
+  "status": "published",
+  "sample": false,
+  "kind": "defect",
+  "track": "game_theory",
+  "title": "Axiomatizations of the proportional division value",
+  "headline": "Open finding: the sufficiency direction of Theorem 1 fails under its displayed, game-by-game coefficient conditions.",
+  "work": {
+    "authors": [
+      "Zhengxing Zou",
+      "René van den Brink",
+      "Youngsub Chun",
+      "Yukihiko Funaki"
+    ],
+    "title": "Axiomatizations of the proportional division value",
+    "venue": "Social Choice and Welfare",
+    "year": 2021,
+    "volume": "57",
+    "pages": "35–62",
+    "doi": "10.1007/s00355-020-01299-3"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Theorem 1 sufficiency direction",
+      "kind": "theorem",
+      "role": "main",
+      "page": "40, Theorem 1, Eqs. (2)–(3)",
+      "gist": "The printed pointwise coefficient restrictions are stated to imply efficiency, weak linearity, and proportional-balanced treatment.",
+      "statement": "For every individually positive or individually negative TU-game, the displayed representation with coefficients satisfying the displayed same-size restriction implies efficiency, weak linearity, and proportional-balanced treatment.",
+      "conditions": [
+        "The domain consists of TU-games whose singleton worths are all strictly positive or all strictly negative.",
+        "The representation and coefficient restriction are imposed separately for each game; the statement does not require coefficients to agree across games."
+      ],
+      "quantifiers": "The theorem compares all games in the stated domain. Weak linearity also compares different games with proportional singleton-worth vectors, while the printed coefficient condition links coefficients only within one game.",
+      "result": {
+        "outcome": "defect_found",
+        "status": "open",
+        "defect_class": "statement_false",
+        "affects": "main_result",
+        "depth": "deep_audit",
+        "summary": "A value defined on the full three-player domain satisfies the printed representation and coefficient restriction, efficiency, and proportional-balanced treatment, but violates weak linearity at a game and its double.",
+        "witness": "Let N={1,2,3}. For every game with singleton worths x_i of one strict sign, set λ_{ij}=(x_i+x_j)x_k for {i,j,k}=N. Then λ_{ij}/((x_i+x_j)x_k)=1 for each pair, so the same-size restriction holds for every game. For the game v with singleton worths (1,1,1), pair worths (1,2,4), and grand-coalition worth 1, direct substitution gives ψ(v)=(-14/3,4/3,13/3), while ψ(2v)=(-118/3,26/3,98/3).",
+        "argument": "The coefficients are defined for every individually positive or negative singleton vector, and all denominators are nonzero. The representation is efficient and satisfies proportional-balanced treatment by the displayed algebra. The numerical witness has 2ψ(v)=(-28/3,8/3,26/3), which differs from ψ(2v); weak linearity therefore fails even though every nonempty coalition worth in v is positive. The failure is that the pointwise condition permits raw coefficients to change across games with proportional singleton worths.",
+        "not_claimed": [
+          "The necessity direction of Theorem 1 is false.",
+          "The intended characterization with an added cross-game coefficient-coherence condition is false.",
+          "The proportional division value or later results in the paper are thereby invalidated.",
+          "A journal correction has been published."
+        ],
+        "repair": "local_repair_proposed",
+        "repair_note": "A natural candidate repair is to require the raw coefficients to be invariant across games whose singleton-worth vectors lie on the same nonzero line. This note does not establish that a corrected theorem follows in full."
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "40 (Theorem 1, Eqs. (2)–(3))",
+        "detail": "The Version of Record PDF was checked at printed page 40 for Theorem 1 and its displayed coefficient conditions."
+      },
+      "evidence": [
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-11-09",
+          "detail": "A fresh separate-session hostile review checked the theorem reading, full-domain construction, displayed coefficient restriction, three axioms, scaling failure, alternative interpretations, and proposed repair.",
+          "session": "informed"
+        }
+      ],
+      "author_response": {
+        "position": "agrees",
+        "responder": "one",
+        "basis": "original",
+        "counts": true,
+        "covers": "The author agrees with the identified sufficiency gap and counterexample."
+      }
+    }
+  ],
+  "correction": null,
+  "related": [],
+  "evidence": {
+    "package_doi": null,
+    "package_sha256": null,
+    "licence": "No public evidence package released.",
+    "files": []
+  },
+  "technical_notes": [
+    {
+      "creator": "As Stated",
+      "date": "2026-11-16",
+      "version": "1.1",
+      "pages": 4,
+      "sha256": "07a38b02bda97167c2605a6b322b0ecb25d711dde4107a22b4eab7b536cd3f18",
+      "rights": "CC BY 4.0 for this note; third-party material remains under its own rights.",
+      "path": "technical-notes/proportional-division-value/v1.1.pdf"
+    }
+  ],
+  "history": [
+    {
+      "date": "2026-11-09",
+      "type": "audit",
+      "label": "A deep audit identified an open sufficiency-direction finding."
+    },
+    {
+      "date": "2026-11-10",
+      "type": "author_contact",
+      "label": "The authors were contacted with the As Stated technical note."
+    },
+    {
+      "date": "2026-11-14",
+      "type": "author_response",
+      "label": "One author agreed with the identified gap and supplied a proposed corrected characterization. A subsequent independent AI review found the proposed correction valid. No official journal corrigendum has yet been published."
+    },
+    {
+      "date": "2026-11-15",
+      "type": "release",
+      "label": "The case was released as an Open finding with its As Stated technical note."
+    },
+    {
+      "date": "2026-11-16",
+      "type": "release",
+      "label": "Released a canonical-style revision of the As Stated technical note; scientific claim wording and status are unchanged."
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2026-11-15",
+      "change": "First release as an Open finding with its exact author-sent As Stated technical note."
+    },
+    {
+      "version": "1.1",
+      "date": "2026-11-16",
+      "change": "Added a semantically equivalent canonical-style technical-note revision; scientific content and status unchanged."
+    }
+  ],
+  "statements": {
+    "ai_use": "AI systems contributed to the audit and later review. The finding remains Open; author agreement is recorded separately and is not a Confirmed label."
+  }
+}
