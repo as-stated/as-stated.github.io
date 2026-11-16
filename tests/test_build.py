@@ -886,28 +886,29 @@ class ProductionTests(unittest.TestCase):
             self.assertIn(rid, cases)
             self.assertIn(title, cases)
             self.assertIn(author, cases)
-        # The home page intentionally shows only its four most recently updated paper groups.
-        for i in [13, 1, 2, 3]:
+        # The migration released presentation-only record versions for cases 2–5 on 16 November.
+        for i in [1, 2, 3, 4]:
             self.assertIn(records[i][1], home)
         self.assertNotIn(records[0][1], home)
-        self.assertNotIn(records[4][1], home)
+        self.assertNotIn(records[5][1], home)
+        self.assertNotIn(records[13][1], home)
         self.assertNotIn("No case records have been released yet.", cases)
 
     def test_public_technical_notes_have_one_simple_action_and_verified_assets(self):
         expected = {
-            "TA-2026-002": ("v1.2", "technical-notes/safe-implementation/v2.0.pdf"),
-            "TA-2026-003": ("v1.2", "technical-notes/large-games-strategic-complementarities/v1.0.pdf"),
-            "TA-2026-004": ("v1.3", "technical-notes/alpha-core-nonemptiness/v1.0.pdf"),
-            "TA-2026-005": ("v1.2", "technical-notes/symbiotic-pnt/v1.0.pdf"),
+            "TA-2026-002": ("v1.3", "technical-notes/safe-implementation/v2.1.pdf"),
+            "TA-2026-003": ("v1.3", "technical-notes/large-games-strategic-complementarities/v1.1.pdf"),
+            "TA-2026-004": ("v1.4", "technical-notes/alpha-core-nonemptiness/v1.1.pdf"),
+            "TA-2026-005": ("v1.3", "technical-notes/symbiotic-pnt/v1.1.pdf"),
             "TA-2026-006": ("v1.0", "technical-notes/proportional-division-value/v1.0.pdf"),
             "TA-2026-007": ("v1.1", "technical-notes/nonbossy-mechanisms/v2.0.pdf"),
             "TA-2026-008": ("v1.0", "technical-notes/peer-prediction-learning-agents/v1.0.pdf"),
-            "TA-2026-009": ("v1.0", "technical-notes/utility-heterogeneity-bne/v1.0.pdf"),
-            "TA-2026-010": ("v1.1", "technical-notes/agentmixer/v1.0.pdf"),
-            "TA-2026-011": ("v1.0", "technical-notes/imperfect-synthetic-controls/v1.0.pdf"),
-            "TA-2026-012": ("v1.2", "technical-notes/randomization-confidence-intervals/v1.0.pdf"),
-            "TA-2026-013": ("v1.0", "technical-notes/principal-strata-mediation/v1.0.pdf"),
-            "TA-2026-014": ("v1.0", "technical-notes/paths-to-equilibrium/v1.0.pdf"),
+            "TA-2026-009": ("v1.1", "technical-notes/utility-heterogeneity-bne/v1.1.pdf"),
+            "TA-2026-010": ("v1.2", "technical-notes/agentmixer/v1.1.pdf"),
+            "TA-2026-011": ("v1.1", "technical-notes/imperfect-synthetic-controls/v1.1.pdf"),
+            "TA-2026-012": ("v1.3", "technical-notes/randomization-confidence-intervals/v1.1.pdf"),
+            "TA-2026-013": ("v1.1", "technical-notes/principal-strata-mediation/v1.1.pdf"),
+            "TA-2026-014": ("v1.1", "technical-notes/paths-to-equilibrium/v1.1.pdf"),
         }
         for rid, (version, path) in expected.items():
             page = (self.out / "cases" / rid / "index.html").read_text(encoding="utf-8")
@@ -925,7 +926,7 @@ class ProductionTests(unittest.TestCase):
     def test_rabideau_wang_latest_reflects_author_clarification(self):
         rec = self.content.latest("TA-2026-012")
         claim = rec["claims"][0]
-        self.assertEqual(rec["version"], "1.2")
+        self.assertEqual(rec["version"], "1.3")
         self.assertEqual(claim["result"]["defect_class"], "missing_or_hidden_assumption")
         self.assertEqual(claim["author_response"]["position"], "partly_agrees")
         self.assertEqual(claim["result"]["status"], "open")

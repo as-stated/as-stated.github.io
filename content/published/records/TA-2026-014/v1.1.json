@@ -1,0 +1,138 @@
+{
+  "public_id": "TA-2026-014",
+  "version": "1.1",
+  "schema": 2,
+  "released": "2026-11-16",
+  "status": "published",
+  "sample": false,
+  "kind": "defect",
+  "track": "game_theory",
+  "title": "Paths to Equilibrium in Games",
+  "headline": "Open finding: The stated bound of at most n profiles is false; the proof gives at most n transitions, or n+1 profiles.",
+  "work": {
+    "authors": [
+      "Bora Yongacoglu",
+      "Gürdal Arslan",
+      "Lacra Pavel",
+      "Serdar Yüksel"
+    ],
+    "title": "Paths to Equilibrium in Games",
+    "venue": "Advances in Neural Information Processing Systems 37 (NeurIPS 2024)",
+    "year": 2024,
+    "volume": "37",
+    "pages": "100870-100894",
+    "doi": "10.52202/079017-3199"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Satisficing-path profile-count bound",
+      "kind": "theorem",
+      "role": "secondary",
+      "page": "NeurIPS 2024, Theorem 1 proof and Section 4 (pp. 100870-100894)",
+      "gist": "Every initial profile has a satisficing path to equilibrium with at most n profiles.",
+      "statement": "The published text states that the path length is uniformly bounded by T(x_1) <= n, where T counts profiles in the sequence (x_t) from x_1 to x_T.",
+      "conditions": [
+        "Finite normal-form game with n players.",
+        "A satisficing path is indexed by profiles x_1 through x_T, so the number of transitions is T-1."
+      ],
+      "quantifiers": "For every initial strategy profile in every finite normal-form game.",
+      "result": {
+        "outcome": "defect_found",
+        "status": "open",
+        "defect_class": "statement_false",
+        "affects": "secondary_result",
+        "depth": "deep_audit",
+        "summary": "The printed bound T(x_1) <= n counts profiles, but the proof yields at most n transitions, hence at most n+1 profiles. In two-player matching pennies, an initial condition requires three profiles.",
+        "witness": "In matching pennies, start at x_1=(A,C), where player 1 is satisfied. Every admissible successor must keep player 1 at A, but no Nash equilibrium has player 1 fixed at A; termination within two profiles is impossible. A legal three-profile path is (A,C), (A, 1/4 C + 3/4 D), then the fully mixed Nash equilibrium. At the middle profile both players are unsatisfied, so the final move is admissible. Thus T=3=n+1.",
+        "argument": "The paper indexes profiles beginning at x_1. Its construction makes at most n-1 growth transitions before appending one equilibrium profile. If the growth phase ends at profile index k, then k=1+s for s transitions, so k<=n; appending the equilibrium gives at most n transitions and T<=n+1 profiles. The matching-pennies witness attains this bound. Scope is limited to the printed profile-count bound. The qualitative finite-path existence theorem is not challenged, and no claim is made that an efficient decentralized algorithm computes the path.",
+        "not_claimed": [
+          "The qualitative theorem that a finite satisficing path to equilibrium exists is false.",
+          "An efficient decentralized algorithm computes the constructed path."
+        ],
+        "repair": "local_repair_proposed",
+        "repair_note": "State at most n transitions, equivalently at most n+1 profiles; the proof's terminal profile index should be k<=n."
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "NeurIPS 2024 proceedings, Theorem 1 proof and Section 4 (pp. 100870-100894)",
+        "detail": "The official proceedings source and decisive text were checked, including the profile indexing and printed bound. The project records this source check as partial because the decisive elements were not checked on rendered VOR pages."
+      },
+      "evidence": [
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-11-14",
+          "session": "informed",
+          "detail": "A fresh separate-session hostile validation checked the proof indexing and matching-pennies witness and supports the narrow profile-count finding."
+        }
+      ],
+      "author_response": {
+        "position": "no_reply",
+        "basis": "none",
+        "counts": false
+      }
+    }
+  ],
+  "correction": null,
+  "related": [],
+  "evidence": {
+    "package_doi": null,
+    "package_sha256": null,
+    "licence": "No public evidence package released.",
+    "files": []
+  },
+  "technical_notes": [
+    {
+      "creator": "As Stated",
+      "date": "2026-11-16",
+      "version": "1.1",
+      "pages": 1,
+      "sha256": "0eb586553a72d6c6b9d2b35fb28d34f6de0ca05e59b140134dc296d40952324a",
+      "rights": "CC BY 4.0 for this note; third-party material remains under its own rights.",
+      "path": "technical-notes/paths-to-equilibrium/v1.1.pdf"
+    }
+  ],
+  "history": [
+    {
+      "date": "2026-11-14",
+      "type": "audit",
+      "label": "The narrow profile-count defect was identified and hostile-validated."
+    },
+    {
+      "date": "2026-11-14",
+      "type": "author_contact",
+      "label": "The As Stated technical note was sent to the authors; one recipient-level delivery failure was recorded."
+    },
+    {
+      "date": "2026-11-15",
+      "type": "author_contact",
+      "label": "The same technical note was resent to a current author address after the delivery failure."
+    },
+    {
+      "date": "2026-11-16",
+      "type": "release",
+      "label": "Released as an open finding with the exact archived As Stated technical note."
+    },
+    {
+      "date": "2026-11-16",
+      "type": "release",
+      "label": "Presentation-only migration: published technical note restyled in the approved canonical As Stated style; scientific case content unchanged. Earlier technical note version 1.0 remains available."
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2026-11-16",
+      "change": "First release as an open finding with the exact archived As Stated technical note; the qualitative existence theorem remains unchallenged."
+    },
+    {
+      "version": "1.1",
+      "date": "2026-11-16",
+      "change": "Presentation-only technical-note restyle to version 1.1; scientific case content unchanged. Earlier PDF remains available at technical-notes/paths-to-equilibrium/v1.0.pdf."
+    }
+  ],
+  "statements": {
+    "ai_use": "AI systems contributed to the audit and separate hostile validation. The finding is open and is not described as human-verified or author-accepted."
+  }
+}

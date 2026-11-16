@@ -1,0 +1,132 @@
+{
+  "public_id": "TA-2026-009",
+  "version": "1.1",
+  "schema": 2,
+  "released": "2026-11-16",
+  "status": "published",
+  "sample": false,
+  "kind": "defect",
+  "track": "game_theory",
+  "title": "Achieving Equilibrium Under Utility Heterogeneity: An Agent-Attention Framework for Multi-Agent Multi-Objective Reinforcement Learning",
+  "headline": "Open finding: Unobserved independently distributed opponent utility preferences make the classical Bayesian Nash equilibrium best-response construction undefined or inapplicable without access to global realized preferences.",
+  "work": {
+    "authors": [
+      "Zhuhui Li",
+      "Chunbo Luo",
+      "Liming Huang",
+      "Luyu Qi",
+      "Geyong Min"
+    ],
+    "title": "Achieving Equilibrium Under Utility Heterogeneity: An Agent-Attention Framework for Multi-Agent Multi-Objective Reinforcement Learning",
+    "venue": "Proceedings of the AAAI Conference on Artificial Intelligence",
+    "year": 2026,
+    "volume": "40",
+    "pages": "29538-29545",
+    "doi": "10.1609/aaai.v40i35.40196"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Theorem 1 / Appendix Theorem 4",
+      "kind": "theorem",
+      "role": "main",
+      "page": "AAAI pp. 29538-29545; arXiv Appendix A",
+      "gist": "Unobserved independently distributed opponent utility preferences make the classical Bayesian Nash equilibrium best-response construction undefined or inapplicable without access to global realized preferences.",
+      "statement": "Unobserved independently distributed opponent utility preferences make the classical Bayesian Nash equilibrium best-response construction undefined or inapplicable without access to global realized preferences.",
+      "conditions": [
+        "Agents observe their own preferences but not opponents' independently distributed preferences.",
+        "Behavioral strategies are measurable on each player's own type space."
+      ],
+      "quantifiers": "The theorem's categorical claim for the stated hidden-preference setting.",
+      "result": {
+        "outcome": "defect_found",
+        "status": "open",
+        "defect_class": "statement_false",
+        "affects": "main_result",
+        "depth": "deep_audit",
+        "summary": "The proof imposes the wrong measurability requirement; an explicit threshold strategy is a measurable pure BNE under hidden independent preference types.",
+        "witness": "The proof imposes the wrong measurability requirement; an explicit threshold strategy is a measurable pure BNE under hidden independent preference types.",
+        "argument": "Source lock, sigma-algebra audit, explicit two-player measurable BNE, POMOMDP embedding and rescue attempts. Limits: Does not establish universal BNE existence or challenge the empirical architecture and results.",
+        "not_claimed": [
+          "The counterexample defeats the categorical impossibility claim, not all hidden-preference learning difficulties."
+        ],
+        "repair": "none_proposed"
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "AAAI pp. 29538-29545; arXiv Appendix A",
+        "detail": "Source verification is at the canonical partial level; the record does not overstate Version of Record verification."
+      },
+      "evidence": [
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-11-14",
+          "session": "informed",
+          "detail": "A fresh separate-session hostile validation supports the stated finding; its scope and limits are summarized above."
+        }
+      ],
+      "author_response": {
+        "position": "no_reply",
+        "basis": "none",
+        "counts": false
+      }
+    }
+  ],
+  "correction": null,
+  "related": [],
+  "evidence": {
+    "package_doi": null,
+    "package_sha256": null,
+    "licence": "No public evidence package released.",
+    "files": []
+  },
+  "technical_notes": [
+    {
+      "creator": "As Stated",
+      "date": "2026-11-16",
+      "version": "1.1",
+      "pages": 2,
+      "sha256": "9d57206cdbbfa15ddcf00c25cd5e3cc4c2f7d2c841e221694f8a06f7b7d72d12",
+      "rights": "CC BY 4.0 for this note; third-party material remains under its own rights.",
+      "path": "technical-notes/utility-heterogeneity-bne/v1.1.pdf"
+    }
+  ],
+  "history": [
+    {
+      "date": "2026-11-14",
+      "type": "audit",
+      "label": "The audit identified the stated finding."
+    },
+    {
+      "date": "2026-11-14",
+      "type": "author_contact",
+      "label": "The authors were contacted with the As Stated technical note."
+    },
+    {
+      "date": "2026-11-15",
+      "type": "release",
+      "label": "Released with the exact archived As Stated technical note; scientific status unchanged."
+    },
+    {
+      "date": "2026-11-16",
+      "type": "release",
+      "label": "Presentation-only migration: published technical note restyled in the approved canonical As Stated style; scientific case content unchanged. Earlier technical note version 1.0 remains available."
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2026-11-15",
+      "change": "First release with the exact archived As Stated technical note; scientific status unchanged."
+    },
+    {
+      "version": "1.1",
+      "date": "2026-11-16",
+      "change": "Presentation-only technical-note restyle to version 1.1; scientific case content unchanged. Earlier PDF remains available at technical-notes/utility-heterogeneity-bne/v1.0.pdf."
+    }
+  ],
+  "statements": {
+    "ai_use": "AI systems contributed to the audit and separate hostile validation. The finding retains its canonical scientific status."
+  }
+}

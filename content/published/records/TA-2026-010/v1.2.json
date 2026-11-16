@@ -1,0 +1,148 @@
+{
+  "public_id": "TA-2026-010",
+  "version": "1.2",
+  "schema": 2,
+  "released": "2026-11-16",
+  "status": "published",
+  "sample": false,
+  "kind": "defect",
+  "track": "game_theory",
+  "title": "AgentMixer: Multi-Agent Correlated Policy Factorization",
+  "headline": "Open finding: AgentMixer converges to an epsilon-approximate correlated equilibrium, with epsilon identified by the centralized policy's optimality gap in the proof.",
+  "work": {
+    "authors": [
+      "Zhiyuan Li",
+      "Wenshuai Zhao",
+      "Lijun Wu",
+      "Joni Pajarinen"
+    ],
+    "title": "AgentMixer: Multi-Agent Correlated Policy Factorization",
+    "venue": "Proceedings of the AAAI Conference on Artificial Intelligence",
+    "year": 2025,
+    "volume": "39",
+    "pages": "18611-18619",
+    "doi": "10.1609/aaai.v39i17.34048"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Theorem 2 approximate correlated equilibrium",
+      "kind": "theorem",
+      "role": "main",
+      "page": "AAAI pp. 18611-18619 and extended proof",
+      "gist": "AgentMixer converges to an epsilon-approximate correlated equilibrium, with epsilon identified by the centralized policy's optimality gap in the proof.",
+      "statement": "AgentMixer converges to an epsilon-approximate correlated equilibrium, with epsilon identified by the centralized policy's optimality gap in the proof.",
+      "conditions": [
+        "Individual-Global-Consistency equates centralized and decentralized policy modes.",
+        "Centralized correlated and decentralized product execution use the paper's distinct operators."
+      ],
+      "quantifiers": "For the policy output generated under the stated AgentMixer/IGC construction.",
+      "result": {
+        "outcome": "defect_found",
+        "status": "open",
+        "defect_class": "statement_false",
+        "affects": "main_result",
+        "depth": "deep_audit",
+        "summary": "IGC controls modes rather than joint laws; an optimal correlated policy and same-marginal decentralized product have positive CE regret 2/25 while the proof-defined epsilon is zero.",
+        "witness": "IGC controls modes rather than joint laws; an optimal correlated policy and same-marginal decentralized product have positive CE regret 2/25 while the proof-defined epsilon is zero.",
+        "argument": "Mode-versus-law audit, same-marginal common-seed counterexample, full-support perturbation and convergence-proof review. Limits: Does not challenge empirical results, every trained policy, or all weaker approximate-equilibrium theorems.",
+        "not_claimed": [
+          "An unrestricted existential epsilon reading is vacuous rather than directly contradicted."
+        ],
+        "repair": "none_proposed"
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "AAAI pp. 18611-18619 and extended proof",
+        "detail": "Source verification is at the canonical partial level; the record does not overstate Version of Record verification."
+      },
+      "evidence": [
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-11-14",
+          "session": "informed",
+          "detail": "A fresh separate-session hostile validation supports the stated finding; its scope and limits are summarized above."
+        }
+      ],
+      "author_response": {
+        "position": "agrees",
+        "responder": "one",
+        "basis": "original",
+        "counts": true,
+        "covers": "One author agreed that IGC mode agreement alone does not control the stochastic joint law, confirmed the 2/25 regret example, and said non-vanishing stochastic execution requires a stronger distributional condition."
+      }
+    }
+  ],
+  "correction": null,
+  "related": [],
+  "evidence": {
+    "package_doi": null,
+    "package_sha256": null,
+    "licence": "No public evidence package released.",
+    "files": []
+  },
+  "technical_notes": [
+    {
+      "creator": "As Stated",
+      "date": "2026-11-16",
+      "version": "1.1",
+      "pages": 2,
+      "sha256": "ff42c358bead8a9a47a29326bd464617a06277629bfe3250db59474ac21e5c61",
+      "rights": "CC BY 4.0 for this note; third-party material remains under its own rights.",
+      "path": "technical-notes/agentmixer/v1.1.pdf"
+    }
+  ],
+  "history": [
+    {
+      "date": "2026-11-14",
+      "type": "audit",
+      "label": "The audit identified the stated finding."
+    },
+    {
+      "date": "2026-11-14",
+      "type": "author_contact",
+      "label": "The authors were contacted with the As Stated technical note."
+    },
+    {
+      "date": "2026-11-14",
+      "type": "author_response",
+      "label": "One author agrees with the finding; private correspondence is not reproduced."
+    },
+    {
+      "date": "2026-11-15",
+      "type": "release",
+      "label": "Released with the exact archived As Stated technical note; scientific status unchanged."
+    },
+    {
+      "date": "2026-11-15",
+      "type": "author_response",
+      "label": "The responding author clarified that the intended exact argument is the zero-dispersion or deterministic-execution limit and agreed that stochastic execution requires a stronger distributional condition; the convergence qualification was also accepted."
+    },
+    {
+      "date": "2026-11-16",
+      "type": "release",
+      "label": "Presentation-only migration: published technical note restyled in the approved canonical As Stated style; scientific case content unchanged. Earlier technical note version 1.0 remains available."
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2026-11-15",
+      "change": "First release with the exact archived As Stated technical note; scientific status unchanged."
+    },
+    {
+      "version": "1.1",
+      "date": "2026-11-15",
+      "change": "Expanded the author-response summary to reflect the explicit scope clarification and agreement; Open status unchanged."
+    },
+    {
+      "version": "1.2",
+      "date": "2026-11-16",
+      "change": "Presentation-only technical-note restyle to version 1.1; scientific case content unchanged. Earlier PDF remains available at technical-notes/agentmixer/v1.0.pdf."
+    }
+  ],
+  "statements": {
+    "ai_use": "AI systems contributed to the audit and separate hostile validation. The finding retains its canonical scientific status."
+  }
+}
