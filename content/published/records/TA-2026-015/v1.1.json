@@ -1,0 +1,133 @@
+{
+  "public_id": "TA-2026-015",
+  "version": "1.1",
+  "schema": 2,
+  "released": "2026-11-17",
+  "status": "published",
+  "sample": false,
+  "kind": "defect",
+  "track": "statistics",
+  "title": "On exact randomization-based covariate-adjusted confidence intervals",
+  "headline": "Open finding: the stated monotonicity condition does not guarantee nominal coverage of the paper's single-interval ANCOVA root-sorting procedure.",
+  "work": {
+    "authors": [
+      "Jacob Fiksel"
+    ],
+    "title": "On exact randomization-based covariate-adjusted confidence intervals",
+    "venue": "Biometrics",
+    "year": 2024,
+    "volume": "80",
+    "pages": "ujae051",
+    "doi": "10.1093/biomtc/ujae051"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Section 3.2 Theorem 1 coverage guarantee",
+      "kind": "theorem",
+      "role": "main",
+      "page": "Biometrics 80(2), Section 3.2, Theorem 1, p. 4",
+      "gist": "The displayed condition is used to justify a monotone p-value path and a single interval formed by sorting crossing roots.",
+      "statement": "Theorem 1's displayed condition is sufficient to justify the root-sorting confidence interval and its nominal finite-sample coverage.",
+      "conditions": [
+        "Complete randomization with a sharp constant treatment effect.",
+        "ANCOVA residualization on an intercept and fixed covariates.",
+        "The displayed Theorem 1 condition is positive for every assignment."
+      ],
+      "quantifiers": "The coverage guarantee is presented for experiments satisfying the stated condition; the finite witness below satisfies it for all 70 four-of-eight assignments.",
+      "result": {
+        "outcome": "defect_found",
+        "status": "open",
+        "defect_class": "construction_or_algorithm_fails",
+        "affects": "main_result",
+        "depth": "deep_audit",
+        "summary": "An exact eight-unit complete-randomization example satisfies the stated condition for every assignment, yet the printed fifth-root 95% interval covers the true sharp effect in only 60 of 70 assignments.",
+        "witness": "With x=(1,-1,0,1,-6,-5,-3,-5), sharp-null outcomes (-1,2,2,0,5,1,-5,3), and four treated units, the minimum displayed-condition value across all 70 assignments is 12/23>0. For the observed assignment (1,0,1,1,0,0,1,0), the printed interval is [-2869/340,-1305/731], excluding the true effect 0, while the exact Fisher p-value at 0 is 2/35.",
+        "argument": "The theorem's own monotonicity calculation concerns the shift Y+theta(2q-1), for which the displayed condition simplifies to 2 r_q' r_q>0 whenever the ANCOVA coefficient is identified. The Fisher inversion used by the interval instead follows Y+theta(q-z). Its slope can be negative; in the witness one candidate assignment has slope -1/2. The actual p-value function therefore need not be monotone. Direct inversion gives a disconnected, unbounded acceptance set, so one interval formed from two sorted roots cannot represent it.",
+        "not_claimed": [
+          "Fisher randomization p-values are not exact.",
+          "Theorem 1's algebraic monotonicity statement along its own displayed shift is false.",
+          "A full inversion that reconstructs the non-monotone p-value function is invalid.",
+          "ANCOVA adjustment is invalid generally."
+        ],
+        "repair": "local_repair_proposed",
+        "repair_note": "A root-sorting shortcut needs a condition on the actual imputation-path slopes; alternatively, retain all p-value jumps and invert the full non-monotone function."
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "Biometrics 80(2), Section 3.2, Theorem 1, p. 4",
+        "detail": "The publisher article text and decisive theorem/algorithm wording were checked. Source verification remains partial because the publisher PDF bytes and supplementary material were not both available through the source-lock workflow."
+      },
+      "evidence": [
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-11-17",
+          "session": "informed",
+          "detail": "A fresh hostile validation reproduced the exact 70-assignment enumeration, the root-sorting undercoverage, the true-null Fisher p-value, the disconnected exact inversion, and the distinction between the theorem path and the algorithm's imputation path."
+        }
+      ],
+      "author_response": {
+        "position": "no_reply",
+        "basis": "none",
+        "counts": false
+      }
+    }
+  ],
+  "correction": null,
+  "related": [],
+  "evidence": {
+    "package_doi": null,
+    "package_sha256": null,
+    "licence": "No public evidence package released.",
+    "files": []
+  },
+  "technical_notes": [
+    {
+      "creator": "As Stated",
+      "date": "2026-11-17",
+      "version": "1.1",
+      "pages": 2,
+      "sha256": "9b552fc60a6059fc3f1c7ef8390b614c78353919a45c6aea89c812b7ee9fb238",
+      "rights": "CC BY 4.0 for this note; third-party material remains under its own rights.",
+      "path": "technical-notes/ancova-randomization-interval/v1.1.pdf"
+    }
+  ],
+  "history": [
+    {
+      "date": "2026-11-17",
+      "type": "audit",
+      "label": "An exact finite-sample audit identified and hostile-validated the root-sorting coverage gap."
+    },
+    {
+      "date": "2026-11-17",
+      "type": "release",
+      "label": "Released as an Open finding with a two-page As Stated technical note."
+    },
+    {
+      "date": "2026-11-17",
+      "type": "outreach",
+      "label": "The author was contacted with the technical note on 17 November 2026; no substantive reply is currently recorded."
+    },
+    {
+      "date": "2026-11-17",
+      "type": "release",
+      "label": "Release-housekeeping correction: v1.1 uses the exact archived PDF bytes; v1.0 remains available. The scientific finding and status are unchanged."
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2026-11-17",
+      "change": "First release as an Open finding with a two-page As Stated technical note."
+    },
+    {
+      "version": "1.1",
+      "date": "2026-11-17",
+      "change": "Release-housekeeping correction: v1.1 uses the exact archived PDF bytes; v1.0 remains available. No change to the scientific finding or status."
+    }
+  ],
+  "statements": {
+    "ai_use": "AI systems contributed to the audit and separate hostile validation. The finding is Open and is not described as human-verified or author-accepted."
+  }
+}
