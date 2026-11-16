@@ -1,0 +1,5 @@
+as-stated-release v1
+kind: record
+id: TA-2026-015
+version: 1.0
+sha256: cdbe4f826347a4a4bec36bef11ee50db0ae8f7cf94e474ba4d6097d46ed434e7
