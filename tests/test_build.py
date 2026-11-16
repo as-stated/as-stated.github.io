@@ -805,7 +805,7 @@ class ProductionLayoutTests(LayoutTests):
         f = next(x for x in self.results if "filter" in x)
         self.assertTrue(f["formVisible"])
         self.assertEqual(f["filter"], "construction")
-        self.assertEqual(f["shown"], 2)
+        self.assertEqual(f["shown"], 3)
 
 
 class ProductionTests(unittest.TestCase):
