@@ -794,7 +794,7 @@ class LayoutTests(unittest.TestCase):
 
 class ProductionLayoutTests(LayoutTests):
     """Layout of the production build (published channel, optional pages off)."""
-    PAGES = ["", "cases/", "cases/TA-2026-001/", "cases/TA-2026-002/", "cases/TA-2026-003/", "cases/TA-2026-004/", "cases/TA-2026-005/", "cases/TA-2026-006/", "cases/TA-2026-007/", "cases/TA-2026-008/", "cases/TA-2026-010/", "cases/TA-2026-012/", "cases/TA-2026-013/", "cases/TA-2026-014/", "methodology/", "definitions/", "about/", "404.html"]
+    PAGES = ["", "cases/", "cases/TA-2026-001/", "cases/TA-2026-002/", "cases/TA-2026-003/", "cases/TA-2026-004/", "cases/TA-2026-005/", "cases/TA-2026-006/", "cases/TA-2026-007/", "cases/TA-2026-008/", "cases/TA-2026-010/", "cases/TA-2026-012/", "cases/TA-2026-013/", "cases/TA-2026-014/", "cases/TA-2026-015/", "methodology/", "definitions/", "about/", "404.html"]
 
     @classmethod
     def project_root(cls):
@@ -826,7 +826,7 @@ class ProductionTests(unittest.TestCase):
 
     def test_builds_from_the_published_channel_only(self):
         self.assertEqual(self.content.channel, "published")
-        self.assertEqual(set(self.content.records), {"TA-2026-001", "TA-2026-002", "TA-2026-003", "TA-2026-004", "TA-2026-005", "TA-2026-006", "TA-2026-007", "TA-2026-008", "TA-2026-009", "TA-2026-010", "TA-2026-011", "TA-2026-012", "TA-2026-013", "TA-2026-014"})
+        self.assertEqual(set(self.content.records), {"TA-2026-001", "TA-2026-002", "TA-2026-003", "TA-2026-004", "TA-2026-005", "TA-2026-006", "TA-2026-007", "TA-2026-008", "TA-2026-009", "TA-2026-010", "TA-2026-011", "TA-2026-012", "TA-2026-013", "TA-2026-014", "TA-2026-015"})
         for rid in self.content.records:
             self.assertTrue((self.out / f"data/records/{rid}/v1.0.json").exists())
 
@@ -881,15 +881,17 @@ class ProductionTests(unittest.TestCase):
             ("TA-2026-012", "Randomization-based confidence intervals for cluster randomized trials", "Rabideau"),
             ("TA-2026-013", "Identification and multiply robust estimation in causal mediation analysis across principal strata", "Cheng"),
             ("TA-2026-014", "Paths to Equilibrium in Games", "Yongacoglu"),
+            ("TA-2026-015", "On exact randomization-based covariate-adjusted confidence intervals", "Fiksel"),
         ]
         for rid, title, author in records:
             self.assertIn(rid, cases)
             self.assertIn(title, cases)
             self.assertIn(author, cases)
         # The migration released presentation-only record versions for cases 2–5 on 16 November.
-        for i in [1, 2, 3, 4]:
+        for i in [1, 2, 3, 14]:
             self.assertIn(records[i][1], home)
         self.assertNotIn(records[0][1], home)
+        self.assertNotIn(records[4][1], home)
         self.assertNotIn(records[5][1], home)
         self.assertNotIn(records[13][1], home)
         self.assertNotIn("No case records have been released yet.", cases)
@@ -909,6 +911,7 @@ class ProductionTests(unittest.TestCase):
             "TA-2026-012": ("v1.3", "technical-notes/randomization-confidence-intervals/v1.1.pdf"),
             "TA-2026-013": ("v1.1", "technical-notes/principal-strata-mediation/v1.1.pdf"),
             "TA-2026-014": ("v1.1", "technical-notes/paths-to-equilibrium/v1.1.pdf"),
+            "TA-2026-015": ("v1.0", "technical-notes/ancova-randomization-interval/v1.0.pdf"),
         }
         for rid, (version, path) in expected.items():
             page = (self.out / "cases" / rid / "index.html").read_text(encoding="utf-8")
