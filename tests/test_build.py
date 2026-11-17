@@ -978,15 +978,38 @@ class ProductionTests(unittest.TestCase):
 
     def test_breaking_barriers_latest_is_author_confirmed_with_correction_pending(self):
         rec = self.content.latest("TA-2026-018")
-        self.assertEqual(rec["version"], "1.1")
+        self.assertEqual(rec["version"], "1.2")
         self.assertEqual([c["result"]["status"] for c in rec["claims"]], ["confirmed", "confirmed"])
         self.assertTrue(all(c["author_response"]["position"] == "agrees" for c in rec["claims"]))
         self.assertTrue(all(c["author_response"]["counts"] for c in rec["claims"]))
         page = (self.out / "cases/TA-2026-018/index.html").read_text(encoding="utf-8")
         self.assertIn("Confirmed", page)
+        self.assertEqual(rec["correction"]["state"], "announced")
+        self.assertIn("Announced.", page)
         self.assertIn("corrected arXiv version", page)
-        self.assertIn("had not yet been independently checked", page)
+        self.assertIn("independently verified", page)
         self.assertIn("One author agrees.", page)
+
+    def test_correction_progress_is_separate_from_finding_status(self):
+        supplied = self.content.latest("TA-2026-006")
+        self.assertEqual(supplied["version"], "1.2")
+        self.assertEqual(supplied["claims"][0]["result"]["status"], "confirmed")
+        self.assertEqual(supplied["correction"]["state"], "author_supplied")
+        page6 = (self.out / "cases/TA-2026-006/index.html").read_text(encoding="utf-8")
+        self.assertIn("Author-supplied correction.", page6)
+        self.assertIn("not presented as a public journal or arXiv correction", page6)
+
+        announced = self.content.latest("TA-2026-008")
+        self.assertEqual(announced["version"], "1.2")
+        self.assertEqual(announced["claims"][0]["result"]["status"], "confirmed")
+        self.assertEqual(announced["correction"]["state"], "announced")
+        page8 = (self.out / "cases/TA-2026-008/index.html").read_text(encoding="utf-8")
+        self.assertIn("Announced.", page8)
+        self.assertIn("No public correction is represented here as completed or independently verified.", page8)
+
+        # Pending/private correction states do not count as published corrections.
+        stats = build.released_statistics(self.content, "2026-11-18")
+        self.assertEqual(sum(stats["corrections"].values()), 0)
 
     def test_rabideau_wang_latest_reflects_author_clarification(self):
         rec = self.content.latest("TA-2026-012")
