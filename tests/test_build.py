@@ -1002,7 +1002,7 @@ class ProductionTests(unittest.TestCase):
         self.assertIn("probability-scale", page)
         self.assertIn("not refuted", page)
         self.assertGreaterEqual(page.count("<math"), 8)
-        visible = re.sub(r"<math\\b.*?</math>", "", page, flags=re.S)
+        visible = re.sub(r"<math\b.*?</math>", "", page, flags=re.S)
         for raw in ["T_i=g(X_i)", "F_T(T_i)", "T_(khat+1)", "T_i,R_i"]:
             self.assertNotIn(raw, visible)
 
