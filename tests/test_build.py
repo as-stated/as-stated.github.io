@@ -994,7 +994,7 @@ class ProductionTests(unittest.TestCase):
         self.assertEqual(claim["result"]["defect_class"], "definition_defect")
         self.assertEqual(claim["author_response"]["position"], "partly_agrees")
         self.assertEqual(claim["result"]["status"], "open")
-        self.assertIn("intended probability-scale lower bound", claim["result"]["not_claimed"][0])
+        self.assertIn("intended probability-scale lower FCR bound", claim["result"]["not_claimed"][0])
         page = (self.out / "cases/TA-2026-016/index.html").read_text(encoding="utf-8")
         self.assertIn("Definition defect", page)
         self.assertIn("partly agree", page)
