@@ -1,0 +1,123 @@
+{
+  "schema": 2,
+  "released": "2026-11-17",
+  "status": "published",
+  "sample": false,
+  "kind": "defect",
+  "correction": null,
+  "related": [],
+  "evidence": {
+    "package_doi": null,
+    "package_sha256": null,
+    "licence": "No public evidence package released.",
+    "files": []
+  },
+  "challenges": [],
+  "statements": {
+    "ai_use": "AI systems contributed to the audit and separate hostile validation. The findings are Open; no human verification or author acceptance is claimed."
+  },
+  "public_id": "TA-2026-017",
+  "version": "1.0",
+  "track": "operations_research",
+  "title": "Decision Space Decomposition for Multiobjective Optimization",
+  "headline": "Open finding: Proposition 2.5 is false as printed; a continuous map with globally strictly convex components violates the asserted inverse-image convergence.",
+  "work": {
+    "authors": [
+      "Emma Soriano",
+      "Mishko Mitkovski",
+      "Margaret M. Wiecek"
+    ],
+    "title": "Decision Space Decomposition for Multiobjective Optimization",
+    "venue": "Journal of Optimization Theory and Applications",
+    "year": 2026,
+    "volume": "208",
+    "pages": "103",
+    "doi": "10.1007/s10957-025-02924-w"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Proposition 2.5 inverse-image convergence claim",
+      "kind": "proposition",
+      "role": "main",
+      "page": "JOTA 208 (2026), Proposition 2.5",
+      "gist": "Proposition 2.5 asserts that continuity of f alone preserves Painlevé–Kuratowski convergence under inverse images.",
+      "statement": "For every continuous f:R^n→R^p, Painlevé–Kuratowski convergence Y_N→Y implies Painlevé–Kuratowski convergence f⁻¹(Y_N)→f⁻¹(Y).",
+      "conditions": [
+        "The map is continuous; the proposition is stated for all continuous maps and convergent image sets."
+      ],
+      "quantifiers": "The claim is universal over continuous f and sequences Y_N with Painlevé–Kuratowski limit Y.",
+      "result": {
+        "outcome": "defect_found",
+        "status": "open",
+        "defect_class": "statement_false",
+        "affects": "main_result",
+        "depth": "deep_audit",
+        "summary": "A continuous map with globally strictly convex components and nonempty singleton image sets gives Y_N→Y in Hausdorff distance, while the inverse images converge to {1} and the limiting inverse image is {−1,1}. The lower-limit inclusion fails.",
+        "witness": "Let F(x)=(x²,g(x)), where g(x)=x⁴+x²+x³−x. Both components are globally strictly convex. For N≥2, put x_N=1−1/N, Y_N={F(x_N)}, and Y={F(1)}={(1,2)}. Then Y_N→Y even in Hausdorff distance. For every finite N, F⁻¹(Y_N)={1−1/N}, so F⁻¹(Y_N)→{1}; but F⁻¹(Y)={−1,1}. Thus −1 in F⁻¹(Y) cannot be approached by points in F⁻¹(Y_N). The witness has nonempty singleton image sets and finite nonempty inverse images; it uses neither an empty set nor a constant map.",
+        "argument": "The first coordinate forces any preimage of F(x_N) to be ±x_N. The second coordinate distinguishes these values for each finite N, while F(−1)=F(1)=(1,2). Thus the inverse image at each finite index is a singleton tending to {1}, but the limiting inverse image also contains −1. This violates the Painlevé–Kuratowski lower-limit inclusion and refutes Proposition 2.5 as printed. Proposition 5.3 invokes Proposition 2.5 and Proposition 5.5 cites Proposition 5.3; these are downstream proof dependencies requiring reanalysis only.",
+        "not_claimed": [
+          "Proposition 5.3 is false.",
+          "Proposition 5.5 is false.",
+          "A corrected general theorem has been established.",
+          "The finding is human-verified.",
+          "The authors agree with the finding."
+        ],
+        "repair": "none_proposed"
+      },
+      "vor_check": {
+        "level": "full",
+        "pages": "Proposition 2.5, printed statement on article p. 6; Proposition 5.3 on article p. 24; Proposition 5.5 dependency in its proof.",
+        "detail": "The publisher current 33-page Version of Record and full-text page were checked at the decisive statement and proof passages. The witness and its scope were rechecked against the printed claim; the source-lock record identifies Propositions 5.3 and 5.5 only as downstream proof dependencies."
+      },
+      "evidence": [
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-11-16",
+          "session": "informed",
+          "detail": "A fresh hostile validation independently checked the strict convexity calculations, singleton Hausdorff convergence, finite inverse images, limiting inverse image and failure of the lower-limit inclusion."
+        }
+      ],
+      "author_response": {
+        "position": "no_reply",
+        "basis": "none",
+        "counts": false
+      }
+    }
+  ],
+  "technical_notes": [
+    {
+      "creator": "As Stated",
+      "date": "2026-11-17",
+      "version": "1.0",
+      "pages": 1,
+      "sha256": "d77a599bc44435080eb4a6d7cb08c95b18aebdc61b777734e0ce231428479a25",
+      "rights": "CC BY 4.0 for this note; third-party material remains under its own rights.",
+      "path": "technical-notes/decision-space-decomposition/v1.0.pdf"
+    }
+  ],
+  "history": [
+    {
+      "date": "2026-11-17",
+      "type": "audit",
+      "label": "A deep audit found Proposition 2.5 false as printed using a continuous map with globally strictly convex components."
+    },
+    {
+      "date": "2026-11-17",
+      "type": "outreach",
+      "label": "The authors were contacted with the technical note on 16 November 2026; no substantive author reply is currently recorded."
+    },
+    {
+      "date": "2026-11-17",
+      "type": "release",
+      "label": "Released as an Open finding with the exact one-page As Stated technical note."
+    }
+  ],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2026-11-17",
+      "change": "First release as an Open finding with the exact one-page As Stated technical note."
+    }
+  ]
+}
