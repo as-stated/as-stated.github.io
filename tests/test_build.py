@@ -987,6 +987,20 @@ class ProductionTests(unittest.TestCase):
         self.assertIn("partly agree", page)
         self.assertIn("genuine null-removing transformation", page)
 
+    def test_fiksel_latest_records_limited_author_agreement(self):
+        rec = self.content.latest("TA-2026-015")
+        claim = rec["claims"][0]
+        self.assertEqual(rec["version"], "1.2")
+        self.assertEqual(claim["author_response"]["position"], "agrees")
+        self.assertFalse(claim["author_response"]["counts"])
+        self.assertEqual(claim["result"]["status"], "open")
+        page = (self.out / "cases/TA-2026-015/index.html").read_text(encoding="utf-8")
+        self.assertIn("One author agrees.", page)
+        self.assertIn("does not have time to undertake a full investigation", page)
+        self.assertIn("note to Biometrics", page)
+        self.assertIn(">Open<", page)
+        self.assertNotIn(">Confirmed<", page)
+
     def test_scop_latest_reflects_author_clarification(self):
         rec = self.content.latest("TA-2026-016")
         claim = rec["claims"][0]
