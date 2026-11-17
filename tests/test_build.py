@@ -991,11 +991,11 @@ class ProductionTests(unittest.TestCase):
         rec = self.content.latest("TA-2026-015")
         claim = rec["claims"][0]
         self.assertEqual(rec["version"], "1.2")
-        self.assertEqual(claim["author_response"]["position"], "agrees")
+        self.assertEqual(claim["author_response"]["position"], "partly_agrees")
         self.assertFalse(claim["author_response"]["counts"])
         self.assertEqual(claim["result"]["status"], "open")
         page = (self.out / "cases/TA-2026-015/index.html").read_text(encoding="utf-8")
-        self.assertIn("One author agrees.", page)
+        self.assertIn("One author partly agrees.", page)
         self.assertIn("does not have time to undertake a full investigation", page)
         self.assertIn("note to Biometrics", page)
         self.assertIn(">Open<", page)
