@@ -987,6 +987,20 @@ class ProductionTests(unittest.TestCase):
         self.assertIn("partly agree", page)
         self.assertIn("genuine null-removing transformation", page)
 
+    def test_scop_latest_reflects_author_clarification(self):
+        rec = self.content.latest("TA-2026-016")
+        claim = rec["claims"][0]
+        self.assertEqual(rec["version"], "1.1")
+        self.assertEqual(claim["result"]["defect_class"], "missing_or_hidden_assumption")
+        self.assertEqual(claim["author_response"]["position"], "partly_agrees")
+        self.assertEqual(claim["result"]["status"], "open")
+        self.assertIn("intended probability-scale lower bound", claim["result"]["not_claimed"][0])
+        page = (self.out / "cases/TA-2026-016/index.html").read_text(encoding="utf-8")
+        self.assertIn("Missing assumption", page)
+        self.assertIn("partly agree", page)
+        self.assertIn("probability-scale", page)
+        self.assertIn("not refuted", page)
+
     def test_policies_live_on_the_methodology_page(self):
         m = (self.out / "methodology/index.html").read_text(encoding="utf-8")
         for anchor in ["responses", "corrections", "challenges", "release", "standard"]:
