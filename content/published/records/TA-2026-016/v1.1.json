@@ -73,7 +73,7 @@
       ],
       "author_response": {
         "position": "partly_agrees",
-        "responder": "one_of_four",
+        "responder": "one",
         "basis": "original",
         "counts": false,
         "covers": "One author explained that the Supplementary Material explicitly reparameterizes the scores by their marginal CDFs and then treats T as Uniform(0,1) in the subsequent theory. The author also agreed that this convention could be stated more explicitly alongside Theorem 2 in the main text.",
