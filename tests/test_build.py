@@ -181,7 +181,7 @@ class BuildTests(unittest.TestCase):
 
     def test_outcome_distinctions_are_defined(self):
         defs = (self.out_p / "definitions/index.html").read_text(encoding="utf-8")
-        for label in ["No defect found", "False as stated", "Proof incomplete", "Missing assumption",
+        for label in ["No defect found", "False as stated", "Definition defect", "Proof incomplete", "Missing assumption",
                       "Construction fails", "Unresolved"]:
             self.assertIn(label, defs)
         self.assertIn("not a proof that the claim is correct", defs)
@@ -997,6 +997,7 @@ class ProductionTests(unittest.TestCase):
         self.assertIn("intended probability-scale lower FCR bound", claim["result"]["not_claimed"][0])
         page = (self.out / "cases/TA-2026-016/index.html").read_text(encoding="utf-8")
         self.assertIn("Definition defect", page)
+        self.assertNotIn('<span class="fd fd-false"><i class="mk" aria-hidden="true"></i>False as stated</span>', page)
         self.assertIn("partly agree", page)
         self.assertIn("probability-scale", page)
         self.assertIn("not refuted", page)
