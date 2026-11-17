@@ -39,6 +39,8 @@ TRACKS = {
     "matching_social_choice": "Matching and social choice",
     "statistics": "Statistics",
     "econometrics": "Econometrics",
+    "operations_research": "Operations research",
+    "theoretical_computer_science": "Theoretical computer science",
 }
 KINDS = {"defect", "negative"}
 # Evidence types (schema 2). Author agreement is not evidence on a case page: it is the author response, and it counts
@@ -698,7 +700,8 @@ def nav_items(site):
     return [(t, n) for t, n in NAV if t not in OPTIONAL_PAGES or page_on(site, OPTIONAL_PAGES[t])]
 TRACK_SHORT = {"game_theory": "Game theory", "mechanism_design": "Mechanism design",
                "matching_social_choice": "Matching and social choice", "statistics": "Statistics",
-               "econometrics": "Econometrics"}
+               "econometrics": "Econometrics", "operations_research": "Operations research",
+               "theoretical_computer_science": "Theoretical computer science"}
 CLAIM_KINDS = {"theorem": "Theorem", "proposition": "Proposition", "lemma": "Lemma", "corollary": "Corollary",
                "remark": "Remark", "algorithm": "Algorithm", "construction": "Construction", "application": "Application"}
 ROLES = {"main": "main result", "supporting": "supporting result", "secondary": "secondary result",

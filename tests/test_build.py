@@ -721,6 +721,15 @@ function load(src, w) { return new Promise(res => { const f = document.createEle
       const shown = [...d.querySelectorAll("#case-index tr.ix-row")].filter(r => !r.hidden && !r.parentElement.hidden).length;
       out.push({filter: sel.value, shown: shown, count: d.getElementById("f-count").textContent,
                 formVisible: !d.getElementById("filters").hidden});
+      const track = d.getElementById("f-track");
+      if ([...track.options].some(o => o.value === "operations_research")) {
+        sel.value = ""; sel.dispatchEvent(new Event("change"));
+        for (const value of ["operations_research", "theoretical_computer_science"]) {
+          track.value = value; track.dispatchEvent(new Event("change"));
+          const n = [...d.querySelectorAll("#case-index tr.ix-row")].filter(r => !r.hidden && !r.parentElement.hidden).length;
+          out.push({trackFilter: value, shown: n, count: d.getElementById("f-count").textContent});
+        }
+      }
     }
     f.remove();
   }
@@ -794,7 +803,7 @@ class LayoutTests(unittest.TestCase):
 
 class ProductionLayoutTests(LayoutTests):
     """Layout of the production build (published channel, optional pages off)."""
-    PAGES = ["", "cases/", "cases/TA-2026-001/", "cases/TA-2026-002/", "cases/TA-2026-003/", "cases/TA-2026-004/", "cases/TA-2026-005/", "cases/TA-2026-006/", "cases/TA-2026-007/", "cases/TA-2026-008/", "cases/TA-2026-010/", "cases/TA-2026-012/", "cases/TA-2026-013/", "cases/TA-2026-014/", "cases/TA-2026-015/", "cases/TA-2026-016/", "methodology/", "definitions/", "about/", "404.html"]
+    PAGES = ["", "cases/", "cases/TA-2026-001/", "cases/TA-2026-002/", "cases/TA-2026-003/", "cases/TA-2026-004/", "cases/TA-2026-005/", "cases/TA-2026-006/", "cases/TA-2026-007/", "cases/TA-2026-008/", "cases/TA-2026-010/", "cases/TA-2026-012/", "cases/TA-2026-013/", "cases/TA-2026-014/", "cases/TA-2026-015/", "cases/TA-2026-016/", "cases/TA-2026-017/", "cases/TA-2026-018/", "methodology/", "definitions/", "about/", "404.html"]
 
     @classmethod
     def project_root(cls):
@@ -805,7 +814,15 @@ class ProductionLayoutTests(LayoutTests):
         f = next(x for x in self.results if "filter" in x)
         self.assertTrue(f["formVisible"])
         self.assertEqual(f["filter"], "construction")
-        self.assertEqual(f["shown"], 3)
+        self.assertEqual(f["shown"], 5)
+
+    def test_new_track_filters_return_their_claim_counts(self):
+        self.assertIsNotNone(self.results, self.raw)
+        by_track = {x["trackFilter"]: x for x in self.results if "trackFilter" in x}
+        self.assertEqual(by_track["operations_research"]["shown"], 1)
+        self.assertEqual(by_track["operations_research"]["count"], "1 of 22 claims, in 1 paper")
+        self.assertEqual(by_track["theoretical_computer_science"]["shown"], 2)
+        self.assertEqual(by_track["theoretical_computer_science"]["count"], "2 of 22 claims, in 1 paper")
 
 
 class ProductionTests(unittest.TestCase):
@@ -826,7 +843,7 @@ class ProductionTests(unittest.TestCase):
 
     def test_builds_from_the_published_channel_only(self):
         self.assertEqual(self.content.channel, "published")
-        self.assertEqual(set(self.content.records), {"TA-2026-001", "TA-2026-002", "TA-2026-003", "TA-2026-004", "TA-2026-005", "TA-2026-006", "TA-2026-007", "TA-2026-008", "TA-2026-009", "TA-2026-010", "TA-2026-011", "TA-2026-012", "TA-2026-013", "TA-2026-014", "TA-2026-015", "TA-2026-016"})
+        self.assertEqual(set(self.content.records), {"TA-2026-001", "TA-2026-002", "TA-2026-003", "TA-2026-004", "TA-2026-005", "TA-2026-006", "TA-2026-007", "TA-2026-008", "TA-2026-009", "TA-2026-010", "TA-2026-011", "TA-2026-012", "TA-2026-013", "TA-2026-014", "TA-2026-015", "TA-2026-016", "TA-2026-017", "TA-2026-018"})
         for rid in self.content.records:
             self.assertTrue((self.out / f"data/records/{rid}/v1.0.json").exists())
 
@@ -883,13 +900,15 @@ class ProductionTests(unittest.TestCase):
             ("TA-2026-014", "Paths to Equilibrium in Games", "Yongacoglu"),
             ("TA-2026-015", "On exact randomization-based covariate-adjusted confidence intervals", "Fiksel"),
             ("TA-2026-016", "Selective conformal inference with false coverage-statement rate control", "Bao"),
+            ("TA-2026-017", "Decision Space Decomposition for Multiobjective Optimization", "Soriano"),
+            ("TA-2026-018", "Breaking Barriers: Combinatorial Algorithms for Non-Monotone Submodular Maximization with Sublinear Adaptivity and 1/e Approximation", "Kuhnle"),
         ]
         for rid, title, author in records:
             self.assertIn(rid, cases)
             self.assertIn(title, cases)
             self.assertIn(author, cases)
-        # The recent home slice now includes TA-2026-016 and the two November 15 records.
-        for i in [1, 2, 14, 15]:
+        # The recent home slice now includes TA-2026-018 and the three preceding releases.
+        for i in [14, 15, 16, 17]:
             self.assertIn(records[i][1], home)
         self.assertNotIn(records[0][1], home)
         self.assertNotIn(records[4][1], home)
@@ -914,6 +933,8 @@ class ProductionTests(unittest.TestCase):
             "TA-2026-014": ("v1.1", "technical-notes/paths-to-equilibrium/v1.1.pdf"),
             "TA-2026-015": ("v1.1", "technical-notes/ancova-randomization-interval/v1.1.pdf"),
             "TA-2026-016": ("v1.0", "technical-notes/scop-lower-fcr-bound/v1.0.pdf"),
+            "TA-2026-017": ("v1.0", "technical-notes/decision-space-decomposition/v1.0.pdf"),
+            "TA-2026-018": ("v1.0", "technical-notes/breaking-barriers/v1.0.pdf"),
         }
         for rid, (version, path) in expected.items():
             page = (self.out / "cases" / rid / "index.html").read_text(encoding="utf-8")
@@ -932,6 +953,27 @@ class ProductionTests(unittest.TestCase):
         self.assertIn("Archived version 1.0. The current version is", prior_page)
         self.assertTrue((self.out / "data/records/TA-2026-015/v1.0.json").is_file())
         self.assertTrue((self.out / "technical-notes/ancova-randomization-interval/v1.0.pdf").is_file())
+
+    def test_new_tracks_render_in_browse_filter_and_case_pages(self):
+        cases = (self.out / "cases/index.html").read_text(encoding="utf-8")
+        self.assertIn('<option value="operations_research">Operations research</option>', cases)
+        self.assertIn('<option value="theoretical_computer_science">Theoretical computer science</option>', cases)
+        index = cases.split('id="case-index"', 1)[1]
+        self.assertIn('data-track="operations_research"', index)
+        self.assertIn('data-track="theoretical_computer_science"', index)
+        self.assertEqual(self.content.latest("TA-2026-017")["track"], "operations_research")
+        self.assertEqual(self.content.latest("TA-2026-018")["track"], "theoretical_computer_science")
+        self.assertIn("Operations research", (self.out / "cases/TA-2026-017/index.html").read_text(encoding="utf-8"))
+        self.assertIn("Theoretical computer science", (self.out / "cases/TA-2026-018/index.html").read_text(encoding="utf-8"))
+
+    def test_new_records_preserve_two_distinct_open_findings(self):
+        one = self.content.latest("TA-2026-017")
+        self.assertEqual(one["claims"][0]["result"]["status"], "open")
+        self.assertEqual(one["claims"][0]["result"]["defect_class"], "statement_false")
+        two = self.content.latest("TA-2026-018")
+        self.assertEqual(len(two["claims"]), 2)
+        self.assertEqual([c["result"]["status"] for c in two["claims"]], ["open", "open"])
+        self.assertTrue(all(c["result"]["defect_class"] == "construction_or_algorithm_fails" for c in two["claims"]))
 
     def test_rabideau_wang_latest_reflects_author_clarification(self):
         rec = self.content.latest("TA-2026-012")
