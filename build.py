@@ -102,6 +102,12 @@ RESPONSE_VERB = {"agrees": ("agree", "agrees"), "partly_agrees": ("partly agree"
                  "disagrees": ("disagree", "disagrees")}
 RESPONSE_BASES = {"original": "from the authors' own written reply", "secondary_record": "from a secondary record of the reply",
                   "none": "no reply recorded"}
+CORRECTION_STATES = {
+    "announced": "Announced",
+    "author_supplied": "Author-supplied correction",
+    "public_revision_verified": "Public revision verified",
+    "formal_correction_published": "Formal correction published",
+}
 UNRESOLVED_REASONS = {"source_limited": "source not available", "disputed_reading": "reading of the source disputed"}
 REPAIRS = {
     "none_proposed": "No repair proposed",
@@ -372,16 +378,22 @@ def validate_record_v2(rec, rid, version):
     _require((rec["kind"] == "defect") == (defect_claims > 0), f"{where}: kind does not match its claims")
     corr = rec.get("correction")
     if corr:
+        state = corr.get("state", "formal_correction_published")
+        _require(state in CORRECTION_STATES, f"{where}: bad correction state")
         _require(corr["relation"] in {"after_notification", "before_audit", "during_audit_before_notification"},
                  f"{where}: bad correction relation")
         _require(corr["attribution"] in {"credits_programme", "none_stated"}, f"{where}: bad correction attribution")
         mathml.check(corr["note"], f"{where}: correction note", math=False)
         _require(re.fullmatch(DATE_RE, corr["date"]) is not None, f"{where}: correction date must be YYYY-MM or YYYY-MM-DD")
+        if state in {"announced", "author_supplied"}:
+            _require(corr.get("doi") is None, f"{where}: non-public correction states must not carry a DOI")
+        elif corr.get("doi") is not None:
+            _require(DOI_RE.fullmatch(corr["doi"]), f"{where}: correction DOI is malformed")
     _keys(rec["evidence"], {"package_doi", "package_sha256", "licence", "files"}, f"{where}: evidence")
     for f in rec["evidence"]["files"]:
         _keys(f, {"name", "sha256"}, f"{where}: evidence file")
     if rec.get("correction"):
-        _keys(rec["correction"], {"type", "doi", "date", "relation", "attribution", "claims", "note"}, f"{where}: correction")
+        _keys(rec["correction"], {"state", "type", "doi", "date", "relation", "attribution", "claims", "note"}, f"{where}: correction")
     for item in rec["related"]:
         _require(set(item) == {"type", "citation", "doi", "note"}, f"{where}: related item fields")
         _require(item["type"] == "related_work", f"{where}: bad related type")
@@ -592,7 +604,8 @@ def released_stats(content, as_of):
                 s["vor_neg"][lvl] += 1
         s["notified"] += paper_notified
         corr = r.get("correction")
-        if corr and corr["relation"] == "after_notification" and corr["date"] <= as_of:
+        if (corr and corr.get("state", "formal_correction_published") in {"public_revision_verified", "formal_correction_published"}
+                and corr["relation"] == "after_notification" and corr["date"] <= as_of):
             s["corrections"][corr["attribution"]] += 1
         s["our_corrections"] += sum(1 for ch in r["changelog"] if ch.get("our_correction"))
     return s
@@ -806,8 +819,15 @@ def development(rec, c):
     out = []
     corr = rec.get("correction")
     if corr and c["id"] in corr.get("claims", []):
+        state = corr.get("state", "formal_correction_published")
         if corr["relation"] == "before_audit":
             out.append(f"Corrected in {fmt_month(corr['date'])}, before this audit")
+        elif state == "announced":
+            out.append(f"Correction announced {fmt_month(corr['date'])}")
+        elif state == "author_supplied":
+            out.append(f"Author-supplied correction {fmt_month(corr['date'])}")
+        elif state == "public_revision_verified":
+            out.append(f"Public revision verified {fmt_month(corr['date'])}")
         else:
             credit = ", credits this audit" if corr["attribution"] == "credits_programme" else ""
             out.append(f"{corr['type'].capitalize()} {fmt_month(corr['date'])}{credit}")
@@ -1140,17 +1160,29 @@ def render_record(site, rec, frozen=False):
                     f'<table class="ov"><tbody>{rows}</tbody></table></section>')
     resp = []
     if corr:
-        if corr["relation"] == "before_audit":
-            ctext = (f"{corr['type'].capitalize()} published in {fmt_month(corr['date'])}, before this audit "
-                     f"({doi_html(site, corr['doi'])}). Not an outcome of this audit.")
+        state = corr.get("state", "formal_correction_published")
+        if state == "announced":
+            ctext = (f"<strong>Announced.</strong> {E(fmt_date(corr['date']))}. {E(corr['note'])} "
+                     "No public correction is represented here as completed or independently verified.")
+        elif state == "author_supplied":
+            ctext = (f"<strong>Author-supplied correction.</strong> {E(fmt_date(corr['date']))}. {E(corr['note'])} "
+                     "This records material supplied privately by the authors; it is not presented as a public journal or arXiv correction.")
+        elif state == "public_revision_verified":
+            link = f" ({doi_html(site, corr['doi'])})" if corr.get("doi") else ""
+            ctext = (f"<strong>Public revision verified.</strong> {E(fmt_date(corr['date']))}.{link} {E(corr['note'])}")
+        elif corr["relation"] == "before_audit":
+            link = f" ({doi_html(site, corr['doi'])})" if corr.get("doi") else ""
+            ctext = (f"{E(corr['type'].capitalize())} published in {E(fmt_month(corr['date']))}, before this audit{link}. "
+                     "Not an outcome of this audit.")
         else:
+            link = f" ({doi_html(site, corr['doi'])})" if corr.get("doi") else ""
             attrib = ("It credits this audit." if corr["attribution"] == "credits_programme" else
                       "It does not mention this audit; we do not claim it resulted from our work.")
-            ctext = (f"{corr['type'].capitalize()} published {E(fmt_date(corr['date']))}, after the authors were contacted "
-                     f"({doi_html(site, corr['doi'])}). {E(attrib)}")
+            ctext = (f"{E(corr['type'].capitalize())} published {E(fmt_date(corr['date']))}, after the authors were contacted"
+                     f"{link}. {E(attrib)} {E(corr['note'])}")
         resp.append(f"<dt>Correction</dt><dd>{ctext}</dd>")
     else:
-        resp.append("<dt>Correction</dt><dd>None published.</dd>")
+        resp.append("<dt>Correction</dt><dd>None recorded.</dd>")
     for item in rec.get("related", []):
         link = doi_html(site, item["doi"]) if item.get("doi") else ""
         note = f" {E(item['note'])}" if item.get("note") else ""
@@ -1310,7 +1342,7 @@ never named because of an unresolved question alone.</dd></div>
 <dl class="defs">{kind_list}</dl><p>Rerunning the original evidence package shows the package works; it is reported separately and is not counted as a check.</p></section>
 <section id="vor"><h2>Source check</h2><p>The decisive elements are the statement, every definition and assumption the finding relies on, the decisive step, and any supplement the claim depends on.</p><ul>{vor}</ul></section>
 <section id="authors"><h2>Author responses</h2><p>Each claim records the authors' position: agrees, partly agrees, disagrees, reviewing, no reply, or not contacted. A response is shown whatever it says. Whether it counts toward the Confirmed label is recorded separately. Contact and reply are not publication requirements. Private correspondence is published only with separate consent to its public use.</p></section>
-<section id="corrections"><h2>Corrections</h2><p>A correction is described as crediting this audit only if its own text says so. A correction published before the audit marks the finding as previously reported; it is not an outcome of this audit.</p></section>
+<section id="corrections"><h2>Corrections</h2><p>Finding status and correction status are separate. A finding may be Open or Confirmed whether or not the authors have issued a correction. Correction status is recorded as <strong>Announced</strong>, <strong>Author-supplied correction</strong>, <strong>Public revision verified</strong>, or <strong>Formal correction published</strong>. Announced and author-supplied states are not presented as completed public corrections. A correction is described as crediting this audit only if its own text says so. A correction published before the audit marks the finding as previously reported; it is not an outcome of this audit.</p></section>
 </div></div>
 <div class="wrap"><section id="metrics" class="block"><h2>Metrics</h2><div class="table-wrap"><table class="data rtable metrics"><thead><tr><th scope=col>ID</th><th scope=col>Label</th><th scope=col>Unit</th><th scope=col>Counting rule</th><th scope=col>Updated</th></tr></thead><tbody>{metrics}</tbody></table></div>
 <p class="note">A ratio is shown only when its numerator is a subset of its denominator, as counts ("6 of 11"). No ratio uses papers or claims examined as its denominator. {E(SELECTION_STATEMENT)}</p></section></div>
