@@ -967,14 +967,26 @@ class ProductionTests(unittest.TestCase):
         self.assertIn("Operations research", (self.out / "cases/TA-2026-017/index.html").read_text(encoding="utf-8"))
         self.assertIn("Theoretical computer science", (self.out / "cases/TA-2026-018/index.html").read_text(encoding="utf-8"))
 
-    def test_new_records_preserve_two_distinct_open_findings(self):
+    def test_new_records_preserve_two_distinct_findings(self):
         one = self.content.latest("TA-2026-017")
         self.assertEqual(one["claims"][0]["result"]["status"], "open")
         self.assertEqual(one["claims"][0]["result"]["defect_class"], "statement_false")
         two = self.content.latest("TA-2026-018")
         self.assertEqual(len(two["claims"]), 2)
-        self.assertEqual([c["result"]["status"] for c in two["claims"]], ["open", "open"])
+        self.assertEqual([c["result"]["status"] for c in two["claims"]], ["confirmed", "confirmed"])
         self.assertTrue(all(c["result"]["defect_class"] == "construction_or_algorithm_fails" for c in two["claims"]))
+
+    def test_breaking_barriers_latest_is_author_confirmed_with_correction_pending(self):
+        rec = self.content.latest("TA-2026-018")
+        self.assertEqual(rec["version"], "1.1")
+        self.assertEqual([c["result"]["status"] for c in rec["claims"]], ["confirmed", "confirmed"])
+        self.assertTrue(all(c["author_response"]["position"] == "agrees" for c in rec["claims"]))
+        self.assertTrue(all(c["author_response"]["counts"] for c in rec["claims"]))
+        page = (self.out / "cases/TA-2026-018/index.html").read_text(encoding="utf-8")
+        self.assertIn("Confirmed", page)
+        self.assertIn("corrected arXiv version", page)
+        self.assertIn("had not yet been independently checked", page)
+        self.assertIn("One author agrees.", page)
 
     def test_rabideau_wang_latest_reflects_author_clarification(self):
         rec = self.content.latest("TA-2026-012")
