@@ -908,13 +908,12 @@ class ProductionTests(unittest.TestCase):
             self.assertIn(rid, cases)
             self.assertIn(title, cases)
             self.assertIn(author, cases)
-        # The recent home slice now includes TA-2026-018 and the three preceding releases.
-        for i in [14, 15, 16, 17]:
-            self.assertIn(records[i][1], home)
-        self.assertNotIn(records[0][1], home)
-        self.assertNotIn(records[4][1], home)
-        self.assertNotIn(records[5][1], home)
-        self.assertNotIn(records[13][1], home)
+        # The home page shows the four most recently released/updated case records.
+        latest_four = sorted(self.content.latest_all(), key=lambda r: r["released"], reverse=True)[:4]
+        for rec in latest_four:
+            self.assertIn(rec["title"], home)
+        older_titles = {r["title"] for r in self.content.latest_all()} - {r["title"] for r in latest_four}
+        self.assertTrue(any(title not in home for title in older_titles))
         self.assertNotIn("No case records have been released yet.", cases)
 
     def test_public_technical_notes_have_one_simple_action_and_verified_assets(self):
@@ -923,9 +922,9 @@ class ProductionTests(unittest.TestCase):
             "TA-2026-003": ("v1.3", "technical-notes/large-games-strategic-complementarities/v1.1.pdf"),
             "TA-2026-004": ("v1.4", "technical-notes/alpha-core-nonemptiness/v1.1.pdf"),
             "TA-2026-005": ("v1.3", "technical-notes/symbiotic-pnt/v1.1.pdf"),
-            "TA-2026-006": ("v1.1", "technical-notes/proportional-division-value/v1.1.pdf"),
+            "TA-2026-006": ("v1.2", "technical-notes/proportional-division-value/v1.1.pdf"),
             "TA-2026-007": ("v1.2", "technical-notes/nonbossy-mechanisms/v2.1.pdf"),
-            "TA-2026-008": ("v1.1", "technical-notes/peer-prediction-learning-agents/v1.1.pdf"),
+            "TA-2026-008": ("v1.2", "technical-notes/peer-prediction-learning-agents/v1.1.pdf"),
             "TA-2026-009": ("v1.1", "technical-notes/utility-heterogeneity-bne/v1.1.pdf"),
             "TA-2026-010": ("v1.2", "technical-notes/agentmixer/v1.1.pdf"),
             "TA-2026-011": ("v1.1", "technical-notes/imperfect-synthetic-controls/v1.1.pdf"),
@@ -978,15 +977,38 @@ class ProductionTests(unittest.TestCase):
 
     def test_breaking_barriers_latest_is_author_confirmed_with_correction_pending(self):
         rec = self.content.latest("TA-2026-018")
-        self.assertEqual(rec["version"], "1.1")
+        self.assertEqual(rec["version"], "1.2")
         self.assertEqual([c["result"]["status"] for c in rec["claims"]], ["confirmed", "confirmed"])
         self.assertTrue(all(c["author_response"]["position"] == "agrees" for c in rec["claims"]))
         self.assertTrue(all(c["author_response"]["counts"] for c in rec["claims"]))
         page = (self.out / "cases/TA-2026-018/index.html").read_text(encoding="utf-8")
         self.assertIn("Confirmed", page)
+        self.assertEqual(rec["correction"]["state"], "announced")
+        self.assertIn("Announced.", page)
         self.assertIn("corrected arXiv version", page)
-        self.assertIn("had not yet been independently checked", page)
+        self.assertIn("independently verified", page)
         self.assertIn("One author agrees.", page)
+
+    def test_correction_progress_is_separate_from_finding_status(self):
+        supplied = self.content.latest("TA-2026-006")
+        self.assertEqual(supplied["version"], "1.2")
+        self.assertEqual(supplied["claims"][0]["result"]["status"], "confirmed")
+        self.assertEqual(supplied["correction"]["state"], "author_supplied")
+        page6 = (self.out / "cases/TA-2026-006/index.html").read_text(encoding="utf-8")
+        self.assertIn("Author-supplied correction.", page6)
+        self.assertIn("not presented as a public journal or arXiv correction", page6)
+
+        announced = self.content.latest("TA-2026-008")
+        self.assertEqual(announced["version"], "1.2")
+        self.assertEqual(announced["claims"][0]["result"]["status"], "confirmed")
+        self.assertEqual(announced["correction"]["state"], "announced")
+        page8 = (self.out / "cases/TA-2026-008/index.html").read_text(encoding="utf-8")
+        self.assertIn("Announced.", page8)
+        self.assertIn("No public correction is represented here as completed or independently verified.", page8)
+
+        # Pending/private correction states do not count as published corrections.
+        stats = build.released_stats(self.content, "2026-11-18")
+        self.assertEqual(sum(stats["corrections"].values()), 0)
 
     def test_rabideau_wang_latest_reflects_author_clarification(self):
         rec = self.content.latest("TA-2026-012")
