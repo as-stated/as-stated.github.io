@@ -711,6 +711,8 @@ FAMILIES = [
      "A deep audit within a stated scope found no defect. This is not a proof that the claim is correct."),
     ("false", "False as stated",
      "The claim, read exactly as printed with its stated assumptions, is false. A counterexample is given."),
+    ("definition", "Definition defect",
+     "A definition, notation or convention is stated or reused in a way that can materially change the claim's meaning; the intended result need not be false."),
     ("proof", "Proof incomplete",
      "The proof does not establish the claim as written. The claim itself is not shown to be false, and a repair may exist."),
     ("assumption", "Missing assumption", "The claim holds only under an assumption that the paper does not state."),
@@ -722,7 +724,7 @@ FAMILIES = [
 ]
 FAMILY_LABEL = {k: lbl for k, lbl, _ in FAMILIES}
 DEFECT_FAMILY = {
-    "statement_false": ("false", None), "definition_defect": ("false", "definition"),
+    "statement_false": ("false", None), "definition_defect": ("definition", None),
     "proof_gap_repairable": ("proof", "repairable gap"), "proof_invalid_statement_open": ("proof", "statement open"),
     "citation_or_dependency_gap": ("proof", "unsupported citation"),
     "missing_or_hidden_assumption": ("assumption", None), "construction_or_algorithm_fails": ("construction", None),

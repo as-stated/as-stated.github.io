@@ -181,7 +181,7 @@ class BuildTests(unittest.TestCase):
 
     def test_outcome_distinctions_are_defined(self):
         defs = (self.out_p / "definitions/index.html").read_text(encoding="utf-8")
-        for label in ["No defect found", "False as stated", "Proof incomplete", "Missing assumption",
+        for label in ["No defect found", "False as stated", "Definition defect", "Proof incomplete", "Missing assumption",
                       "Construction fails", "Unresolved"]:
             self.assertIn(label, defs)
         self.assertIn("not a proof that the claim is correct", defs)
@@ -986,6 +986,21 @@ class ProductionTests(unittest.TestCase):
         self.assertIn("Missing assumption", page)
         self.assertIn("partly agree", page)
         self.assertIn("genuine null-removing transformation", page)
+
+    def test_scop_latest_reflects_author_clarification(self):
+        rec = self.content.latest("TA-2026-016")
+        claim = rec["claims"][0]
+        self.assertEqual(rec["version"], "1.1")
+        self.assertEqual(claim["result"]["defect_class"], "definition_defect")
+        self.assertEqual(claim["author_response"]["position"], "partly_agrees")
+        self.assertEqual(claim["result"]["status"], "open")
+        self.assertIn("intended probability-scale lower FCR bound", claim["result"]["not_claimed"][0])
+        page = (self.out / "cases/TA-2026-016/index.html").read_text(encoding="utf-8")
+        self.assertIn("Definition defect", page)
+        self.assertNotIn('<span class="fd fd-false"><i class="mk" aria-hidden="true"></i>False as stated</span>', page)
+        self.assertIn("partly agree", page)
+        self.assertIn("probability-scale", page)
+        self.assertIn("not refuted", page)
 
     def test_policies_live_on_the_methodology_page(self):
         m = (self.out / "methodology/index.html").read_text(encoding="utf-8")
