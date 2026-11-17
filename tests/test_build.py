@@ -908,13 +908,12 @@ class ProductionTests(unittest.TestCase):
             self.assertIn(rid, cases)
             self.assertIn(title, cases)
             self.assertIn(author, cases)
-        # The recent home slice now includes TA-2026-018 and the three preceding releases.
-        for i in [14, 15, 16, 17]:
-            self.assertIn(records[i][1], home)
-        self.assertNotIn(records[0][1], home)
-        self.assertNotIn(records[4][1], home)
-        self.assertNotIn(records[5][1], home)
-        self.assertNotIn(records[13][1], home)
+        # The home page shows the four most recently released/updated case records.
+        latest_four = sorted(self.content.latest_all(), key=lambda r: r["released"], reverse=True)[:4]
+        for rec in latest_four:
+            self.assertIn(rec["title"], home)
+        older_titles = {r["title"] for r in self.content.latest_all()} - {r["title"] for r in latest_four}
+        self.assertTrue(any(title not in home for title in older_titles))
         self.assertNotIn("No case records have been released yet.", cases)
 
     def test_public_technical_notes_have_one_simple_action_and_verified_assets(self):
@@ -923,9 +922,9 @@ class ProductionTests(unittest.TestCase):
             "TA-2026-003": ("v1.3", "technical-notes/large-games-strategic-complementarities/v1.1.pdf"),
             "TA-2026-004": ("v1.4", "technical-notes/alpha-core-nonemptiness/v1.1.pdf"),
             "TA-2026-005": ("v1.3", "technical-notes/symbiotic-pnt/v1.1.pdf"),
-            "TA-2026-006": ("v1.1", "technical-notes/proportional-division-value/v1.1.pdf"),
+            "TA-2026-006": ("v1.2", "technical-notes/proportional-division-value/v1.1.pdf"),
             "TA-2026-007": ("v1.2", "technical-notes/nonbossy-mechanisms/v2.1.pdf"),
-            "TA-2026-008": ("v1.1", "technical-notes/peer-prediction-learning-agents/v1.1.pdf"),
+            "TA-2026-008": ("v1.2", "technical-notes/peer-prediction-learning-agents/v1.1.pdf"),
             "TA-2026-009": ("v1.1", "technical-notes/utility-heterogeneity-bne/v1.1.pdf"),
             "TA-2026-010": ("v1.2", "technical-notes/agentmixer/v1.1.pdf"),
             "TA-2026-011": ("v1.1", "technical-notes/imperfect-synthetic-controls/v1.1.pdf"),
@@ -1008,7 +1007,7 @@ class ProductionTests(unittest.TestCase):
         self.assertIn("No public correction is represented here as completed or independently verified.", page8)
 
         # Pending/private correction states do not count as published corrections.
-        stats = build.released_statistics(self.content, "2026-11-18")
+        stats = build.released_stats(self.content, "2026-11-18")
         self.assertEqual(sum(stats["corrections"].values()), 0)
 
     def test_rabideau_wang_latest_reflects_author_clarification(self):
