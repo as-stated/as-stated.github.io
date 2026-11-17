@@ -1,0 +1,124 @@
+{
+  "public_id": "TA-2026-016",
+  "version": "1.0",
+  "schema": 2,
+  "released": "2026-11-17",
+  "status": "published",
+  "sample": false,
+  "kind": "defect",
+  "track": "statistics",
+  "title": "Selective conformal inference with false coverage-statement rate control",
+  "headline": "Open finding: the lower FCR bound printed in Theorem 2, equation (9), is false as stated because it uses a raw score order statistic where the proof requires the PIT/CDF probability.",
+  "work": {
+    "authors": [
+      "Yajie Bao",
+      "Yuyang Huo",
+      "Haojie Ren",
+      "Changliang Zou"
+    ],
+    "title": "Selective conformal inference with false coverage-statement rate control",
+    "venue": "Biometrika",
+    "year": 2024,
+    "volume": "111",
+    "pages": "727–742",
+    "doi": "10.1093/biomet/asae010"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Theorem 2 equation (9) lower FCR bound",
+      "kind": "theorem",
+      "role": "secondary",
+      "page": "Biometrika 111(3), 727–742, Section 4.2, Theorem 2, equation (9); current-author PDF physical p. 9",
+      "gist": "The printed lower false coverage-statement rate bound uses the raw score order statistic T_(khat+1), although the proof’s binomial probability is on the PIT/CDF scale F_T(T_(khat+1)).",
+      "statement": "Theorem 2, equation (9), states a lower FCR bound using the raw score order statistic T_(khat+1) where the proof requires the probability-scale quantity F_T(T_(khat+1)).",
+      "conditions": [
+        "Independent and identically distributed calibration and test data under the theorem’s ranking-based selection assumptions.",
+        "The scores T_i=g(X_i) are real-valued on their raw scale; the theorem does not require them to lie in [0,1]."
+      ],
+      "quantifiers": "The stated class of ranking-based selection procedures and score distributions.",
+      "result": {
+        "outcome": "defect_found",
+        "status": "open",
+        "defect_class": "statement_false",
+        "affects": "secondary_result",
+        "depth": "deep_audit",
+        "summary": "A continuous bounded-support example makes the printed lower endpoint approximately 14.147, exceeding 1. Translating every score by 100.01 preserves ranks, selected units, conformal intervals and actual FCR, yet leaves a printed lower endpoint approximately 0.09909094 above the actual FCR of 1/33.",
+        "witness": "Take n=10 calibration observations and m=2 test observations, Top-1 selection, k=1, alpha=0.1, score map g(x)=x and predictor zero. Independently draw X from Uniform(-0.01,-0.005) and Y from Uniform(0,1). With M=T_(2), the printed lower endpoint is approximately 14.147, greater than 1. After translating every score by 100.01, the actual FCR remains 1/33, while the printed endpoint is approximately 0.09909094.",
+        "argument": "The proof converts raw scores to their probability-integral-transform values and uses the threshold probability F_T(M) in its binomial calculation. The raw threshold M is not itself that probability, so substituting M makes the printed expression depend on the arbitrary score scale. In the continuous bounded-support example the endpoint exceeds 1. Positive translation leaves ranks, selected units, conformal intervals and actual FCR unchanged but makes the printed endpoint exceed the actual FCR. The lower-bound correction is to use F_T(M), or an equivalent probability-scale quantity. This finding does not challenge the SCOP upper guarantee, the SCOP procedure itself, or the empirical results.",
+        "not_claimed": [
+          "The SCOP upper guarantee is false.",
+          "The SCOP procedure itself is invalid.",
+          "The empirical results are invalid."
+        ],
+        "repair": "local_repair_proposed",
+        "repair_note": "Use F_T(M), or an equivalent probability-scale quantity, in place of the raw order statistic M in the lower-bound calculation."
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "Biometrika 111(3), 727–742, Section 4.2, Theorem 2, equation (9); current-author PDF physical p. 9; proof supplement Section C.1.",
+        "detail": "The DOI-linked current-author theorem and proof-bearing supplement were checked. The subscriber-restricted typeset VOR theorem page was not independently displayed, so VOR verification remains partial."
+      },
+      "evidence": [
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-11-14",
+          "session": "informed",
+          "detail": "A fresh hostile validation reproduced the raw-score/PIT mismatch, the continuous negative-support endpoint above 1, and the positive-translation example in which the printed endpoint exceeds the unchanged actual FCR. It did not refute the SCOP upper guarantee or the rank-based procedure."
+        }
+      ],
+      "author_response": {
+        "position": "no_reply",
+        "basis": "none",
+        "counts": false
+      }
+    }
+  ],
+  "correction": null,
+  "related": [],
+  "evidence": {
+    "package_doi": null,
+    "package_sha256": null,
+    "licence": "No public evidence package released.",
+    "files": []
+  },
+  "technical_notes": [
+    {
+      "creator": "As Stated",
+      "date": "2026-11-16",
+      "version": "1.0",
+      "pages": 2,
+      "sha256": "9b4d692a42876b2b86187ee4f731954ba3189cce6665065900fe84bcf8fdc65b",
+      "rights": "CC BY 4.0 for this note; third-party material remains under its own rights.",
+      "path": "technical-notes/scop-lower-fcr-bound/v1.0.pdf"
+    }
+  ],
+  "history": [
+    {
+      "date": "2026-11-17",
+      "type": "audit",
+      "label": "A deep audit found the printed lower FCR bound in Theorem 2, equation (9), false as stated."
+    },
+    {
+      "date": "2026-11-17",
+      "type": "outreach",
+      "label": "An author was contacted with the technical note on 14 November 2026; no substantive author reply is currently recorded."
+    },
+    {
+      "date": "2026-11-17",
+      "type": "release",
+      "label": "Released as an Open finding with the exact two-page As Stated technical note."
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2026-11-17",
+      "change": "First release as an Open finding with the exact two-page As Stated technical note."
+    }
+  ],
+  "statements": {
+    "ai_use": "AI systems contributed to the audit and separate hostile validation. The finding is Open; no human verification or author acceptance is claimed."
+  }
+}
