@@ -990,7 +990,7 @@ class ProductionTests(unittest.TestCase):
     def test_scop_latest_reflects_author_clarification(self):
         rec = self.content.latest("TA-2026-016")
         claim = rec["claims"][0]
-        self.assertEqual(rec["version"], "1.1")
+        self.assertEqual(rec["version"], "1.2")
         self.assertEqual(claim["result"]["defect_class"], "definition_defect")
         self.assertEqual(claim["author_response"]["position"], "partly_agrees")
         self.assertEqual(claim["result"]["status"], "open")
@@ -1001,6 +1001,10 @@ class ProductionTests(unittest.TestCase):
         self.assertIn("partly agree", page)
         self.assertIn("probability-scale", page)
         self.assertIn("not refuted", page)
+        self.assertGreaterEqual(page.count("<math"), 8)
+        visible = re.sub(r"<math\\b.*?</math>", "", page, flags=re.S)
+        for raw in ["T_i=g(X_i)", "F_T(T_i)", "T_(khat+1)", "T_i,R_i"]:
+            self.assertNotIn(raw, visible)
 
     def test_policies_live_on_the_methodology_page(self):
         m = (self.out / "methodology/index.html").read_text(encoding="utf-8")
