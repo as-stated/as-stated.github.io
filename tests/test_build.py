@@ -4,6 +4,7 @@ Tests generate their data at run time with tests/fixtures.py, so a fresh clone n
 
 The layout tests need Microsoft Edge or Google Chrome; they are skipped when neither is installed."""
 import functools
+import html as html_module
 import http.server
 import importlib.util
 import json
@@ -986,6 +987,57 @@ class ProductionTests(unittest.TestCase):
         self.assertIn("Missing assumption", page)
         self.assertIn("partly agree", page)
         self.assertIn("genuine null-removing transformation", page)
+
+    def test_fiksel_latest_records_limited_author_agreement(self):
+        rec = self.content.latest("TA-2026-015")
+        claim = rec["claims"][0]
+        self.assertEqual(rec["version"], "1.2")
+        self.assertEqual(claim["author_response"]["position"], "partly_agrees")
+        self.assertFalse(claim["author_response"]["counts"])
+        self.assertEqual(claim["result"]["status"], "open")
+        page = (self.out / "cases/TA-2026-015/index.html").read_text(encoding="utf-8")
+        self.assertIn("One author partly agrees.", page)
+        self.assertIn("does not have time to undertake a full investigation", page)
+        self.assertIn("note to Biometrics", page)
+        self.assertIn(">Open<", page)
+        self.assertNotIn(">Confirmed<", page)
+
+    def test_latest_case_pages_do_not_expose_unmarked_mathematics(self):
+        # Immutable legacy releases known to predate this gate. The exemption is exact-version only:
+        # any later release of these records must satisfy the same rule as every new case.
+        legacy = {
+            ("TA-2026-006", "1.1"),
+            ("TA-2026-014", "1.1"),
+            ("TA-2026-017", "1.0"),
+            ("TA-2026-018", "1.0"),
+        }
+        raw_math = re.compile(
+            r"(?:"
+            r"\\\\[A-Za-z]+"
+            r"|\\b[A-Za-z][A-Za-z0-9]*_[A-Za-z0-9({]"
+            r"|\\b[A-Za-z][A-Za-z0-9]*\\s*(?:<=|>=|=|<|>)\\s*[-+A-Za-z0-9({]"
+            r"|\\b\\d+(?:/\\d+)?\\s*(?:<=|>=|=|<|>)\\s*[-+A-Za-z0-9({]"
+            r"|\\b[A-Za-z0-9)\\]]\\s*\\^\\s*[-+A-Za-z0-9({]"
+            r")"
+        )
+        problems = []
+        for rid in sorted(self.content.records):
+            rec = self.content.latest(rid)
+            if (rid, rec["version"]) in legacy:
+                continue
+            page = (self.out / f"cases/{rid}/index.html").read_text(encoding="utf-8")
+            claims = "\n".join(re.findall(r'<section class="claim\\b.*?</section>', page, flags=re.S))
+            without_math = re.sub(r"<math\\b.*?</math>", " ", claims, flags=re.S)
+            visible = html_module.unescape(re.sub(r"<[^>]+>", " ", without_math))
+            m = raw_math.search(visible)
+            if m:
+                excerpt = visible[max(0, m.start() - 60):m.end() + 100].replace("\n", " ")
+                problems.append(f"{rid} v{rec['version']}: {m.group()!r} in {excerpt!r}")
+        self.assertFalse(
+            problems,
+            "Math-like source is visible as plain text instead of MathML. "
+            "Wrap formulas in schema-2 \\( ... \\) or \\[ ... \\]:\n" + "\n".join(problems),
+        )
 
     def test_scop_latest_reflects_author_clarification(self):
         rec = self.content.latest("TA-2026-016")
