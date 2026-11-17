@@ -71,7 +71,8 @@
         "responder": "one",
         "basis": "original",
         "counts": false,
-        "covers": "The sole author replied that the finite-sample claim looks correct to him, while explicitly noting that he does not have time to undertake a full investigation. He also suggested that a note to Biometrics could be worthwhile."
+        "covers": "The sole author replied that the finite-sample claim looks correct to him, while explicitly noting that he does not have time to undertake a full investigation. He also suggested that a note to Biometrics could be worthwhile.",
+        "assessment": "This is a substantive author indication supporting the finding, but the author explicitly says he did not undertake a full investigation. As Stated therefore does not treat the response as independent verification or as confirmation support; the finding remains Open."
       }
     }
   ],
