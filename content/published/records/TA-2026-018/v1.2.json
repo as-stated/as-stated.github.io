@@ -1,0 +1,210 @@
+{
+  "schema": 2,
+  "released": "2026-11-18",
+  "status": "published",
+  "sample": false,
+  "kind": "defect",
+  "correction": {
+    "state": "announced",
+    "type": "arXiv revision",
+    "doi": null,
+    "date": "2026-11-18",
+    "relation": "after_notification",
+    "attribution": "none_stated",
+    "claims": [
+      "c1",
+      "c2"
+    ],
+    "note": "The responding author said the authors would post a corrected arXiv version shortly. No corrected arXiv version is independently verified in this record."
+  },
+  "related": [],
+  "evidence": {
+    "package_doi": null,
+    "package_sha256": null,
+    "licence": "No public evidence package released.",
+    "files": []
+  },
+  "challenges": [],
+  "statements": {
+    "ai_use": "AI systems contributed to the audit and separate hostile validation. A subsequent substantive written author response confirmed both issues and identified the intended repairs. Both findings are therefore Confirmed. The announced corrected arXiv version had not yet been independently checked when this record version was released."
+  },
+  "public_id": "TA-2026-018",
+  "version": "1.2",
+  "track": "theoretical_computer_science",
+  "title": "Breaking Barriers: Combinatorial Algorithms for Non-Monotone Submodular Maximization with Sublinear Adaptivity and 1/e Approximation",
+  "work": {
+    "authors": [
+      "Yixin Chen",
+      "Wenjing Chen",
+      "Alan Kuhnle"
+    ],
+    "title": "Breaking Barriers: Combinatorial Algorithms for Non-Monotone Submodular Maximization with Sublinear Adaptivity and 1/e Approximation",
+    "venue": "Proceedings of the 42nd International Conference on Machine Learning (PMLR)",
+    "year": 2025,
+    "volume": "267",
+    "pages": "7840–7879",
+    "doi": "10.48550/arXiv.2502.07062"
+  },
+  "technical_notes": [
+    {
+      "creator": "As Stated",
+      "date": "2026-11-17",
+      "version": "1.0",
+      "pages": 1,
+      "sha256": "3277eaef328b143f6410c10f5f7ff4042be6ceeca42ba8dd22ac8afb9b192eb9",
+      "rights": "CC BY 4.0 for this note; third-party material remains under its own rights.",
+      "path": "technical-notes/breaking-barriers/v1.0.pdf"
+    }
+  ],
+  "history": [
+    {
+      "date": "2026-11-17",
+      "type": "audit",
+      "label": "A deep audit identified two distinct algorithmic defects: the displayed Algorithm 2 violates Theorem 3.1 on a legal modular instance, and Algorithm 5 Update can fail to terminate when called by Algorithm 6."
+    },
+    {
+      "date": "2026-11-17",
+      "type": "outreach",
+      "label": "An author was contacted with the technical note on 16 November 2026."
+    },
+    {
+      "date": "2026-11-17",
+      "type": "release",
+      "label": "Released as an Open finding with the exact one-page As Stated technical note."
+    },
+    {
+      "date": "2026-11-18",
+      "type": "author_response",
+      "label": "The responding author, with both co-authors copied, confirmed both issues, identified the intended repairs, and stated that the authors would post a corrected arXiv version."
+    },
+    {
+      "date": "2026-11-18",
+      "type": "correction_status",
+      "label": "The authors' planned arXiv correction was normalized to the structured correction state Announced; no completed public revision has yet been verified."
+    }
+  ],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2026-11-17",
+      "change": "First release as an Open finding with two distinct algorithmic findings and the exact one-page As Stated technical note."
+    },
+    {
+      "version": "1.1",
+      "date": "2026-11-18",
+      "change": "Both findings moved from Open to Confirmed after a substantive written author response confirmed each issue and identified the intended repairs. The authors announced a corrected arXiv version; that external correction is not yet marked as completed or independently checked in this record."
+    },
+    {
+      "version": "1.2",
+      "date": "2026-11-18",
+      "change": "Added structured correction status. The authors' planned arXiv revision is recorded as Announced, separate from the already Confirmed findings; no completed public revision is independently verified."
+    }
+  ],
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Algorithm 2 / Theorem 3.1 expected approximation guarantee",
+      "kind": "algorithm",
+      "role": "main",
+      "page": "ICML 2025 (PMLR 267), Algorithm 2 and Theorem 3.1",
+      "gist": "The displayed Algorithm 2 uses one shared candidate pool across its outer rounds and permanently removes selections assigned to discarded candidates.",
+      "statement": "Under the displayed Algorithm 2 and Theorem 3.1 parameter conditions, the expected returned value is at least \\((1/e-\\varepsilon)\\operatorname{OPT}\\).",
+      "conditions": [
+        "\\(\\varepsilon=0.1\\), \\(\\ell=10\\), \\(k=1000\\), and \\(m=\\lfloor k/\\ell\\rfloor=100\\) satisfy the theorem's displayed numerical conditions.",
+        "The objective is the nonnegative modular function \\(f(S)=|S\\cap H|\\), with \\(|H|=1000\\) and at least 9000 zero-value elements including the 2000 dummies."
+      ],
+      "quantifiers": "The approximation guarantee is stated for instances satisfying Theorem 3.1; the modular instance below is legal and has \\(\\operatorname{OPT}=1000\\).",
+      "result": {
+        "outcome": "defect_found",
+        "status": "confirmed",
+        "defect_class": "construction_or_algorithm_fails",
+        "affects": "main_result",
+        "depth": "deep_audit",
+        "summary": "On a legal modular instance, the displayed Algorithm 2 returns value \\(100\\) in expectation, below the Theorem 3.1 requirement of \\((1/e-0.1)\\cdot1000\\approx267.879\\).",
+        "witness": "Let \\(H\\) contain 1000 unit-value elements and provide at least 9000 zero-value elements including the 2000 dummies. Set \\(f(S)=|S\\cap H|\\). Then \\(\\operatorname{OPT}=1000\\). With \\(\\varepsilon=0.1\\), \\(\\ell=10\\), \\(k=1000\\), and \\(m=100\\), the first round performs \\(m\\ell=1000\\) greedy selections from a single shared pool \\(V\\). These exhaust \\(H\\), assigning exactly 100 elements of \\(H\\) to each of the ten candidates. One candidate is retained at random, but the 900 high-value elements assigned to discarded candidates have already been removed from \\(V\\). All later marginal gains are zero. Therefore \\(\\mathbb{E}[f(\\text{returned set})]=100\\), while the claimed lower bound is \\((1/e-0.1)\\cdot1000\\approx267.879\\).",
+        "argument": "Because all remaining high-value elements have marginal one while zero-value elements have marginal zero, the first round consumes all of \\(H\\). Retaining one candidate cannot recover high-value elements already deleted from the shared pool. The returned value is exactly \\(100\\) regardless of which candidate is retained, contradicting the displayed approximation guarantee.",
+        "not_claimed": [
+          "Theorem 4.2 is not claimed false.",
+          "Empirical results are not claimed invalid.",
+          "The defect is not generalized beyond the displayed Algorithm 2 / Theorem 3.1 connection.",
+          "The corrected arXiv version has not yet been independently checked because it had not been posted when this version of the record was released."
+        ],
+        "repair": "local_repair_proposed",
+        "repair_note": "The responding author states that the analysis assumes the candidate pool is restored at the start of each outer round, \\(V\\leftarrow U\\setminus G\\), as in Algorithms 7 and 10. The authors report that with this repair the proof goes through and Theorem 3.1 is unchanged."
+      },
+      "vor_check": {
+        "level": "full",
+        "pages": "Official PMLR proceedings PDF and arXiv v2, Algorithm 2 and Theorem 3.1.",
+        "detail": "The official proceedings and arXiv v2 passages were checked and found materially identical at Algorithm 2 and Theorem 3.1. The theorem hypotheses and displayed shared-pool algorithm were checked against the modular witness."
+      },
+      "evidence": [
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-11-16",
+          "session": "informed",
+          "detail": "A fresh hostile validation checked the parameter conditions, modular objective, shared-pool selections, returned value \\(100\\), and comparison with the stated lower bound."
+        }
+      ],
+      "author_response": {
+        "position": "agrees",
+        "responder": "one",
+        "basis": "original",
+        "counts": true,
+        "covers": "The responding author, with both co-authors copied, confirmed the Algorithm 2 issue and stated that the analysis assumes the candidate pool is restored each round via \\(V\\leftarrow U\\setminus G\\). The authors report that this repair leaves Theorem 3.1 unchanged."
+      }
+    },
+    {
+      "id": "c2",
+      "label": "Algorithm 5 Update termination as called by Algorithm 6",
+      "kind": "algorithm",
+      "role": "main",
+      "page": "ICML 2025 (PMLR 267), Algorithms 5 and 6; Theorem 4.1 inputs",
+      "gist": "Algorithm 6 calls Algorithm 5 Update on an empty residual candidate pool before testing whether its threshold has fallen below \\(\\tau_{\\min}\\).",
+      "statement": "Algorithm 5 Update terminates when called by Algorithm 6 under its stated inputs.",
+      "conditions": [
+        "The objective is modular with one singleton of value \\(M>0\\) and all other elements, including dummies, of value zero.",
+        "\\(\\ell=2\\), \\(\\varepsilon=0.1\\), \\(k\\) is sufficiently large and legal, and \\(\\tau_{\\min}=\\varepsilon M/k>0\\)."
+      ],
+      "quantifiers": "This finding is a concrete nontermination trace for a legal execution under Theorem 4.1 inputs; it is separate from the Algorithm 2 approximation counterexample.",
+      "result": {
+        "outcome": "defect_found",
+        "status": "confirmed",
+        "defect_class": "construction_or_algorithm_fails",
+        "affects": "main_result",
+        "depth": "deep_audit",
+        "summary": "After the singleton is selected and removed from every candidate pool, Algorithm 6 can call Update on an empty active residual pool before its cutoff test. Algorithm 5 has no cutoff inside its empty-candidate loop. With zero residual marginal gains, \\(\\tau_j^{(t)}=0.9^tM>0\\) for every finite \\(t\\), so Update does not terminate and never returns to the cutoff test.",
+        "witness": "Initially each \\(V_j\\) contains the positive singleton and \\(\\tau_j=M\\). The first alternating-addition step selects that singleton and removes it from every candidate pool. At a later active empty residual pool, Algorithm 6 calls Update before checking \\(\\tau_j<\\tau_{\\min}\\). Algorithm 5 then repeatedly reduces \\(\\tau_j\\) by the factor \\(1-\\varepsilon=0.9\\) while the residual candidate set remains empty. Since \\(\\tau_j=0.9^tM>0\\) for every finite \\(t\\) and there is no cutoff within the loop, Update never terminates. This is a separate defect from the Algorithm 2 witness.",
+        "argument": "The nontermination follows from the order of operations in Algorithm 6 and the absent cutoff in Algorithm 5 Update. The positive singleton is selected first; thereafter all residual marginal gains are zero. The Update loop therefore cannot satisfy its nonempty-candidate condition at any finite iteration and does not return to Algorithm 6's cutoff test.",
+        "not_claimed": [
+          "Theorem 4.2 is not claimed false.",
+          "Empirical results are not claimed invalid.",
+          "The defect is not generalized beyond the displayed Update / Algorithm 6 control flow, except that the authors state the same repair also covers PItG (Algorithm 11), which calls Algorithm 6.",
+          "The corrected arXiv version has not yet been independently checked because it had not been posted when this version of the record was released."
+        ],
+        "repair": "local_repair_proposed",
+        "repair_note": "The responding author states that Algorithm 5 is missing the \\(\\tau_{\\min}\\) cutoff and should stop once \\(\\tau<\\tau_{\\min}\\). The authors report that this guard preserves the adaptivity and query bounds and also covers PItG (Algorithm 11), which calls Algorithm 6."
+      },
+      "vor_check": {
+        "level": "full",
+        "pages": "Official PMLR proceedings PDF and arXiv v2, Algorithm 5 Update, Algorithm 6 and Theorem 4.1 inputs.",
+        "detail": "The official proceedings and arXiv v2 passages were checked and found materially identical. The Algorithm 6 call order, Algorithm 5 loop condition and stated positive threshold were checked against the modular trace."
+      },
+      "evidence": [
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-11-16",
+          "session": "informed",
+          "detail": "A fresh hostile validation checked the positive-singleton trace, call-before-cutoff order, positive finite threshold sequence, and nontermination of Algorithm 5 Update."
+        }
+      ],
+      "author_response": {
+        "position": "agrees",
+        "responder": "one",
+        "basis": "original",
+        "counts": true,
+        "covers": "The responding author, with both co-authors copied, confirmed the missing-cutoff issue in Algorithm 5 and stated that Update should stop once \\(\\tau<\\tau_{\\min}\\). The authors report that this repair preserves the adaptivity and query bounds and also covers PItG (Algorithm 11)."
+      }
+    }
+  ],
+  "headline": "Confirmed finding: the authors confirmed both displayed-algorithm defects, identified the intended repairs, and announced a corrected arXiv version."
+}
