@@ -67,7 +67,7 @@
         }
       ],
       "author_response": {
-        "position": "agrees",
+        "position": "partly_agrees",
         "responder": "one",
         "basis": "original",
         "counts": false,
@@ -136,10 +136,10 @@
     {
       "version": "1.2",
       "date": "2026-11-18",
-      "change": "Recorded the author's substantive response. The author says the finding looks correct but explicitly did not undertake a full investigation; the response is therefore shown as author agreement but is not counted as independent verification. The finding remains Open."
+      "change": "Recorded the author's substantive response. The author says the finding looks correct but explicitly did not undertake a full investigation; the response is therefore recorded as partial agreement and is not counted as verification support. The finding remains Open."
     }
   ],
   "statements": {
-    "ai_use": "AI systems contributed to the audit and separate hostile validation. The sole author subsequently said the finding looks correct but did not undertake a full investigation; that response is recorded as author agreement but is not treated as independent verification. The finding remains Open."
+    "ai_use": "AI systems contributed to the audit and separate hostile validation. The sole author subsequently said the finding looks correct but did not undertake a full investigation; that response is recorded as partial agreement and is not treated as verification support. The finding remains Open."
   }
 }
