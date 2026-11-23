@@ -2,6 +2,7 @@
 # The site is built from the PUBLISHED channel. Real releases use immutable versioned data plus exact SHA-256 release
 # manifests. Tests generate their own data at run time. TRUST_FINGERPRINTS stays "none": real releases use no signing
 # key. The deploy job needs the build job, so it runs only after the tests, manifest checks and leak scan pass.
+# workflow_dispatch builds and checks but does not deploy; deployment is only from a current main push.
 name: Build and deploy
 on:
   push:
@@ -10,22 +11,40 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
-concurrency:
-  group: pages
-  cancel-in-progress: true
 env:
   SITE_CHANNEL: published
 jobs:
   build:
     runs-on: ubuntu-24.04
+    concurrency:
+      group: checks-${{ github.event_name }}-${{ github.ref }}
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
+      - name: Check immutable public release history
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PUSH_BASE: ${{ github.event.before }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          BUILD_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            BASE="$PR_BASE"
+          elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            BASE="$(git rev-parse HEAD^)"
+          else
+            BASE="$PUSH_BASE"
+            git merge-base --is-ancestor "$BASE" "$BUILD_SHA"
+          fi
+          python release_safety.py check-append-only --base "$BASE"
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: "3.12"
-      - name: Install pinned build dependency (hash-checked, wheels only)
+      - name: Install pinned build dependencies (hash-checked, wheels only)
         run: 'python -m pip install --require-hashes --only-binary :all: -r requirements.txt'
       - name: Tests (release gate, statistics checks, links, leak scan, layout)
         run: python -m unittest discover -s tests -v
@@ -38,15 +57,32 @@ jobs:
         with:
           path: _site
   deploy:
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-24.04
+    concurrency:
+      group: pages-production
+      cancel-in-progress: false
     permissions:
+      contents: read
       pages: write
       id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Confirm deployment commit is current remote main
+        env:
+          DEPLOY_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
+          git fetch --quiet --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          REMOTE_MAIN="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test "$REMOTE_MAIN" = "$DEPLOY_SHA"
       - id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346  # v5.0.1

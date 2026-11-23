@@ -270,7 +270,7 @@ def snapshot(build, items, name, as_of, released):
     m03[keys[1]] += x["claims"] - x["claims"] // 2
     if all(v >= 5 for v in m03.values()):
         by_track["M03"] = m03
-    return {"snapshot": name, "as_of": as_of, "released": released, "metrics_version": "1.1", "sample": False,
+    return {"snapshot": name, "as_of": as_of, "released": released, "metrics_version": "1.2", "sample": False,
             "programme": {"id": "test-programme", "description": "Test programme description."}, "totals": totals,
             "unresolved_reasons": {"source_limited": rs["unresolved"] + x["unres"]}, "examined_by_track": by_track,
             "activity": [a for a in ACTIVITY if a["month"] <= as_of[:7]]}

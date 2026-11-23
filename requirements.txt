@@ -2,3 +2,7 @@
 # latex2mathml converts the \( ... \) and \[ ... \] formulas in schema-2 records to static MathML.
 latex2mathml==3.80.0 \
     --hash=sha256:2ddc8269896c1c29257267b74a050676692255def766feaddeab56e8831f1115
+pypdf==7.1.1 \
+    --hash=sha256:04c5680d4b4cfa04ab505b09393fc949860c34a4dad6565284d11a2f5c3ce8b1
+fonttools==4.68.0 \
+    --hash=sha256:d76f8fdcb6936f5e1045a0c9dd721a4bf11112e60d1e243bfa1d39f06a8b3104

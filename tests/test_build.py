@@ -7,6 +7,7 @@ import functools
 import html as html_module
 import http.server
 import importlib.util
+import io
 import json
 import os
 import re
@@ -232,10 +233,15 @@ class BuildTests(unittest.TestCase):
         self.assertEqual(rs["candidates"], defects)
         self.assertEqual(rs["confirmed"] + rs["open"], defects)
 
+    def test_schema_one_unresolved_reason_enum_remains_frozen(self):
+        def newer_reason(record):
+            record["claims"][1]["result"]["unresolved_reason"] = "conflicting_checks"
+        self.load_with_edit("TEST-2000-023", newer_reason, "unresolved claim needs a reason")
+
     def test_methodology_states_how_releases_are_controlled(self):
         page = (self.out_p / "methodology/index.html").read_text(encoding="utf-8")
         self.assertIn("exact SHA-256 manifests", page)
-        self.assertIn("The owner approves each release.", page)
+        self.assertIn("validated positive finding with status Open is released by default", page)
         self.assertNotIn("protected", page)
 
     def test_every_author_position_renders(self):
@@ -362,7 +368,7 @@ class BuildTests(unittest.TestCase):
 
     def test_unknown_schema_is_refused(self):
         def unknown(r):
-            r["schema"] = 3
+            r["schema"] = 4
         self.load_with_edit("TEST-2000-019", unknown, "unknown schema")
 
     def test_related_work_needs_a_real_doi(self):
@@ -434,7 +440,23 @@ class BuildTests(unittest.TestCase):
     def test_technical_note_pdf_is_hash_checked_and_rendered_as_one_reader_link(self):
         root = fixtures.make_project(build, self.tmp / "technical_note_project")
         croot = root / PUBLISHED
-        pdf = b"%PDF-1.4\n% local fixture\n%%EOF\n"
+        from pypdf import PdfWriter
+        from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
+
+        writer = PdfWriter()
+        page = writer.add_blank_page(width=612, height=792)
+        font = DictionaryObject({NameObject("/Type"): NameObject("/Font"),
+                                 NameObject("/Subtype"): NameObject("/Type1"),
+                                 NameObject("/BaseFont"): NameObject("/Helvetica")})
+        font_ref = writer._add_object(font)
+        page[NameObject("/Resources")] = DictionaryObject({
+            NameObject("/Font"): DictionaryObject({NameObject("/F1"): font_ref})})
+        stream = DecodedStreamObject()
+        stream.set_data(b"BT /F1 12 Tf 72 720 Td (Synthetic technical note) Tj ET")
+        page[NameObject("/Contents")] = writer._add_object(stream)
+        handle = io.BytesIO()
+        writer.write(handle)
+        pdf = handle.getvalue()
         public_path = "technical-notes/example-note/v1.0.pdf"
         source = croot / "files" / public_path
         source.parent.mkdir(parents=True, exist_ok=True)
@@ -525,12 +547,95 @@ class BuildTests(unittest.TestCase):
         problems = build.scan_output(bad, ["secret term"])
         self.assertTrue(any("Dropbox" in p for p in problems))
         self.assertTrue(any("e-mail" in p for p in problems))
+        self.assertTrue(all("a@b.org" not in p for p in problems))
 
     def test_private_denylist_blocks_build(self):
         deny = self.tmp / "deny.txt"
         deny.write_text("Author A1\n", encoding="utf-8")
         with self.assertRaises(build.BuildError):
             build.build(None, self.tmp / "dist_deny", denylist_file=deny, root=self.proj)
+
+    def test_pdf_text_metadata_actions_xmp_outline_and_text_attachment_are_scanned(self):
+        from pypdf import PdfWriter
+        from pypdf.generic import (ArrayObject, DecodedStreamObject, DictionaryObject, NameObject,
+                                   NumberObject, TextStringObject)
+
+        out = self.tmp / "pdf_scan"
+        out.mkdir()
+        path = out / "synthetic.pdf"
+        writer = PdfWriter()
+        page = writer.add_blank_page(width=612, height=792)
+        font = DictionaryObject({NameObject("/Type"): NameObject("/Font"),
+                                 NameObject("/Subtype"): NameObject("/Type1"),
+                                 NameObject("/BaseFont"): NameObject("/Helvetica")})
+        font_ref = writer._add_object(font)
+        page[NameObject("/Resources")] = DictionaryObject({
+            NameObject("/Font"): DictionaryObject({NameObject("/F1"): font_ref})})
+        stream = DecodedStreamObject()
+        stream.set_data(b"BT /F1 12 Tf 72 720 Td (SYNTHETIC_BODY_SECRET) Tj ET")
+        page[NameObject("/Contents")] = writer._add_object(stream)
+        writer.add_metadata({"/Subject": "SYNTHETIC_METADATA_SECRET"})
+        writer.add_attachment("synthetic.txt", b"SYNTHETIC_ATTACHMENT_SECRET")
+        action = DictionaryObject({NameObject("/S"): NameObject("/URI"),
+                                   NameObject("/URI"): TextStringObject("https://example.invalid/SYNTHETIC_ACTION_SECRET")})
+        additional_action = DictionaryObject({NameObject("/S"): NameObject("/JavaScript"),
+                                              NameObject("/JS"): TextStringObject("SYNTHETIC_ADDITIONAL_ACTION_SECRET")})
+        annotation = DictionaryObject({NameObject("/Type"): NameObject("/Annot"),
+                                       NameObject("/Subtype"): NameObject("/Link"),
+                                       NameObject("/Rect"): ArrayObject([NumberObject(0), NumberObject(0),
+                                                                         NumberObject(100), NumberObject(100)]),
+                                       NameObject("/A"): action,
+                                       NameObject("/AA"): DictionaryObject({NameObject("/E"): additional_action})})
+        page[NameObject("/Annots")] = ArrayObject([writer._add_object(annotation)])
+        writer.add_outline_item(title="SYNTHETIC_OUTLINE_SECRET", page_number=0)
+        xmp = DecodedStreamObject()
+        xmp_xml = '''<?xpacket begin=""?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:test="https://example.invalid/"><test:private>SYNTHETIC_XMP_SECRET</test:private></rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end="w"?>'''
+        xmp.set_data(xmp_xml.encode("utf-16"))
+        xmp.update({NameObject("/Type"): NameObject("/Metadata"), NameObject("/Subtype"): NameObject("/XML")})
+        writer._root_object[NameObject("/Metadata")] = writer._add_object(xmp)
+        with path.open("wb") as handle:
+            writer.write(handle)
+
+        problems = build.scan_output(out, ["SYNTHETIC_BODY_SECRET", "SYNTHETIC_METADATA_SECRET",
+                                           "SYNTHETIC_ATTACHMENT_SECRET", "SYNTHETIC_ACTION_SECRET",
+                                           "SYNTHETIC_ADDITIONAL_ACTION_SECRET", "SYNTHETIC_XMP_SECRET",
+                                           "SYNTHETIC_OUTLINE_SECRET"])
+        self.assertEqual(sum("private-denylist" in item for item in problems), 7)
+
+    def test_pdf_unknown_opaque_attachment_fails_privacy_scan_closed(self):
+        from pypdf import PdfWriter
+        from pypdf.generic import (DecodedStreamObject, DictionaryObject, NameObject)
+
+        out = self.tmp / "pdf_opaque_scan"
+        out.mkdir()
+        writer = PdfWriter()
+        page = writer.add_blank_page(width=612, height=792)
+        font = DictionaryObject({NameObject("/Type"): NameObject("/Font"),
+                                 NameObject("/Subtype"): NameObject("/Type1"),
+                                 NameObject("/BaseFont"): NameObject("/Helvetica")})
+        font_ref = writer._add_object(font)
+        page[NameObject("/Resources")] = DictionaryObject({
+            NameObject("/Font"): DictionaryObject({NameObject("/F1"): font_ref})})
+        stream = DecodedStreamObject()
+        stream.set_data(b"BT /F1 12 Tf 72 720 Td (Visible page text) Tj ET")
+        page[NameObject("/Contents")] = writer._add_object(stream)
+        writer.add_attachment("opaque.bin", b"\\x00\\x01\\x02opaque")
+        with (out / "opaque.pdf").open("wb") as handle:
+            writer.write(handle)
+        problems = build.scan_output(out, [])
+        self.assertTrue(any("PDF privacy scan could not complete" in item for item in problems))
+
+    def test_pdf_without_extractable_text_fails_privacy_scan_closed(self):
+        from pypdf import PdfWriter
+
+        out = self.tmp / "pdf_empty_scan"
+        out.mkdir()
+        with (out / "empty.pdf").open("wb") as handle:
+            writer = PdfWriter()
+            writer.add_blank_page(width=612, height=792)
+            writer.write(handle)
+        problems = build.scan_output(out, [])
+        self.assertTrue(any("PDF privacy scan could not complete" in item for item in problems))
 
     def test_expected_trust_must_be_none(self):
         build.build(None, self.tmp / "dist_trust_ok", expect_trust="none", root=self.proj)
@@ -695,7 +800,19 @@ def find_browser():
                   r"C:\Program Files\Google\Chrome\Application\chrome.exe",
                   shutil.which("google-chrome") or "", shutil.which("chromium") or "",
                   shutil.which("chromium-browser") or "", shutil.which("microsoft-edge") or ""]
-    return next((c for c in candidates if c and Path(c).exists()), None)
+    for candidate in dict.fromkeys(c for c in candidates if c and Path(c).exists()):
+        try:
+            with tempfile.TemporaryDirectory(prefix="as_layout_probe_") as profile:
+                result = subprocess.run(
+                    [candidate, "--headless=new", "--disable-gpu", "--no-first-run",
+                     f"--user-data-dir={profile}", "--dump-dom",
+                     "data:text/html,<html><body>AS_STATED_LAYOUT_PROBE</body></html>"],
+                    capture_output=True, text=True, encoding="utf-8", timeout=30)
+            if result.returncode == 0 and "AS_STATED_LAYOUT_PROBE" in result.stdout:
+                return candidate
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+    return None
 
 
 LAYOUT_PAGES = ["", "cases/", "cases/TEST-2000-001/", "cases/TEST-2000-002/v1.0/", "cases/TEST-2000-007/",
@@ -880,6 +997,13 @@ class ProductionTests(unittest.TestCase):
         for path in ROOT.rglob("*"):
             if path.is_file() and not ignored & set(path.relative_to(ROOT).parts):
                 self.assertNotRegex(path.read_text(encoding="utf-8", errors="replace"), BANNED_TREE, str(path))
+
+    def test_public_operator_docs_do_not_expose_local_paths_or_sync_names(self):
+        for path in (ROOT / "README.md", ROOT / "content" / "published" / "README.txt"):
+            text = path.read_text(encoding="utf-8")
+            for pattern in build.LEAK_PATTERNS:
+                self.assertNotRegex(text, pattern, str(path))
+            self.assertNotRegex(text, r"[\w.+-]+@[\w-]+\.[\w.]+", str(path))
 
     def test_cases_page_contains_the_real_records(self):
         cases = (self.out / "cases/index.html").read_text(encoding="utf-8")
@@ -1097,7 +1221,8 @@ class ProductionTests(unittest.TestCase):
         for anchor in ["responses", "corrections", "challenges", "release", "standard"]:
             self.assertIn(f'id="{anchor}"', m)
         self.assertIn("exact SHA-256 manifests", m)
-        self.assertIn("Author notification, a waiting period and author consent are not publication gates", m)
+        self.assertIn("Author contact is not a publication requirement", m)
+        self.assertIn("Open is not an outreach state", m)
 
     def test_links_resolve(self):
         BuildTests.check_links(self, self.out)

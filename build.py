@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""As Stated: static site builder and release checker (Python standard library only).
+"""As Stated: static site builder and release checker (Python standard library plus pinned build dependencies).
 
 Commands
   python build.py build [--channel published] [--pretty-urls] [--out DIR]
@@ -10,15 +10,19 @@ Publication rule enforced here: every released data file needs a release stateme
 SHA-256, and any file flagged as not real is refused. Real releases use no separate signing key, so
 --expect-trust accepts only 'none'. Tests generate their own data at run time (tests/fixtures.py).
 
-Two record schemas. Schema 1 (no "schema" key) is the frozen format of records already released; its data is never
-reinterpreted. Schema 2 adds Open/Confirmed status, per-claim evidence and author responses, and mathematics written
-as \\( ... \\) (inline) or \\[ ... \\] (display), converted at build time by mathml.py using the pinned latex2mathml.
+Three record schemas. Schema 1 (no "schema" key) and schema 2 are frozen formats of records already released; their
+data is never reinterpreted. Schema 2 adds Open/Confirmed status, per-claim evidence and mathematics written as
+\\( ... \\) (inline) or \\[ ... \\] (display), converted at build time by mathml.py using the pinned latex2mathml.
+Schema 3 adds same-paper unresolved context, public correction history and factual outreach state.
 What this module checks is schema, truthful labels, manifests, privacy and math safety. Whether a finding meets the
 research standard is decided upstream, and checked against the private ledger by the projection checker.
+PDF privacy scanning uses pinned pypdf and fontTools to inspect searchable text, metadata, annotations, form fields, and embedded files.
 """
 import argparse
+import copy
 import hashlib
 import html
+import io
 import json
 import re
 import shutil
@@ -28,7 +32,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
-import mathml  # noqa: E402  (build-time math for schema 2; needs the pinned latex2mathml)
+import mathml  # noqa: E402  (build-time math for schema 2 and 3; needs the pinned latex2mathml)
 NAMESPACE = "as-stated-release"
 CHANNEL = "published"
 
@@ -108,7 +112,12 @@ CORRECTION_STATES = {
     "public_revision_verified": "Public revision verified",
     "formal_correction_published": "Formal correction published",
 }
-UNRESOLVED_REASONS = {"source_limited": "source not available", "disputed_reading": "reading of the source disputed"}
+UNRESOLVED_REASONS_V2 = {"source_limited", "disputed_reading"}
+UNRESOLVED_REASONS_V3 = {"source_limited", "conflicting_checks", "mathematically_open"}
+UNRESOLVED_REASON_LABELS = {"source_limited": "source not available", "disputed_reading": "reading of the source disputed",
+                            "conflicting_checks": "technical checks conflict",
+                            "mathematically_open": "the mathematical question remains open"}
+UNRESOLVED_REASONS_V1 = {"source_limited", "disputed_reading"}
 REPAIRS = {
     "none_proposed": "No repair proposed",
     "local_repair_proposed": "Local repair proposed",
@@ -214,6 +223,7 @@ class Content:
             self.records.setdefault(rid, []).append(rec)
         for rid in self.records:
             self.records[rid].sort(key=lambda r: vkey(r["version"]))
+            validate_record_history(self.records[rid], self.verified)
         sdir = self.croot / "snapshots"
         for f in sorted(sdir.glob("*.json")) if sdir.exists() else []:
             snap = self.released("snapshot", f.stem, "1", f)
@@ -272,7 +282,7 @@ def validate_record(rec, rid, version):
             # Rule approved by the owner on 31 October 2026: an unresolved question may be shown only inside a record
             # that is released for its settled claims, never as the reason for naming a paper, and never as a defect.
             _require(settled, f"{where}: {c['label']}: an unresolved claim cannot be the only claim in a record")
-            _require(res.get("unresolved_reason") in UNRESOLVED_REASONS and res.get("detail") and res.get("limits"),
+            _require(res.get("unresolved_reason") in UNRESOLVED_REASONS_V1 and res.get("detail") and res.get("limits"),
                      f"{where}: {c['label']}: an unresolved claim needs a reason, a description and its limits")
             continue
         _require(c["vor_check"]["level"] in {"full", "partial"},
@@ -305,6 +315,7 @@ def validate_record(rec, rid, version):
 
 
 RECORD_KEYS_V2 = (RECORD_KEYS - {"author_position"}) | {"schema", "related", "technical_notes"}
+CHANGELOG_KEYS_V2 = {"version", "date", "change", "our_correction"}
 WORK_KEYS_V2 = {"authors", "title", "venue", "year", "volume", "pages", "doi"}
 RESULT_KEYS_V2 = {
     "defect_found": {"outcome", "status", "defect_class", "affects", "depth", "summary", "witness", "argument",
@@ -320,8 +331,20 @@ def _keys(obj, allowed, where):
     _require(not unknown, f"{where}: unknown fields {sorted(unknown)}")
 CLAIM_KEYS_V2 = {"id", "label", "kind", "role", "page", "gist", "statement", "conditions", "quantifiers",
                  "result", "vor_check", "evidence", "author_response", "novelty"}
+RECORD_KEYS_V3 = RECORD_KEYS_V2 | {"primary_claim_id", "outreach"}
+CLAIM_KEYS_V3 = (CLAIM_KEYS_V2 - {"author_response"}) | {
+    "author_response", "unresolved_context", "publication_revision", "status_provenance"}
+OUTREACH_STATES = {
+    "not_contacted": "Authors not contacted",
+    "awaiting_substantive_response": "Awaiting a substantive author response",
+    "substantive_response_received": "Substantive author response received",
+}
+PUBLICATION_REVISION_STATUSES = {"open", "confirmed", "unresolved", "rejected"}
+REVISION_TYPES = {"error_correction", "superseding_evidence", "material_narrowing"}
+RECORD_KINDS_V3 = KINDS | {"status_correction"}
 EVIDENCE_KEYS_V2 = {"type", "date", "detail", "session", "identity"}
 RESPONSE_KEYS_V2 = {"position", "responder", "basis", "counts", "covers", "assessment"}
+PRIVATE_CONFIRMATION_PUBLIC_DETAIL = "The confirmation was recorded privately; correspondence and identifying details are not published."
 DATE_RE = r"\d{4}-\d{2}(-\d{2})?"
 DOI_RE = re.compile(r"10\.\d{4,9}/\S+")
 TECH_NOTE_PATH_RE = re.compile(r"technical-notes/[a-z0-9]+(?:-[a-z0-9]+)*/v\d+(?:\.\d+)*\.pdf")
@@ -329,19 +352,23 @@ SHA256_RE = re.compile(r"[0-9a-f]{64}")
 
 
 def validate_any(rec, rid, version):
-    """Schema 1 is the frozen format of released records; schema 2 is the current format. Anything else is refused."""
+    """Schemas 1 and 2 are frozen; schema 3 adds public lifecycle facts without changing prior bytes."""
     if "schema" not in rec:
         return validate_record(rec, rid, version)
-    _require(rec["schema"] == 2, f"record {rid} v{version}: unknown schema {rec['schema']!r}")
     try:
-        return validate_record_v2(rec, rid, version)
+        if rec["schema"] == 2:
+            return validate_record_v2(rec, rid, version)
+        if rec["schema"] == 3:
+            return validate_record_v3(rec, rid, version)
+        raise BuildError(f"record {rid} v{version}: unknown schema {rec['schema']!r}")
     except mathml.MathError as exc:  # malformed or unsafe mathematics refuses the build like any other error
         raise BuildError(str(exc)) from None
     except (KeyError, TypeError, AttributeError, IndexError) as exc:
         raise BuildError(f"record {rid} v{version}: malformed record ({type(exc).__name__}: {exc})") from None
 
 
-def validate_record_v2(rec, rid, version):
+def validate_record_v2(rec, rid, version, allow_unresolved_only_ids=None, allow_corrective_rejected_ids=None,
+                       public_position_only=False, unresolved_reasons=None, skip_hostile_claim_ids=None):
     where = f"record {rid} v{version}"
     unknown = set(rec) - RECORD_KEYS_V2
     _require(not unknown, f"{where}: unknown fields {sorted(unknown)}")
@@ -371,11 +398,22 @@ def validate_record_v2(rec, rid, version):
     ids = [c.get("id") for c in rec["claims"]]
     _require(all(ids) and len(set(ids)) == len(ids), f"{where}: every claim needs a unique id")
     settled = [c for c in rec["claims"] if c["result"]["outcome"] in {"defect_found", "no_defect_found"}]
+    allow_unresolved_only_ids = allow_unresolved_only_ids or set()
+    allow_corrective_rejected_ids = allow_corrective_rejected_ids or set()
+    unresolved_reasons = unresolved_reasons or UNRESOLVED_REASONS_V2
+    skip_hostile_claim_ids = skip_hostile_claim_ids or set()
     defect_claims = 0
     for c in rec["claims"]:
-        validate_claim_v2(c, where, settled)
+        validate_claim_v2(c, where, settled,
+                          allow_unresolved_only=c["id"] in allow_unresolved_only_ids,
+                          corrective_rejected=c["id"] in allow_corrective_rejected_ids,
+                          public_position_only=public_position_only,
+                          unresolved_reasons=unresolved_reasons,
+                          require_hostile=c["id"] not in skip_hostile_claim_ids)
         defect_claims += c["result"]["outcome"] == "defect_found"
-    _require((rec["kind"] == "defect") == (defect_claims > 0), f"{where}: kind does not match its claims")
+    corrective_nonpositive = bool(allow_unresolved_only_ids or allow_corrective_rejected_ids)
+    _require((rec["kind"] == "defect") == (defect_claims > 0) or (corrective_nonpositive and rec["kind"] == "defect"),
+             f"{where}: kind does not match its claims")
     corr = rec.get("correction")
     if corr:
         state = corr.get("state", "formal_correction_published")
@@ -437,7 +475,289 @@ def validate_record_v2(rec, rid, version):
         mathml.check(ch["outcome"], f"{where}: challenge outcome", math=False)
 
 
-def validate_claim_v2(c, record_where, settled):
+def validate_record_v3(rec, rid, version):
+    """Validate public lifecycle facts. Authorization and readiness live in the private release record."""
+    where = f"record {rid} v{version}"
+    unknown = set(rec) - RECORD_KEYS_V3
+    _require(not unknown, f"{where}: unknown fields {sorted(unknown)}")
+    missing = (RECORD_KEYS_V3 - {"technical_notes", "outreach"}) - set(rec)
+    _require(not missing, f"{where}: missing fields {sorted(missing)}")
+    _require(rec["kind"] in RECORD_KINDS_V3, f"{where}: bad kind")
+    for change in rec["changelog"]:
+        _keys(change, set(CHANGELOG_KEYS_V2) | {"revision_type"}, f"{where}: changelog item")
+        if "revision_type" in change:
+            _require(change["revision_type"] in REVISION_TYPES,
+                     f"{where}: changelog revision_type is not recognized")
+    outreach = rec.get("outreach")
+    if outreach is not None:
+        _require(set(outreach) == {"status"} and outreach["status"] in OUTREACH_STATES,
+                 f"{where}: outreach needs one supported status and no correspondence fields")
+    claims = rec["claims"]
+    claim_ids = {c.get("id") for c in claims}
+    _require(rec["primary_claim_id"] in claim_ids, f"{where}: primary_claim_id must name a claim in this record")
+    allow_unresolved = set()
+    allow_rejected = set()
+    corrective_positive = set()
+    restored_positive = set()
+    for c in claims:
+        _keys(c, CLAIM_KEYS_V3, f"{where}: {c.get('label', '?')}")
+        for evidence in c.get("evidence", []):
+            if evidence.get("type") == "private_human_confirmation":
+                _require(evidence.get("detail") == PRIVATE_CONFIRMATION_PUBLIC_DETAIL,
+                         f"{where}: private human confirmation must use the fixed public wording")
+        ar = c.get("author_response")
+        if ar is not None:
+            _require(set(ar) == {"position"},
+                 f"{where}: schema 3 author responses may publish only a factual position, not identity or correspondence details")
+            _require(ar.get("position") in {"agrees", "partly_agrees", "disagrees"},
+                     f"{where}: schema 3 author_response is only for a substantive factual position; use outreach for contact lifecycle")
+        revision = c.get("publication_revision")
+        provenance = c.get("status_provenance")
+        if revision is not None:
+            _require(provenance is None,
+                     f"{where}: {c['label']}: publication_revision and status_provenance cannot be combined")
+            _require(isinstance(revision, dict) and bool(revision),
+                     f"{where}: {c['label']}: publication_revision must be a non-empty object")
+            _require(set(revision) == {"from_version", "from_status", "to_status", "prior_sha256", "reason"},
+                     f"{where}: {c['label']}: publication_revision has unsupported or missing fields")
+            _require(re.fullmatch(r"\d+(?:\.\d+)*", revision["from_version"]) is not None,
+                     f"{where}: {c['label']}: malformed prior version")
+            _require(revision["from_status"] in PUBLICATION_REVISION_STATUSES and
+                     revision["to_status"] in PUBLICATION_REVISION_STATUSES,
+                     f"{where}: {c['label']}: status correction has an unsupported prior or current status")
+            _require(SHA256_RE.fullmatch(revision["prior_sha256"]) is not None,
+                     f"{where}: {c['label']}: prior JSON SHA-256 must be 64 lowercase hexadecimal characters")
+            _require(isinstance(revision["reason"], str) and revision["reason"].strip(),
+                     f"{where}: {c['label']}: status correction needs a reason")
+            mathml.check(revision["reason"], f"{where}: publication revision reason", math=False)
+            if c["result"]["outcome"] == "unresolved":
+                _require(revision["to_status"] == "unresolved", f"{where}: unresolved correction status does not match its finding")
+                allow_unresolved.add(c["id"])
+            elif c["result"]["outcome"] == "no_defect_found":
+                _require(revision["to_status"] == "rejected", f"{where}: rejected correction status does not match its finding")
+                allow_rejected.add(c["id"])
+            elif c["result"]["outcome"] == "defect_found":
+                _require(revision["to_status"] in {"open", "confirmed"} and
+                         revision["to_status"] == c["result"].get("status"),
+                         f"{where}: positive correction status does not match its finding")
+                corrective_positive.add(c["id"])
+                if revision["from_status"] in {"unresolved", "rejected"}:
+                    restored_positive.add(c["id"])
+            else:
+                raise BuildError(f"{where}: {c['label']}: unsupported status correction outcome")
+            _require(c.get("unresolved_context") is None,
+                     f"{where}: a corrective unresolved finding is the former primary finding, not unresolved context")
+        elif provenance is not None:
+            _require(isinstance(provenance, dict) and set(provenance) == {"status", "revision_version"} and
+                     provenance.get("status") in PUBLICATION_REVISION_STATUSES and
+                     re.fullmatch(r"\d+(?:\.\d+)*", provenance.get("revision_version", "")) is not None,
+                     f"{where}: {c['label']}: status_provenance needs a supported status and prior correction version")
+            outcome = c["result"]["outcome"]
+            matches = ((provenance["status"] in {"open", "confirmed"} and outcome == "defect_found" and
+                        c["result"].get("status") == provenance["status"]) or
+                       (provenance["status"] == "unresolved" and outcome == "unresolved") or
+                       (provenance["status"] == "rejected" and outcome == "no_defect_found"))
+            _require(matches and c.get("unresolved_context") is None,
+                     f"{where}: {c['label']}: carried status does not match the finding or cannot be unresolved context")
+            if provenance["status"] in {"open", "confirmed"}:
+                corrective_positive.add(c["id"])
+            elif provenance["status"] == "unresolved":
+                allow_unresolved.add(c["id"])
+            elif provenance["status"] == "rejected":
+                allow_rejected.add(c["id"])
+        elif c["result"]["outcome"] == "unresolved":
+            context = c.get("unresolved_context")
+            _require(isinstance(context, dict) and set(context) == {"anchor_claim_id"},
+                     f"{where}: {c['label']}: unresolved material must be explicitly linked as context")
+            _require(context["anchor_claim_id"] == rec["primary_claim_id"] and c["id"] != rec["primary_claim_id"],
+                     f"{where}: {c['label']}: unresolved material cannot be the principal claim or support another claim")
+            _require(c["role"] == "secondary", f"{where}: {c['label']}: unresolved context must be clearly secondary")
+        else:
+            _require(c.get("unresolved_context") is None,
+                     f"{where}: only an unresolved claim can be labelled as context")
+
+    # Reuse the strict v2 scientific/public-data validator without changing the old schemas.
+    legacy = copy.deepcopy(rec)
+    legacy["schema"] = 2
+    legacy.pop("primary_claim_id", None)
+    legacy.pop("outreach", None)
+    for c in legacy["claims"]:
+        c.pop("unresolved_context", None)
+        c.pop("publication_revision", None)
+        c.pop("status_provenance", None)
+    for c in legacy["claims"]:
+        if "author_response" not in c:
+            c["author_response"] = {"position": "no_reply", "basis": "none", "counts": False}
+        else:
+            # Schema 3 deliberately publishes position only. Supply non-public compatibility fields
+            # solely to the frozen schema-2 scientific validator.
+            position = c["author_response"]["position"]
+            c["author_response"] = {"position": position, "basis": "none", "counts": False}
+            if position in {"agrees", "partly_agrees", "disagrees"}:
+                c["author_response"]["responder"] = "some"
+    for change in legacy["changelog"]:
+        change.pop("revision_type", None)
+    legacy["kind"] = "defect" if rec["kind"] == "status_correction" else rec["kind"]
+    validate_record_v2(legacy, rid, version, allow_unresolved, allow_rejected,
+                       public_position_only=True, unresolved_reasons=UNRESOLVED_REASONS_V3,
+                       skip_hostile_claim_ids=corrective_positive - restored_positive)
+
+    current_defect = any(c["result"]["outcome"] == "defect_found" for c in claims)
+    current_negative = any(c["result"]["outcome"] == "no_defect_found" and
+                           not c.get("publication_revision") and not c.get("status_provenance") for c in claims)
+    expected_kind = "defect" if current_defect else ("negative" if current_negative else "status_correction")
+    _require(rec["kind"] == expected_kind,
+             f"{where}: kind must describe the current projection as {expected_kind!r}, not its former finding")
+
+    primary = next(c for c in claims if c["id"] == rec["primary_claim_id"])
+    if any(c["result"]["outcome"] == "unresolved" and not c.get("publication_revision") and
+           not c.get("status_provenance") for c in claims):
+        _require(primary["result"]["outcome"] == "defect_found" and
+                 primary["result"].get("status") in {"open", "confirmed"} and primary["role"] == "main" and
+                 sum(c["role"] == "main" for c in claims) == 1,
+                 f"{where}: unresolved context requires a qualifying positive finding about the same paper")
+
+
+def context_claims_retired_by_correction(prior, current):
+    corrected_nonpositive = {claim["id"] for claim in current.get("claims", [])
+                             if (claim.get("publication_revision") or {}).get("to_status") in {"unresolved", "rejected"}}
+    return {claim["id"] for claim in prior.get("claims", [])
+            if (claim.get("unresolved_context") or {}).get("anchor_claim_id") in corrected_nonpositive}
+
+
+def validate_record_history(records, verified):
+    """New versions preserve every prior claim and corrections retain an Open-origin lineage."""
+    hashes = {(kind, rid, version): digest for kind, rid, version, digest in verified}
+    by_version = {rec["version"]: rec for rec in records}
+    for rec in records:
+        if rec.get("schema") != 3:
+            continue
+        preceding = [item for item in records if vkey(item["version"]) < vkey(rec["version"])]
+        if preceding:
+            nearest = max(preceding, key=lambda item: vkey(item["version"]))
+            prior_claim_ids = {item["id"] for item in nearest["claims"]}
+            current_claim_ids = {item["id"] for item in rec["claims"]}
+            retired_context = context_claims_retired_by_correction(nearest, rec)
+            _require(prior_claim_ids - retired_context <= current_claim_ids,
+                     f"record {rec['public_id']} v{rec['version']}: a previously public claim was removed from the current projection")
+            versions = {item["version"] for item in preceding}
+            changelog_versions = [item["version"] for item in rec["changelog"]]
+            _require(len(changelog_versions) == len(set(changelog_versions)) and versions <= set(changelog_versions),
+                     f"record {rec['public_id']} v{rec['version']}: changelog must retain a link for every prior public version")
+            previous_by_id = {item["id"]: item for item in nearest["claims"]}
+            current_by_id = {item["id"]: item for item in rec["claims"]}
+            for claim_id in prior_claim_ids & current_claim_ids:
+                old_claim, current_claim = previous_by_id[claim_id], current_by_id[claim_id]
+                if public_claim_status(old_claim) != public_claim_status(current_claim):
+                    _require(current_claim.get("publication_revision"),
+                             f"record {rec['public_id']} v{rec['version']}: a public claim status changed without a visible publication_revision")
+                old_correction = old_claim.get("publication_revision") or old_claim.get("status_provenance")
+                if old_correction and not current_claim.get("publication_revision"):
+                    origin_version = (old_correction.get("revision_version") if old_claim.get("status_provenance")
+                                      else nearest["version"])
+                    _require(current_claim.get("status_provenance") ==
+                             {"status": public_claim_status(old_claim), "revision_version": origin_version},
+                             f"record {rec['public_id']} v{rec['version']}: corrected status needs explicit carry-forward provenance")
+                elif not old_correction:
+                    _require(current_claim.get("status_provenance") is None,
+                             f"record {rec['public_id']} v{rec['version']}: status provenance has no prior public correction")
+                if not current_claim.get("publication_revision"):
+                    lifecycle_fields = {"author_response", "evidence", "vor_check", "publication_revision", "status_provenance"}
+                    old_content = {key: value for key, value in old_claim.items() if key not in lifecycle_fields}
+                    current_content = {key: value for key, value in current_claim.items() if key not in lifecycle_fields}
+                    _require(current_content == old_content,
+                             f"record {rec['public_id']} v{rec['version']}: a previously public claim changed without publication_revision")
+                change = next((item for item in rec["changelog"] if item["version"] == rec["version"]), None)
+                if current_claim.get("publication_revision"):
+                    _require(change and change.get("revision_type") in REVISION_TYPES,
+                             f"record {rec['public_id']} v{rec['version']}: publication_revision needs a dated revision_type changelog entry")
+                    _require(bool(change.get("our_correction")) == (change["revision_type"] == "error_correction"),
+                             f"record {rec['public_id']} v{rec['version']}: our_correction must distinguish an error from a status update")
+        for claim in rec["claims"]:
+            revision = claim.get("publication_revision")
+            provenance = claim.get("status_provenance")
+            if provenance:
+                origins = []
+                for candidate in preceding:
+                    origin_claim = next((item for item in candidate["claims"] if item["id"] == claim["id"]), None)
+                    if origin_claim and origin_claim.get("publication_revision"):
+                        origins.append((candidate, origin_claim))
+                latest_origin = max(origins, key=lambda item: vkey(item[0]["version"])) if origins else None
+                _require(latest_origin is not None and provenance["revision_version"] == latest_origin[0]["version"] and
+                         provenance["status"] == public_claim_status(latest_origin[1]),
+                         f"record {rec['public_id']} v{rec['version']}: carried status must point to its latest public correction")
+            if not revision:
+                continue
+            rid, version = rec["public_id"], rec["version"]
+            prior = by_version.get(revision["from_version"])
+            preceding = [item for item in records if vkey(item["version"]) < vkey(version)]
+            nearest = max(preceding, key=lambda item: vkey(item["version"])) if preceding else None
+            _require(prior is not None and nearest is prior,
+                     f"record {rid} v{version}: correction must refer to the immediately preceding public version")
+            _require(prior.get("schema") in {2, 3},
+                     f"record {rid} v{version}: correction prior version has no supported Open status")
+            _require(prior["work"] == rec["work"],
+                     f"record {rid} v{version}: correction must retain the same paper/work identity")
+            prior_claim = next((item for item in prior["claims"] if item["id"] == claim["id"]), None)
+            _require(prior_claim is not None and public_claim_status(prior_claim) == revision["from_status"],
+                     f"record {rid} v{version}: correction prior status does not match its immediately preceding public version")
+            prior_hash = hashes.get(("record", rid, revision["from_version"]))
+            _require(prior_hash == revision["prior_sha256"],
+                     f"record {rid} v{version}: correction does not match the exact prior public JSON hash")
+            _require(rec["released"] > prior["released"],
+                     f"record {rid} v{version}: correction release date must follow the prior version")
+            correction_entry = next((ch for ch in rec["changelog"] if ch["version"] == version), None)
+            _require(correction_entry and correction_entry.get("revision_type") in REVISION_TYPES,
+                     f"record {rid} v{version}: correction needs a dated revision_type changelog entry")
+            lineage = prior
+            seen = set()
+            while True:
+                _require(lineage["version"] not in seen, f"record {rid} v{version}: correction lineage has a cycle")
+                seen.add(lineage["version"])
+                lineage_claim = next((item for item in lineage["claims"] if item["id"] == claim["id"]), None)
+                _require(lineage_claim is not None and lineage.get("work") == rec.get("work"),
+                         f"record {rid} v{version}: correction lineage changed paper or claim identity")
+                provenance = lineage_claim.get("status_provenance")
+                if provenance:
+                    origin = by_version.get(provenance["revision_version"])
+                    origin_claim = next((item for item in origin["claims"] if item["id"] == claim["id"]), None) if origin else None
+                    _require(origin is not None and origin_claim is not None and
+                             origin_claim.get("publication_revision") and
+                             public_claim_status(origin_claim) == provenance["status"] == public_claim_status(lineage_claim),
+                             f"record {rid} v{version}: carried correction status has no matching public correction origin")
+                    lineage = origin
+                    continue
+                prior_revision = lineage_claim.get("publication_revision")
+                if not prior_revision:
+                    _require(lineage.get("schema") in {2, 3} and
+                             lineage_claim["result"]["outcome"] == "defect_found" and
+                             lineage_claim["result"].get("status") == "open",
+                             f"record {rid} v{version}: correction lineage must lead to an originally public Open finding")
+                    break
+                lineage = by_version.get(prior_revision["from_version"])
+                _require(lineage is not None,
+                         f"record {rid} v{version}: correction lineage prior version is missing")
+
+
+def public_claim_status(claim):
+    revision = claim.get("publication_revision") or {}
+    if revision:
+        return revision["to_status"]
+    provenance = claim.get("status_provenance") or {}
+    if provenance:
+        return provenance["status"]
+    outcome = claim["result"]["outcome"]
+    if outcome == "defect_found":
+        return claim["result"].get("status")
+    if outcome == "unresolved":
+        return "unresolved"
+    if outcome == "no_defect_found":
+        return "negative_audit"
+    return outcome
+
+
+def validate_claim_v2(c, record_where, settled, allow_unresolved_only=False, corrective_rejected=False,
+                      public_position_only=False, unresolved_reasons=None, require_hostile=True):
     where = f"{record_where}: {c.get('label', '?')}"
     unknown = set(c) - CLAIM_KEYS_V2
     _require(not unknown, f"{where}: unknown fields {sorted(unknown)}")
@@ -462,13 +782,18 @@ def validate_claim_v2(c, record_where, settled):
     mathml.check(res["summary"], f"{where}: summary", math=True)
     outcome = res["outcome"]
     if outcome == "unresolved":
-        _require(settled, f"{where}: an unresolved claim cannot be the only claim in a record")
-        _require(res.get("unresolved_reason") in UNRESOLVED_REASONS and res.get("detail") and res.get("limits"),
+        _require(settled or allow_unresolved_only,
+                 f"{where}: an unresolved claim needs a qualifying positive context or a prior-public Open correction")
+        _require(res.get("unresolved_reason") in (unresolved_reasons or UNRESOLVED_REASONS_V2) and res.get("detail") and res.get("limits"),
                  f"{where}: an unresolved claim needs a reason, a description and its limits")
         mathml.check(res["detail"], f"{where}: detail", math=True)
         mathml.check(res["limits"], f"{where}: limits", math=True)
     elif outcome == "no_defect_found":
-        _require(res.get("depth") == "deep_audit", f"{where}: named negative audits must be deep audits")
+        if corrective_rejected:
+            _require(res.get("depth") in {"claim_check", "deep_audit"},
+                     f"{where}: a rejected former Open finding needs a scoped refuting review")
+        else:
+            _require(res.get("depth") == "deep_audit", f"{where}: named negative audits must be deep audits")
         _require(res.get("search_scope") and res.get("limits"), f"{where}: a negative audit needs a search scope and limits")
         mathml.check(res["search_scope"], f"{where}: search scope", math=True)
         mathml.check(res["limits"], f"{where}: limits", math=True)
@@ -520,7 +845,7 @@ def validate_claim_v2(c, record_where, settled):
                  f"{where}: a {ar['position']} response has no responder, covers or assessment")
     if ar.get("covers") is not None:
         mathml.check(ar["covers"], f"{where}: covers", math=True)
-    if ar["position"] in {"disagrees", "partly_agrees"}:
+    if ar["position"] in {"disagrees", "partly_agrees"} and not public_position_only:
         _require(ar.get("assessment"), f"{where}: a disagreeing or partly agreeing response needs our assessment of it")
     if ar.get("assessment") is not None:
         _require(ar["position"] in {"disagrees", "partly_agrees"}, f"{where}: an assessment is only for a disagreeing or partly agreeing response")
@@ -529,7 +854,8 @@ def validate_claim_v2(c, record_where, settled):
              f"{where}: an author response counts only as an agreement recorded from the authors' own written reply")
 
     if outcome == "defect_found":
-        _require("hostile_ai_recheck" in types, f"{where}: a defect needs a separate-session hostile AI recheck")
+        if require_hostile:
+            _require("hostile_ai_recheck" in types, f"{where}: a defect needs a separate-session hostile AI recheck")
         if res["status"] == "confirmed":
             kinds = types | ({"author_agreement"} if ar["counts"] else set())
             _require(len(kinds) >= 2 and kinds & HUMAN_KINDS,
@@ -546,33 +872,40 @@ def validate_snapshot_shape(snap, stem):
                  f"snapshot {stem}: track breakdowns that include unreleased work are allowed only for M01-M04")
 
 
-def released_stats(content, as_of):
+def released_stats(content, as_of, include_legacy_no_reply=False):
     """Counts computable from the records released on or before as_of, read through claim_view."""
     recs = content.latest_all(as_of)
-    s = {"papers": len(recs), "claims": 0, "deep": 0, "confirmed": 0, "open": 0, "negative": 0, "candidates": 0,
+    s = {"papers": len(recs), "claims": 0, "deep": 0, "confirmed": 0, "open": 0, "negative": 0, "rejected": 0, "candidates": 0,
          "ai_blind": 0, "ai_informed": 0, "indep": 0, "external": 0,
          "vor_conf": {"full": 0, "partial": 0, "none": 0}, "vor_neg": {"full": 0, "partial": 0, "none": 0},
          "positions": {"agreed": 0, "partly_agreed": 0, "disagreed": 0, "none_yet": 0}, "notified": 0,
          "unresolved": 0, "previously_reported": 0, "calibration": 0,
          "corrections": {"credits_programme": 0, "none_stated": 0}, "our_corrections": 0,
          "papers_by_track": {t: 0 for t in TRACKS}, "claims_by_track": {t: 0 for t in TRACKS},
-         "outcome_by_track": {t: {"confirmed": 0, "open": 0, "negative": 0} for t in TRACKS},
+         "outcome_by_track": {t: {"confirmed": 0, "open": 0, "negative": 0, "rejected": 0} for t in TRACKS},
          "defect_class": {}, "affects": {}}
     pos_map = {"agrees": "agreed", "partly_agrees": "partly_agreed", "disagrees": "disagreed",
                "reviewing": "none_yet", "no_reply": "none_yet", "none_yet": "none_yet"}
     for r in recs:
         s["papers_by_track"][r["track"]] += 1
-        paper_notified = False
+        outreach = (r.get("outreach") or {}).get("status")
+        paper_notified = outreach in {"awaiting_substantive_response", "substantive_response_received"}
         for c in r["claims"]:
             view = claim_view(r, c)
             pos = view["response"]["position"]
-            paper_notified = paper_notified or pos in {"agrees", "partly_agrees", "disagrees", "reviewing", "no_reply", "none_yet"}
+            if r.get("schema") != 3:
+                paper_notified = paper_notified or pos in {"agrees", "partly_agrees", "disagrees", "reviewing"}
+                if include_legacy_no_reply:
+                    paper_notified = paper_notified or pos == "no_reply"
             s["claims"] += 1
             s["claims_by_track"][r["track"]] += 1
             s["deep"] += c["result"].get("depth") == "deep_audit"
             lvl = c["vor_check"]["level"]
             if view["outcome"] == "unresolved":
                 s["unresolved"] += 1
+            elif view["outcome"] == "rejected":
+                s["rejected"] += 1
+                s["outcome_by_track"][r["track"]]["rejected"] += 1
             elif view["outcome"] == "defect_found":
                 s["candidates"] += 1
                 dc = DEFECT_CLASSES[c["result"]["defect_class"]]
@@ -644,11 +977,14 @@ def check_statistics(content):
                  f"{tag}: support counts must be subsets of confirmed claims")
         _require(sum(t["M11"].values()) == conf, f"{tag}: M11 does not partition confirmed claims")
         _require(sum(t["M13"].values()) <= conf, f"{tag}: M13 population exceeds confirmed claims")
-        rs = released_stats(content, snap["as_of"])
+        _require(snap["metrics_version"] in {"1.1", "1.2"},
+                 f"{tag}: unsupported metrics version {snap['metrics_version']!r}")
+        rs = released_stats(content, snap["as_of"], include_legacy_no_reply=snap["metrics_version"] == "1.1")
         checks = [
             ("M01", t["M01"], rs["papers"]), ("M02", t["M02"], rs["papers"]), ("M03", t["M03"], rs["claims"]),
-            ("M04", t["M04"], rs["deep"]), ("M05", t["M05"], rs["candidates"] + rs["unresolved"]),
+            ("M04", t["M04"], rs["deep"]), ("M05", t["M05"], rs["candidates"] + rs["unresolved"] + rs["rejected"]),
             ("M06 confirmed", conf, rs["confirmed"]), ("M06 open", m06["open"], rs["open"]), ("M06 unresolved", m06["unresolved"], rs["unresolved"]),
+            ("M06 rejected", m06["rejected"], rs["rejected"]),
             ("M07", m07, rs["negative"]), ("M08 blind", t["M08"]["blind"], rs["ai_blind"]),
             ("M08 informed", t["M08"]["informed"], rs["ai_informed"]), ("M09", t["M09"], rs["indep"]),
             ("M10", t["M10"], rs["external"]), ("M12", t["M12"], rs["notified"]),
@@ -722,6 +1058,8 @@ ROLES = {"main": "main result", "supporting": "supporting result", "secondary": 
 FAMILIES = [
     ("none", "No defect found",
      "A deep audit within a stated scope found no defect. This is not a proof that the claim is correct."),
+    ("rejected", "Rejected former finding",
+     "New evidence showed that a previously public Open finding does not stand. This is a status correction, not a new negative audit."),
     ("false", "False as stated",
      "The claim, read exactly as printed with its stated assumptions, is false. A counterexample is given."),
     ("definition", "Definition defect",
@@ -769,10 +1107,14 @@ METHOD_STEPS = [
 
 def family(c):
     r = c["result"]
+    revision = c.get("publication_revision") or {}
+    provenance = c.get("status_provenance") or {}
+    if revision.get("to_status") == "rejected" or provenance.get("status") == "rejected":
+        return "rejected", FAMILY_LABEL["rejected"], None
     if r["outcome"] == "no_defect_found":
         return "none", FAMILY_LABEL["none"], None
     if r["outcome"] == "unresolved":
-        return "unresolved", FAMILY_LABEL["unresolved"], UNRESOLVED_REASONS.get(r.get("unresolved_reason"))
+        return "unresolved", FAMILY_LABEL["unresolved"], UNRESOLVED_REASON_LABELS.get(r.get("unresolved_reason"))
     fam, q = DEFECT_FAMILY[r["defect_class"]]
     label = "Algorithm fails" if fam == "construction" and c.get("kind") == "algorithm" else FAMILY_LABEL[fam]
     if r.get("previously_reported"):
@@ -863,7 +1205,7 @@ def paper_group(site, page, rec):
     for c in rec["claims"]:
         view = claim_view(rec, c)
         fam = family(c)[0]
-        status = view["status"] or ""
+        status = view["status"] or (view["outcome"] if view["outcome"] in {"unresolved", "rejected"} else "")
         where = f"{rid} {c['id']}"
         text = f"{group_text} {c['label']} {mathml.plain(c['gist'])} {mathml.plain(c['result'].get('summary', ''))}".lower()
         rows.append(
@@ -886,16 +1228,19 @@ def claim_index(site, page, recs):
 
 
 def counts(recs):
-    k = {"papers": len(recs), "claims": 0, "none": 0, "defect": 0, "open": 0, "confirmed": 0, "unresolved": 0}
+    k = {"papers": len(recs), "claims": 0, "none": 0, "defect": 0, "open": 0, "confirmed": 0,
+         "unresolved": 0, "rejected": 0}
     for r in recs:
         for c in r["claims"]:
             k["claims"] += 1
             view = claim_view(r, c)
             if view["outcome"] == "no_defect_found":
                 k["none"] += 1
+            elif view["outcome"] == "rejected":
+                k["rejected"] += 1
             elif view["outcome"] == "unresolved":
                 k["unresolved"] += 1
-            else:
+            elif view["outcome"] == "defect_found":
                 k["defect"] += 1
                 k[view["status"]] += 1
     return k
@@ -969,6 +1314,7 @@ def render_home(site):
       <li class="sub"><span>Open</span><span class="n">{k['open']}</span></li>
       <li class="sub"><span>Confirmed</span><span class="n">{k['confirmed']}</span></li>
       <li><span class="fd fd-unresolved"><i class="mk"></i>Unresolved</span><span class="n">{k['unresolved']}</span></li>
+      <li><span class="fd fd-rejected"><i class="mk"></i>Rejected former finding</span><span class="n">{k['rejected']}</span></li>
     </ul>
     <p class="aside-note">Papers are chosen deliberately, not sampled at random. These are counts of this programme's work, not error rates.{stats_link}</p>"""
         recent = f"""<div class="sec-head"><h2>Recent case records</h2>
@@ -979,7 +1325,7 @@ def render_home(site):
     else:
         aside = f"""<p class="aside-k">Case records</p>
     <p class="aside-v">No case records have been released yet.</p>
-    <p class="aside-note">A record is published only after the owner approves its exact content. <a href="{site.href(page, 'methodology/')}">How this works</a></p>"""
+    <p class="aside-note">Validated Open positives use the standing release rule after the full review; new Confirmed and negative records retain case-specific authorization. <a href="{site.href(page, 'methodology/')}">How this works</a></p>"""
         recent = f"""<div class="sec-head"><h2>Case records</h2></div>
   <p class="sec-lede">No case records have been released yet. Released records will be listed here and on the
   <a href="{site.href(page, 'cases/')}">Cases</a> page, one row per investigated claim, grouped by paper.</p>"""
@@ -1025,7 +1371,7 @@ def render_explorer(site):
 <div class="wrap page-head">
   <h1>Cases</h1>
   <p class="lede">No case records have been released yet.</p>
-  <p class="small muted">A record is published only after the owner approves its exact content. Released records will appear here, one row per investigated claim, grouped by paper.
+  <p class="small muted">Validated Open positives use the standing release rule after the full review; new Confirmed and negative records retain case-specific authorization. Released records will appear here, one row per investigated claim, grouped by paper.
   See the <a href="{site.href(page, 'methodology/')}">methodology</a>.</p>
 </div>
 """
@@ -1036,20 +1382,20 @@ def render_explorer(site):
   <h1>Cases</h1>
   <p class="lede">Every investigated claim, grouped by paper, most recently updated first. {k['claims']} claims in
   {k['papers']} papers.</p>
-  <p class="small muted">A record is published only after the owner approves its exact content. Candidates still under review and rejected candidates {counted}.</p>
+  <p class="small muted">Validated Open positives use the standing release rule after the full review; new Confirmed and negative records retain case-specific authorization. Candidates still under review and rejected candidates {counted}.</p>
 </div>
 <div class="wrap">
 <form class="filters" id="filters" hidden>
   <label class="f-search"><span class="sr">Search</span><input type="search" id="f-text" placeholder="Search papers, authors, claims"></label>
   <label><span class="f-l">Finding</span><select id="f-fam"><option value="">All</option>{o_f}</select></label>
-  <label><span class="f-l">Status</span><select id="f-status"><option value="">All</option><option value="open">Open</option><option value="confirmed">Confirmed</option></select></label>
+  <label><span class="f-l">Status</span><select id="f-status"><option value="">All</option><option value="open">Open</option><option value="confirmed">Confirmed</option><option value="unresolved">Unresolved</option><option value="rejected">Rejected</option></select></label>
   <label><span class="f-l">Claim type</span><select id="f-kind"><option value="">All</option>{o_k}</select></label>
   <label><span class="f-l">Field</span><select id="f-track"><option value="">All</option>{o_t}</select></label>
   <span class="count" id="f-count" aria-live="polite"></span>
 </form>
 {claim_index(site, page, recs)}
 <p class="note">Finding labels are defined in <a href="{site.href(page, 'definitions/')}#findings">Definitions</a>.
-Status is Open or Confirmed, as defined there; each case page states the basis for its status and lists only the checks that took place.
+Status is Open, Confirmed, Unresolved or a rejected former Open finding, as defined there; each case page states the basis for its status and lists only the checks that took place.
 The authors' responses are recorded separately from those checks. {E(SELECTION_STATEMENT)}</p>
 </div>
 """
@@ -1083,6 +1429,26 @@ def render_claim(site, page, rec, c, i, n):
     if view["status"]:
         badge += " " + status_html(site, page, view["status"])
     finding = f'<p class="verdict">{badge}</p>'
+    revision = c.get("publication_revision")
+    if revision:
+        prior_url = site.href(page, f"cases/{rec['public_id']}/v{revision['from_version']}/")
+        prior_status = status_html(site, page, revision["from_status"])
+        current_status = status_html(site, page, revision["to_status"])
+        finding += (f'<p class="revision-note"><strong>Corrective version.</strong> Current status: {current_status}. '
+                    f'This version supersedes the prior {prior_status} finding in '
+                    f'<a href="{prior_url}">version {E(revision["from_version"])}</a>. '
+                    f'{rich(rec, revision["reason"], where + " correction reason")}</p>')
+    elif c.get("status_provenance"):
+        provenance = c["status_provenance"]
+        current_status = status_html(site, page, provenance["status"])
+        prior_url = site.href(page, f"cases/{rec['public_id']}/v{provenance['revision_version']}/")
+        finding += (f'<p class="revision-note"><strong>Status carried forward.</strong> Current status: {current_status}. '
+                    f'This status was established in <a href="{prior_url}">correction version '
+                    f'{E(provenance["revision_version"])}</a> and remains current.</p>')
+    elif c.get("unresolved_context"):
+        anchor_id = c["unresolved_context"]["anchor_claim_id"]
+        finding += (f'<p class="context-note"><strong>Context only.</strong> This unresolved claim does not support or '
+                    f'determine the qualifying positive finding <a href="#{E(anchor_id)}">{E(anchor_id)}</a>.</p>')
     basis = basis_text(view)
     if basis:
         finding += f'<p class="basis">{E(basis)}</p>'
@@ -1105,6 +1471,11 @@ def render_claim(site, page, rec, c, i, n):
         checked += evidence_list(rec, view, where)
         if checked:
             parts.append(blk("How it was checked", checked))
+    elif view["outcome"] == "rejected":
+        parts.append(blk("Refuting review", f"<p>{rich(rec, res['search_scope'], where + ' refuting review')}</p>"))
+        parts.append(blk("Limits of this status correction", f"<p>{rich(rec, res['limits'], where + ' limits')}</p>"))
+        if view["evidence"]:
+            parts.append(blk("How it was checked", evidence_list(rec, view, where)))
     elif res["outcome"] == "no_defect_found":
         verdict_note = f'<p class="caveat">{E(NEGATIVE_CAVEAT)}</p>'
         parts.append(blk("What was tested", f"<p>{rich(rec, res['search_scope'], where + ' search scope')}</p>"))
@@ -1112,8 +1483,14 @@ def render_claim(site, page, rec, c, i, n):
         if view["evidence"]:
             parts.append(blk("How it was checked", evidence_list(rec, view, where)))
     else:
-        verdict_note = ('<p class="caveat caveat-open">This question is not settled. It is not counted as a defect, and the '
-                        'record will be revised if the missing source becomes available.</p>')
+        if c.get("publication_revision") or c.get("status_provenance"):
+            verdict_note = ('<p class="caveat caveat-open">The former Open finding is now Unresolved and is not counted as a defect. '
+                            'The prior positive version remains available in the correction history.</p>')
+        elif c.get("unresolved_context"):
+            verdict_note = ('<p class="caveat caveat-open">This contextual question is not settled and is not counted as a defect. '
+                            'It does not establish or support the record’s qualifying positive finding.</p>')
+        else:
+            verdict_note = '<p class="caveat caveat-open">This question is not settled. It is not counted as a defect.</p>'
         parts.append(blk("What is known", f"<p>{rich(rec, res['detail'], where + ' detail')}</p>"))
         parts.append(blk("Why unresolved", f"<p>{rich(rec, res['limits'], where + ' limits')}</p>"))
     rep = c.get("reproduction") or {}
@@ -1136,6 +1513,37 @@ def render_claim(site, page, rec, c, i, n):
   {verdict_note}
   <div class="blks">{''.join(parts)}</div>
 </section>"""
+
+
+def latest_correction_descendant(versions, source_version, claim_id):
+    by_version = {record["version"]: record for record in versions}
+    latest_record = versions[-1]
+    latest_claim = next((item for item in latest_record["claims"] if item["id"] == claim_id), None)
+
+    def reaches_source(record):
+        cursor = next((item for item in record["claims"] if item["id"] == claim_id), None)
+        seen = set()
+        while cursor:
+            revision = cursor.get("publication_revision")
+            provenance = cursor.get("status_provenance")
+            if provenance:
+                prior_version = provenance["revision_version"]
+            elif revision:
+                prior_version = revision["from_version"]
+            else:
+                return False
+            if prior_version == source_version:
+                return True
+            if prior_version in seen:
+                return False
+            seen.add(prior_version)
+            prior = by_version.get(prior_version)
+            cursor = next((item for item in prior["claims"] if item["id"] == claim_id), None) if prior else None
+        return False
+
+    if latest_claim and any(reaches_source(record) for record in versions if record["version"] != source_version):
+        return latest_claim
+    return None
 
 
 def render_record(site, rec, frozen=False):
@@ -1213,6 +1621,11 @@ def render_record(site, rec, frozen=False):
     technical_note_section = (f'<section class="after technical-notes" id="technical-notes"><h2>As Stated technical note</h2>'
                               f'{"".join(technical_notes)}</section>' if technical_notes else "")
     evidence_package = doi_html(site, rec["evidence"]["package_doi"]) if rec["evidence"].get("package_doi") else ""
+    outreach_status = (rec.get("outreach") or {}).get("status")
+    outreach_text = OUTREACH_STATES.get(outreach_status)
+    outreach_section = (f'<section class="after" id="outreach"><h2>Author outreach</h2><p>{E(outreach_text)}. '
+                        'This records contact lifecycle only; it does not determine the finding status.</p></section>'
+                        if outreach_text else "")
     url = cfg["base_url"].rstrip("/") + f"/cases/{rid}/v{ver}/"
     cite = f"{cfg['owner']} ({rec['released'][:4]}). Case record {rid}, version {ver}: {rec['title']}. {cfg['name']}. {url}"
     bib = (f"@misc{{{rid.replace('-', '_')}_v{ver.replace('.', '_')},\n  author = {{{cfg['owner']}}},\n"
@@ -1220,12 +1633,26 @@ def render_record(site, rec, frozen=False):
            f"  year = {{{rec['released'][:4]}}},\n  url = {{{url}}}\n}}")
     notes = ""
     if frozen and ver != current["version"]:
+        changed = []
+        versions = site.c.records[rid]
+        for old_claim in rec["claims"]:
+            newest = latest_correction_descendant(versions, ver, old_claim["id"])
+            if newest is not None:
+                view = claim_view(current, newest)
+                target = site.href(page, f"cases/{rid}/#{newest['id']}")
+                changed.append(f'<li>Current status for claim <a href="{target}">{E(newest["id"])}</a>: '
+                               f'{status_html(site, page, view["status"])}.</li>')
+        status_note = f'<ul>{"".join(changed)}</ul>' if changed else ""
         notes += (f'<p class="notice">Archived version {E(ver)}. The current version is '
-                  f'<a href="{site.href(page, "cases/" + rid + "/")}">{E(current["version"])}</a>.</p>')
+                  f'<a href="{site.href(page, "cases/" + rid + "/")}">{E(current["version"])}</a>.</p>{status_note}')
     fams = [family(c)[0] for c in claims]
     open_n = sum(1 for v in views if v["status"] == "open")
     conf_n = sum(1 for v in views if v["status"] == "confirmed")
-    status_fact = " · ".join(x for x in [f"{open_n} Open" if open_n else "", f"{conf_n} Confirmed" if conf_n else ""] if x)
+    unresolved_n = sum(1 for v in views if v["outcome"] == "unresolved")
+    rejected_n = sum(1 for v in views if v["outcome"] == "rejected")
+    status_fact = " · ".join(x for x in [f"{open_n} Open" if open_n else "", f"{conf_n} Confirmed" if conf_n else "",
+                                         f"{unresolved_n} Unresolved" if unresolved_n else "",
+                                         f"{rejected_n} Rejected" if rejected_n else ""] if x)
     body = f"""
 <div class="wrap case">
 <nav class="crumbs" aria-label="Breadcrumb"><a href="{site.href(page, 'cases/')}">Cases</a><span aria-hidden="true">/</span><span>{E(rid)}</span></nav>
@@ -1246,7 +1673,8 @@ def render_record(site, rec, frozen=False):
   {overview}
   {''.join(render_claim(site, page, rec, c, i, n) for i, c in enumerate(claims, start=1))}
   {technical_note_section}
-  <section class="after" id="corrections"><h2>Author engagement and correction status</h2><dl class="rd">{''.join(resp)}</dl></section>
+  {outreach_section}
+  <section class="after" id="corrections"><h2>Corrections and related record details</h2><dl class="rd">{''.join(resp)}</dl></section>
   <section class="after" id="history"><h2>History</h2><ol class="hist">{hist}</ol></section>
   <section class="after" id="versions"><h2>Versions</h2><ol class="hist">{vers}</ol>
   <p class="note">Released versions are never edited; each keeps its own address.</p></section>
@@ -1259,7 +1687,7 @@ def render_record(site, rec, frozen=False):
       <span class="small muted">{E(rec['evidence']['licence'])}</span>{f'<ul class="files">{files}</ul>' if files else ''}</dd>
     <dt id="verification">Release verification</dt><dd class="small">Release manifest. Record file SHA-256
       <span class="mono hash" title="{E(digest)}">{E(digest[:16])}…</span> verified when the site was built.
-      The owner approves each release. Automated tests and a privacy scan must pass before it deploys.
+      The applicable publication authorization and release checks are recorded for each version. Automated tests and a privacy scan must pass before deployment.
       <a href="{site.href(page, f'data/records/{rid}/v{ver}.json')}">JSON</a> · <a href="{site.href(page, 'methodology/')}#release">How</a></dd>
     <dt>Cite this record</dt><dd><p class="cite" id="cite-text">{E(cite)}</p>
       <button class="btn" type="button" data-copy="cite-text">Copy citation</button>
@@ -1285,7 +1713,7 @@ METRIC_ROWS = [
     ("M09", "Confirmed: reproduced by the researcher", "claim", "Re-derived by hand or with separately written code. Package reruns do not count.", "monthly"),
     ("M10", "Confirmed: checked by an external human", "claim", "Checked by someone outside the programme.", "monthly"),
     ("M11", "Confirmed: source check", "claim", "Confirmed claims by full, partial or no check against the published version.", "monthly"),
-    ("M12", "Papers whose authors were contacted", "paper", "Contact is optional and is not a publication requirement.", "quarterly"),
+    ("M12", "Papers with evidenced author contact", "paper", "Schema 3 uses explicit outreach state; legacy records use only supported contact evidence under their recorded metric version. Silence alone is not contact evidence.", "quarterly"),
     ("M13", "Authors' position on confirmed findings", "claim", "Confirmed claims in papers whose authors were contacted, by the authors' latest written position.", "quarterly"),
     ("M14", "Corrections published after author contact", "claim", "Released records only; credited to this audit only if the correction says so.", "monthly"),
     ("M15", "Records released", "record", "Records with status published.", "monthly"),
@@ -1322,27 +1750,25 @@ def render_definitions(site):
 <nav class="toc" aria-label="On this page"><a href="#findings">Findings</a><a href="#open-and-confirmed">Open and Confirmed</a><a href="#statuses">Statuses</a><a href="#checks">Checks</a>
 <a href="#vor">Source check</a><a href="#authors">Author responses</a><a href="#corrections">Corrections</a><a href="#metrics">Metrics</a></nav>
 <div class="prose">
-<section id="findings"><h2>Findings</h2><p>Each investigated claim has exactly one finding. A paper with several claims can have
+<section id="findings"><h2>Findings</h2><p>Each investigated claim has one finding or a status correction to a previously public Open finding. A paper with several claims can have
 several different findings; there is no verdict on a paper as a whole.</p><dl class="defs">{fams}</dl>
 <p>A short qualifier sometimes follows the label:</p><ul>{quals}</ul>
 <p>Records also say which result a defect affects and what the finding does <em>not</em> establish.</p></section>
 <section id="open-and-confirmed"><h2>Open and Confirmed</h2>
 <dl class="defs">
-<div class="def"><dt id="open">Open</dt><dd>A published finding that has not received the optional, stronger Confirmed label. Open does not mean that the mathematical question is unresolved; that is what Unresolved means. Each case page states the basis on which its finding was published.</dd></div>
+<div class="def"><dt id="open">Open</dt><dd>A published positive finding that has not received the optional, stronger Confirmed label. Open does not mean that the mathematical question is unresolved or that an author response is pending. Outreach is recorded separately. Each case page states the basis on which its finding was published.</dd></div>
 <div class="def"><dt id="confirmed">Confirmed</dt><dd>An optional, stronger evidentiary label. It additionally requires at least two different kinds of check, at least one of them by a human, and no refuting check left unaddressed. It is not required for publication.</dd></div>
 </dl></section>
 <section id="statuses"><h2>Other statuses</h2><dl class="defs">
 <div class="def"><dt id="candidate">Candidate</dt><dd>Any possible defect reported by any check. Most candidates come from AI-assisted discovery runs and are never published by name.</dd></div>
-<div class="def"><dt id="unresolved">Unresolved</dt><dd>Checks were completed but could not settle the question. Never counted as a defect or as rejected. An unresolved
-question appears by name only inside a record that is released for other, settled claims in the same paper; a paper is
-never named because of an unresolved question alone.</dd></div>
-<div class="def"><dt>Rejected</dt><dd>A check showed the suspected defect does not exist. Counted, never named.</dd></div>
+<div class="def"><dt id="unresolved">Unresolved</dt><dd>Checks could not settle the question. It is not counted as a defect. In a new record, unresolved material may appear only as clearly labelled context beside a qualifying positive finding about the same paper that independently meets the release standard. It cannot determine or support that finding, and it cannot be the record's principal proposition. A previously public Open finding may also be corrected to Unresolved, with the prior version preserved and linked.</dd></div>
+<div class="def"><dt>Rejected</dt><dd>A refuting check showed that a previously public Open finding does not stand. It remains visible as a status correction, not as a new negative audit.</dd></div>
 <div class="def"><dt id="withdrawn">Withdrawn</dt><dd>A released record we no longer stand behind. The page stays online with the reason.</dd></div></dl></section>
 <section id="checks"><h2>Kinds of check</h2><p>A case page lists only the checks that actually took place. The kinds are:</p>
 <dl class="defs">{kind_list}</dl><p>Rerunning the original evidence package shows the package works; it is reported separately and is not counted as a check.</p></section>
 <section id="vor"><h2>Source check</h2><p>The decisive elements are the statement, every definition and assumption the finding relies on, the decisive step, and any supplement the claim depends on.</p><ul>{vor}</ul></section>
-<section id="authors"><h2>Author responses</h2><p>Each claim records the authors' position: agrees, partly agrees, disagrees, reviewing, no reply, or not contacted. A response is shown whatever it says. Whether it counts toward the Confirmed label is recorded separately. Contact and reply are not publication requirements. Private correspondence is published only with separate consent to its public use.</p></section>
-<section id="corrections"><h2>Corrections</h2><p>Finding status and correction status are separate. A finding may be Open or Confirmed whether or not the authors have issued a correction. Correction status is recorded as <strong>Announced</strong>, <strong>Author-supplied correction</strong>, <strong>Public revision verified</strong>, or <strong>Formal correction published</strong>. Announced and author-supplied states are not presented as completed public corrections. A correction is described as crediting this audit only if its own text says so. A correction published before the audit marks the finding as previously reported; it is not an outcome of this audit.</p></section>
+<section id="authors"><h2>Author responses and outreach</h2><p>Scientific status and outreach are independent. Open never means that a response is pending. When supported by the record, outreach may state that authors have not been contacted, are awaiting a substantive response, or have provided one. A factual author position may also be shown. These public facts never include private correspondence or attachments. Whether an author's written agreement counts toward Confirmed is recorded separately. Contact and reply are not publication requirements.</p></section>
+<section id="corrections"><h2>Corrections</h2><p>Finding status, author correction status and our public status corrections are separate. Announced and author-supplied corrections are not presented as completed public corrections. A correction is described as crediting this audit only if its own text says so. When new evidence changes a previously public Open finding's status or material scope, a new immutable version states the current status and links the superseded version; the earlier version stays addressable. This standing correction rule does not authorize a new standalone unresolved finding. A correction published before the audit marks the finding as previously reported; it is not an outcome of this audit.</p></section>
 </div></div>
 <div class="wrap"><section id="metrics" class="block"><h2>Metrics</h2><div class="table-wrap"><table class="data rtable metrics"><thead><tr><th scope=col>ID</th><th scope=col>Label</th><th scope=col>Unit</th><th scope=col>Counting rule</th><th scope=col>Updated</th></tr></thead><tbody>{metrics}</tbody></table></div>
 <p class="note">A ratio is shown only when its numerator is a subset of its denominator, as counts ("6 of 11"). No ratio uses papers or claims examined as its denominator. {E(SELECTION_STATEMENT)}</p></section></div>
@@ -1371,13 +1797,12 @@ The claim may be a theorem, proposition, lemma, corollary, remark, algorithm, co
 theory, mechanism design, matching and social choice, or related fields. The unit of investigation is the single claim,
 read exactly as stated. A paper is not given a verdict as a whole.</p></section>
 <section id="process"><h2>Process</h2><ol class="proc">{steps}</ol></section>
-<section id="standard"><h2>Open and Confirmed</h2><p class="callout">Every published finding is either <strong>Open</strong> or
-<strong>Confirmed</strong>. A finding is published as Open when it has survived a separate-session hostile AI recheck and a
+<section id="standard"><h2>Open and Confirmed</h2><p class="callout">A positive finding is published as <strong>Open</strong> when it has survived a separate-session hostile AI recheck and a
 source review of the published version. <strong>Confirmed</strong> is an optional, stronger evidentiary label: it also
 requires at least two different kinds of check, at least one of them by a human, and no refuting check left unaddressed.</p>
-<p>Human checking is not a condition of publication, and no publication waits for an author's reply. Open is not a
-judgement that the mathematics is unsettled; a question that could not be settled is <em>Unresolved</em>, a separate status.</p></section>
-<section id="findings"><h2>Findings</h2><p>Each investigated claim receives one of six findings.</p>
+<p>Human checking is not a condition of initial Open publication, and no publication waits for an author's reply. Open is not a
+judgement that the mathematics is unsettled; a question that could not be settled is <em>Unresolved</em>, a separate status. An Open finding may later receive a corrective version that reports an unresolved or rejected status.</p></section>
+<section id="findings"><h2>Findings</h2><p>Each investigated claim has one finding, or a status correction to a previously public Open finding.</p>
 <ul class="legend">{legend_html()}</ul></section>
 <section id="verification"><h2>Checks and evidence</h2><p>Each case page lists the checks that actually took place, and nothing
 else. A check can be a separate-session hostile AI recheck, a reproduction by the researcher, an external check, a
@@ -1388,17 +1813,14 @@ tested and its limits. Only deep audits are published by name; lighter screens a
 <section id="source"><h2>Source check</h2><p>Findings are checked against the version of record. Each claim states whether every
 decisive element was checked on rendered pages of the published version (full), only partly (partial), or whether the
 needed version could not be obtained. A question that depends on an unobtainable version is reported as unresolved, not as
-a defect. It is shown only inside a record released for other, settled claims in the same paper, and the record is
-revised if the missing version becomes available.</p></section>
-<section id="authors"><h2>Author responses</h2><p>Each claim records the authors' position, and the position is shown whatever
-it is. Whether a written agreement counts toward Confirmed is recorded separately, and an author's response is never described
-as verification. Author contact is not a publication requirement. Author notification, a waiting period and author consent are not publication gates.</p></section>
+a defect. In a new record it may appear only as clearly labelled context beside a qualifying positive finding about the same paper; it cannot support that finding or be the record's principal proposition. A corrective version of a previously public Open finding may report its new unresolved status directly.</p></section>
+<section id="authors"><h2>Author responses and outreach</h2><p>Scientific status and outreach are independent. Open never means that a response is pending. Where the public record supports it, outreach may be stated as not contacted, awaiting a substantive response, or substantive response received. A factual author position is separate. The page does not publish private correspondence or attachments. Whether a written agreement counts toward Confirmed is recorded separately. Author contact is not a publication requirement.</p></section>
 <section id="ai"><h2>How AI is used</h2><p>AI models search for counterexamples, check candidate findings in separate sessions
 and help write test code. They do not decide what is published. Each finding is checked against the published version, and the
 researcher makes every editorial decision. Human checks are recorded when they happen; they are optional, not a condition of
 publication. Each record states how AI was used in that case.</p></section>
 <section id="responses"><h2>Author responses: policy</h2><ul>
-<li>Author contact is optional and is not required before or after publication.</li>
+<li>Author contact is optional and is not required before or after publication. Open is not an outreach state.</li>
 <li>If a substantive written response already exists, it is considered in the record and may motivate further checking.</li>
 <li>An author's disagreement is evidence to assess, not a veto over publication.</li>
 <li>A reply is published only as the authors' own public statement, wording they separately approve for public use, or a link to their public statement.</li>
@@ -1417,17 +1839,12 @@ consent. Allegations about papers not on this site should not be sent through pu
 units; small counts that could identify an unpublished case are suppressed.</p></section>
 <section id="release"><h2>How releases are approved</h2><p>Every real record version has a release manifest containing the
 SHA-256 of its exact public data file. The site build refuses a missing or mismatched manifest. Public versions are
-immutable: corrections use a new version. The owner approves each release. Automated tests and a privacy scan must pass
-before it deploys.</p>
+immutable: corrections use a new version. A validated positive finding with status Open is released by default after its case-specific scientific, source, evidence, scope, correction, novelty, rights, privacy and presentation checks pass. Author contact is not a gate. An active owner hold blocks an initial Open release. A previously public Open finding may receive a corrective or superseding version without a new per-case publish instruction when new evidence changes its status or material scope. A new Confirmed positive or named negative record retains its case-specific publish authorization. Automated tests, history checks and a privacy scan must pass before deployment.</p>
 <p class="small muted">{keys_line}</p></section>
 <section id="not"><h2>What we do not do</h2><ul><li>Publish anonymous or unchecked allegations.</li>
 <li>Rank journals, fields or authors.</li><li>Report error rates for published research.</li>
-<li>Name a paper because a candidate was rejected or remains unresolved.</li></ul></section>
-<section id="changes"><h2>Changes</h2><p class="small">Version 2.0, 13 November 2026. Case pages now state Open or Confirmed,
-give the basis for that status, and list only the checks that took place. Author responses are recorded per claim and kept
-separate from verification. Mathematics is typeset from its TeX source at build time. Earlier versions of this page said that
-only confirmed defects are published, and that every published defect had been checked by a human. Those statements are withdrawn:
-neither is a requirement of publication.</p></section>
+<li>Name a paper solely because a new candidate was rejected or remains unresolved. A correction to a previously public Open finding remains visible as a status update.</li></ul></section>
+<section id="changes"><h2>Changes</h2><p class="small">Version 2.1, 23 November 2026. Added the standing release rule for validated Open positives, the narrow same-paper unresolved-context rule, and the corrective-version path for previously public Open findings. Outreach is stated separately from scientific status. Historical releases remain immutable. Earlier versions of this page said that only confirmed defects are published, and that every published defect had been checked by a human. Those statements are withdrawn: neither is a requirement of publication.</p></section>
 </div></div>
 """
     site.add(page, layout(site, page, "Methodology", body, "methodology/", indexable=True, cls="methodology"))
@@ -1470,7 +1887,7 @@ def render_statistics(site):
         latest = i == len(snaps) - 1
         page = "statistics/index.html" if latest else f"statistics/{snap['snapshot']}/index.html"
         t = snap["totals"]
-        rs = released_stats(site.c, snap["as_of"])
+        rs = released_stats(site.c, snap["as_of"], include_legacy_no_reply=snap["metrics_version"] == "1.1")
         m06 = t["M06"]
         conf = m06["confirmed"]
         m07 = sum(t["M07"].values())
@@ -1647,23 +2064,38 @@ def render_404(site):
 
 def rich(rec, text, where):
     """Text for one field. Schema-2 fields may hold \\( \\) and \\[ \\] mathematics; schema-1 text is escaped as written."""
-    if rec.get("schema") == 2:
+    if rec.get("schema") in {2, 3}:
         return mathml.render(text, where, math=True)
     return E(text)
 
 
 def claim_view(rec, c):
-    """Facts about one claim, the same for schema 1 and schema 2: outcome, status, the evidence that happened and the
+    """Facts about one claim: outcome, status, evidence that happened and the
     author response. Renderers and statistics read this. It records facts; it does not decide publication."""
     res = c["result"]
-    v2 = rec.get("schema") == 2
+    v2 = rec.get("schema") in {2, 3}
     status = (res["status"] if v2 else "confirmed") if res["outcome"] == "defect_found" else None
+    outcome = res["outcome"]
+    revision = c.get("publication_revision") or {}
+    if revision:
+        status = revision["to_status"]
+        if status == "rejected":
+            outcome = "rejected"
+    provenance = c.get("status_provenance") or {}
+    if provenance:
+        status = provenance["status"]
+        if status == "rejected":
+            outcome = "rejected"
     if v2:
         evidence = [dict(e) for e in c["evidence"]]
-        ar = c["author_response"]
-        response = {"position": ar["position"], "responder": ar.get("responder"), "basis": ar["basis"],
-                    "counts": ar["counts"], "covers": ar.get("covers"), "assessment": ar.get("assessment"),
-                    "legacy": False, "summary": None}
+        ar = c.get("author_response")
+        if rec.get("schema") == 3 and ar is None:
+            response = {"position": None, "responder": None, "basis": "none", "counts": False,
+                        "covers": None, "assessment": None, "legacy": False, "summary": None}
+        else:
+            response = {"position": ar["position"], "responder": ar.get("responder"), "basis": ar.get("basis", "none"),
+                        "counts": ar.get("counts", False), "covers": ar.get("covers"), "assessment": ar.get("assessment"),
+                        "legacy": False, "summary": None}
     else:
         evidence = [{"type": V1_EVIDENCE[k["kind"]], "date": k["date"], "session": k.get("session"),
                      "identity": None, "detail": k["detail"]}
@@ -1672,7 +2104,7 @@ def claim_view(rec, c):
         counts = any(k["kind"] == "author_agreement" and k.get("result") == "confirms" for k in c.get("checks", []))
         response = {"position": pos["position"], "responder": None, "basis": "original" if counts else "none",
                     "counts": counts, "covers": None, "assessment": None, "legacy": True, "summary": pos.get("summary")}
-    return {"outcome": res["outcome"], "status": status, "evidence": evidence, "response": response}
+    return {"outcome": outcome, "status": status, "evidence": evidence, "response": response}
 
 
 AGREEMENT_SENTENCE = {
@@ -1705,8 +2137,10 @@ def basis_text(view):
 
 
 def status_html(site, page, status):
-    label = {"open": "Open", "confirmed": "Confirmed"}[status]
-    return f'<a class="status status-{status}" href="{site.href(page, "definitions/")}#{status}">{label}</a>'
+    label = {"open": "Open", "confirmed": "Confirmed", "unresolved": "Unresolved", "rejected": "Rejected"}[status]
+    if status in {"open", "confirmed"}:
+        return f'<a class="status status-{status}" href="{site.href(page, "definitions/")}#{status}">{label}</a>'
+    return f'<span class="status status-{status}">{label}</span>'
 
 
 def status_cell(site, page, rec, c):
@@ -1717,7 +2151,10 @@ def status_cell(site, page, rec, c):
         rerun = " · rerun passes" if (c.get("reproduction") or {}).get("result") == "pass" else ""
         return f'<span class="vt">Deep audit{rerun}</span><span class="vs-sub">{E(src)}</span>'
     if view["outcome"] == "unresolved":
-        return f'<span class="vt">Not settled</span><span class="vs-sub">{E(src)}</span>'
+        label = "Unresolved" if c.get("publication_revision") or c.get("status_provenance") else "Not settled"
+        return f'<span class="vt status-unresolved">{label}</span><span class="vs-sub">{E(src)}</span>'
+    if view["outcome"] == "rejected":
+        return f'<span class="vt status-rejected">Rejected</span><span class="vs-sub">Former Open finding · {E(src)}</span>'
     names = [EVIDENCE_SHORT[e["type"]] for e in view["evidence"]]
     if view["response"]["counts"]:
         names.append(EVIDENCE_SHORT["author_agreement"])
@@ -1741,7 +2178,7 @@ def evidence_list(rec, view, where):
 
 
 def author_html(rec, view, where):
-    """Author response for one claim: position, who responded, what it covers. It never claims verification."""
+    """Render only the author-response facts allowed by the record schema."""
     resp = view["response"]
     if resp["legacy"]:
         out = f"<p>{E(POS_LONG[resp['position']])}</p>"
@@ -1750,6 +2187,8 @@ def author_html(rec, view, where):
                     '<p class="resp-src">Quoted with the authors\' approval.</p>')
         return out
     pos = resp["position"]
+    if pos is None:
+        return "<p>No substantive author position is recorded in this version.</p>"
     if pos in RESPONSE_VERB and resp.get("responder") in RESPONDERS:
         singular = resp["responder"] in {"one", "one_of_two"}
         line = f"{RESPONDERS[resp['responder']]} {RESPONSE_VERB[pos][1 if singular else 0]}."
@@ -1766,20 +2205,136 @@ def author_html(rec, view, where):
 
 
 def scan_output(out_dir, denylist):
+    # Exact existing public PDF+attachment pairs. The embedded files are C2PA/JUMBF CBOR manifests;
+    # raw bytes are checked below, and any changed or new opaque attachment fails closed.
+    legacy_c2pa_attachments = {
+        ("35788fcacfed91012f9f1f7449c02168abbd9588e75dd636a69876f996e39e4a",
+         "b913370333b9a042564b8f5d6c3b5b4577f5b82f0e86bb9213ca50d4b9c8fb44"),
+        ("5be28b879699ec9c99142add40ecb02f1ba53025cc93dd09d4c191df1524e3c3",
+         "2f32c633312ab135e36ea1aa66c9c0d42c963c1790087117a73cebde8a3978f7"),
+        ("8d5bb24abdeee4beb0d34c7c3648c342087be528110c51ca4e264bb5aec0196a",
+         "e77d6304375e981468cb8b2c98244dc6585c16a6cb59d85935912f092e1749d6"),
+        ("9ebbaea1081ce64e4d7af2c25538d93f0bd1dae5c280c579b21afb6251aa07b2",
+         "a4bfed2d7f145630197f94cc05c18ef6db0bcf3fc62186afedf71d0cca83179b"),
+        ("ecbb9b5b10f66741f50cec4307f7024ba046022863e02a9e0a33d15ba07a26fe",
+         "39be431b783d7ddc04fb9da3fbddd985dca58ab5088ddf2802f975a848dc968d"),
+    }
+    text_attachment_suffixes = {".csv", ".html", ".htm", ".json", ".md", ".txt", ".xml"}
     problems = []
     pats = [re.compile(p) for p in LEAK_PATTERNS]
     deny = [d for d in denylist if d]
     for f in out_dir.rglob("*"):
-        if f.is_file() and f.suffix in {".html", ".json", ".xml", ".css", ".js", ".txt"}:
+        if not f.is_file():
+            continue
+        if f.suffix == ".pdf":
+            try:
+                from pypdf import PdfReader
+                from pypdf.generic import ByteStringObject, IndirectObject, NameObject, TextStringObject
+
+                def pdf_object_text(obj, depth=0, seen=None):
+                    if depth > 64:
+                        raise ValueError("PDF object nesting limit")
+                    if seen is None:
+                        seen = set()
+                    if isinstance(obj, IndirectObject):
+                        ref = (obj.idnum, obj.generation)
+                        if ref in seen:
+                            return ""
+                        seen.add(ref)
+                        obj = obj.get_object()
+                    if isinstance(obj, ByteStringObject):
+                        raw = bytes(obj)
+                        parts = [raw.decode("latin-1"), raw.decode("utf-8", errors="replace")]
+                        if raw.startswith((b"\xff\xfe", b"\xfe\xff")):
+                            parts.append(raw.decode("utf-16", errors="replace"))
+                        return "\n".join(parts)
+                    if isinstance(obj, (TextStringObject, NameObject)):
+                        return str(obj)
+                    if isinstance(obj, dict):
+                        identity = id(obj)
+                        if identity in seen:
+                            return ""
+                        seen.add(identity)
+                        return "\n".join(pdf_object_text(value, depth + 1, seen)
+                                         for value in obj.values())
+                    if isinstance(obj, (list, tuple)):
+                        identity = id(obj)
+                        if identity in seen:
+                            return ""
+                        seen.add(identity)
+                        return "\n".join(pdf_object_text(value, depth + 1, seen) for value in obj)
+                    return ""
+
+                def pdf_text(reader, pdf_digest, depth=0):
+                    if depth > 4 or reader.is_encrypted or not reader.pages:
+                        raise ValueError("PDF nesting, encryption or page limit")
+                    parts = []
+                    if reader.metadata:
+                        parts.append(str(reader.metadata))
+                    xmp = reader.xmp_metadata
+                    if xmp:
+                        stream = getattr(xmp, "stream", None)
+                        if stream is None or not hasattr(stream, "get_data"):
+                            raise ValueError("PDF XMP metadata could not be read")
+                        xmp_bytes = stream.get_data()
+                        parts.append(xmp_bytes.decode("latin-1"))
+                        parts.append(xmp_bytes.decode("utf-8", errors="replace"))
+                        if xmp_bytes.startswith((b"\xff\xfe", b"\xfe\xff")):
+                            parts.append(xmp_bytes.decode("utf-16", errors="replace"))
+                    page_text = []
+                    for page in reader.pages:
+                        extracted = page.extract_text() or ""
+                        page_text.append(extracted)
+                        parts.append(extracted)
+                    if not any(value.strip() for value in page_text):
+                        raise ValueError("PDF has no extractable page text")
+                    # Covers nested annotation actions (/A -> /URI), additional/catalog actions,
+                    # form values, and outline strings. Stream payloads are handled separately.
+                    parts.append(pdf_object_text(reader.trailer))
+                    fields = reader.get_fields()
+                    if fields:
+                        parts.append(str(fields))
+                    for name, attachments in reader.attachments.items():
+                        parts.append(str(name))
+                        for attachment in attachments:
+                            if not isinstance(attachment, bytes):
+                                raise ValueError("invalid embedded file")
+                            attachment_digest = sha256_bytes(attachment)
+                            if attachment.startswith(b"%PDF-"):
+                                parts.append(pdf_text(PdfReader(io.BytesIO(attachment), strict=True),
+                                                      attachment_digest, depth + 1))
+                            elif Path(str(name)).suffix.lower() in text_attachment_suffixes:
+                                if attachment.startswith((b"\xff\xfe", b"\xfe\xff")):
+                                    parts.append(attachment.decode("utf-16", errors="strict"))
+                                else:
+                                    parts.append(attachment.decode("utf-8-sig", errors="strict"))
+                            elif (pdf_digest, attachment_digest) in legacy_c2pa_attachments:
+                                # CBOR text strings are UTF-8; scanning raw bytes catches ASCII/UTF-8
+                                # strings while the exact pair preserves the immutable legacy files.
+                                parts.append(attachment.decode("latin-1"))
+                                parts.append(attachment.decode("utf-8", errors="replace"))
+                            else:
+                                raise ValueError("unsupported opaque embedded file")
+                    return "\n".join(parts)
+
+                pdf_bytes = f.read_bytes()
+                pdf_digest = sha256_bytes(pdf_bytes)
+                text = pdf_text(PdfReader(io.BytesIO(pdf_bytes), strict=True), pdf_digest)
+            except Exception:
+                problems.append(f"{f.relative_to(out_dir)}: PDF privacy scan could not complete")
+                continue
+        elif f.suffix in {".html", ".json", ".xml", ".css", ".js", ".txt"}:
             text = f.read_text(encoding="utf-8", errors="replace")
-            for p in pats:
-                if p.search(text):
-                    problems.append(f"{f.relative_to(out_dir)}: matches {p.pattern}")
-            for d in deny:
-                if d.lower() in text.lower():
-                    problems.append(f"{f.relative_to(out_dir)}: contains a private-denylist term")
-            for em in re.findall(r"[\w.+-]+@[\w-]+\.[\w.]+", text):
-                problems.append(f"{f.relative_to(out_dir)}: e-mail address {em}")
+        else:
+            continue
+        for p in pats:
+            if p.search(text):
+                problems.append(f"{f.relative_to(out_dir)}: matches {p.pattern}")
+        for d in deny:
+            if d.lower() in text.lower():
+                problems.append(f"{f.relative_to(out_dir)}: contains a private-denylist term")
+        for em in re.findall(r"[\w.+-]+@[\w-]+\.[\w.]+", text):
+            problems.append(f"{f.relative_to(out_dir)}: contains an e-mail address")
     return problems
 
 
