@@ -1,0 +1,158 @@
+{
+  "public_id": "TA-2026-016",
+  "version": "1.3",
+  "schema": 3,
+  "released": "2026-11-25",
+  "status": "published",
+  "sample": false,
+  "kind": "defect",
+  "track": "statistics",
+  "title": "Selective conformal inference with false coverage-statement rate control",
+  "headline": "Open finding narrowed after author clarification: Theorem 2's lower FCR bound is valid under the Supplementary Material's explicit probability-integral-transform reparameterization; the remaining issue is a main-text definition/notation gap about which scale the symbol T denotes.",
+  "work": {
+    "authors": [
+      "Yajie Bao",
+      "Yuyang Huo",
+      "Haojie Ren",
+      "Changliang Zou"
+    ],
+    "title": "Selective conformal inference with false coverage-statement rate control",
+    "venue": "Biometrika",
+    "year": 2024,
+    "volume": "111",
+    "pages": "727–742",
+    "doi": "10.1093/biomet/asae010"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Theorem 2 equation (9) lower FCR bound",
+      "kind": "theorem",
+      "role": "secondary",
+      "page": "Biometrika 111(3), 727–742, Section 4.2, Theorem 2, equation (9); current-author PDF physical p. 9",
+      "gist": "Equation (9) uses \\(T_{(\\hat\\kappa+1)}\\), while the Supplementary Material explicitly reparameterizes the scores by their marginal CDF and then reuses \\(T\\) for \\(\\operatorname{Unif}([0,1])\\) scores in the subsequent theory; the main-text theorem does not restate that change of scale.",
+      "statement": "The lower FCR bound in Theorem 2 is valid on the probability-integral-transform scale used by the Supplementary Material, but the main-text statement reuses \\(T\\) without stating alongside the theorem that \\(T\\) now denotes the transformed \\(\\operatorname{Unif}([0,1])\\) score rather than the raw score \\(T_i=g(X_i)\\).",
+      "conditions": [
+        "Section 3.1 defines the original selection score as \\(T_i=g(X_i)\\), with \\(g\\) real-valued.",
+        "Supplementary Material Appendix A.1 states that ranking-based selection and residual ranks are preserved by the marginal CDF transforms and then assumes \\(T_i,R_i\\sim\\operatorname{Unif}([0,1])\\) in the following assumptions and theoretical results.",
+        "Under that probability-scale convention, the conditional binomial calculation in the proof of Theorem 2 uses \\(p=T_{(\\hat\\kappa+1)}\\) and is valid."
+      ],
+      "quantifiers": "Theorem 2's intended probability-scale formulation for the stated class of ranking-based selection procedures.",
+      "result": {
+        "outcome": "defect_found",
+        "status": "open",
+        "defect_class": "definition_defect",
+        "affects": "secondary_result",
+        "depth": "deep_audit",
+        "summary": "The original raw-score counterexample does not refute the intended lower bound because the Supplementary Material explicitly applies the probability-integral transform and then reuses \\(T\\) for \\(\\operatorname{Unif}([0,1])\\) scores in the subsequent theory. The remaining issue is definitional/notation clarity: the main text defines \\(T_i=g(X_i)\\) on an arbitrary real scale and states equation (9) without saying alongside the theorem that \\(T\\) now denotes the transformed probability-scale score.",
+        "witness": "If equation (9) is read literally using the raw main-text score \\(T_i=g(X_i)\\), monotone translation changes the printed lower endpoint while preserving the selected sets, conformal intervals and actual FCR. That demonstrates why the probability-scale convention matters, but after the Supplementary Material's reparameterization is taken into account it is not a counterexample to the intended theorem.",
+        "argument": "Section 3.1 defines \\(T_i=g(X_i)\\) as the original real-valued score. Appendix A.1 of the Supplementary Material then observes that replacing scores by \\(F_T(T_i)\\) preserves the ranking-based selected test and calibration sets, and explicitly says that \\(T_i\\) and \\(R_i\\) may therefore be assumed \\(\\operatorname{Unif}([0,1])\\) in the following assumptions and theoretical results. Under this reused notation, the proof's conditional binomial parameter \\(p=T_{(\\hat\\kappa+1)}\\) is correct. The author clarification points directly to that convention and agrees it could be stated more explicitly alongside Theorem 2. As Stated therefore withdraws its earlier characterization of the intended probability-scale theorem as false and narrows the finding to a definition/notation gap in the main-text presentation.",
+        "not_claimed": [
+          "The intended probability-scale lower FCR bound in Theorem 2 is false.",
+          "The proof's conditional binomial calculation is invalid after the Supplementary Material's reparameterization.",
+          "The SCOP upper guarantee is false.",
+          "The SCOP procedure itself is invalid.",
+          "The empirical results are invalid.",
+          "The authors agreed with As Stated's earlier statement-false characterization."
+        ],
+        "repair": "local_repair_proposed",
+        "repair_note": "State explicitly alongside Assumption 1 and Theorem 2 that \\(T\\) denotes the probability-integral-transformed \\(\\operatorname{Unif}([0,1])\\) score for the theoretical results, or write the lower bound on the original score scale using \\(F_T(T_{(\\hat\\kappa+1)})\\). No additional distributional assumption is needed beyond the continuity already used for the PIT."
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "Biometrika 111(3), 727–742, Section 4.2, Theorem 2, equation (9); current-author PDF physical p. 9; proof supplement Section C.1.",
+        "detail": "The DOI-linked current-author theorem and proof-bearing supplement were checked. The subscriber-restricted typeset VOR theorem page was not independently displayed, so VOR verification remains partial."
+      },
+      "evidence": [
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-11-14",
+          "session": "informed",
+          "detail": "The initial hostile validation established that equation (9) fails if T is interpreted on the original raw-score scale and identified the probability-integral-transform quantity as the relevant binomial probability. After the author's clarification, an exact source recheck of Supplementary Material Appendix A.1 confirmed that the paper explicitly reuses T for Uniform(0,1) transformed scores in the subsequent theoretical analysis, so the intended probability-scale theorem is not refuted."
+        }
+      ],
+      "author_response": {
+        "position": "partly_agrees"
+      },
+      "status_provenance": {
+        "status": "open",
+        "revision_version": "1.1"
+      }
+    }
+  ],
+  "correction": null,
+  "related": [],
+  "evidence": {
+    "package_doi": null,
+    "package_sha256": null,
+    "licence": "No public evidence package released.",
+    "files": []
+  },
+  "technical_notes": [
+    {
+      "creator": "As Stated",
+      "date": "2026-11-25",
+      "version": "2.0",
+      "pages": 1,
+      "sha256": "9b9bbc92ad72276d4b74c8cb64fd5795c576a5fabb552c70fe56584013eb52b1",
+      "rights": "CC BY 4.0 for this note; third-party material remains under its own rights.",
+      "path": "technical-notes/scop-lower-fcr-bound/v2.0.pdf"
+    }
+  ],
+  "history": [
+    {
+      "date": "2026-11-17",
+      "type": "audit",
+      "label": "A deep audit identified a raw-score/probability-scale ambiguity in the lower FCR bound and initially characterized the printed lower bound as false on the raw-score reading."
+    },
+    {
+      "date": "2026-11-17",
+      "type": "outreach",
+      "label": "An author was contacted with the technical note on 14 November 2026."
+    },
+    {
+      "date": "2026-11-17",
+      "type": "release",
+      "label": "Released as an Open finding with the exact two-page As Stated technical note."
+    },
+    {
+      "date": "2026-11-17",
+      "type": "author_response",
+      "label": "One author pointed to the Supplementary Material's explicit probability-integral-transform convention and agreed that the convention could be stated more explicitly alongside Theorem 2."
+    },
+    {
+      "date": "2026-11-18",
+      "type": "correction",
+      "label": "After rechecking the cited Supplementary Material, As Stated narrowed the finding: the intended probability-scale lower bound is not refuted; the remaining issue is a definition/notation gap in the main-text presentation."
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2026-11-17",
+      "change": "First release as an Open finding with the exact two-page As Stated technical note."
+    },
+    {
+      "version": "1.1",
+      "date": "2026-11-18",
+      "change": "Narrowed the finding after substantive author clarification and exact source recheck. The intended probability-scale lower bound is no longer characterized as false; the remaining Open finding is a definition/notation gap about the score normalization used in the main-text statement. Version 1.0 and its technical note remain available as the historical record."
+    },
+    {
+      "version": "1.2",
+      "date": "2026-11-18",
+      "change": "Rendering-only release: added explicit mathematical markup so the score definitions and probability-scale expressions render as native MathML. No scientific assessment changed from version 1.1."
+    },
+    {
+      "version": "1.3",
+      "date": "2026-11-25",
+      "change": "Corrected the public technical note to supersede the earlier raw-score characterization: Supplementary Material Appendix A.1 explicitly PIT-transforms the scores and the intended probability-scale lower bound is valid; the remaining Open issue is the main-text definition/notation gap.",
+      "revision_type": "error_correction",
+      "our_correction": true
+    }
+  ],
+  "primary_claim_id": "c1",
+  "statements": {
+    "ai_use": "AI systems contributed to the original audit and hostile validation. A subsequent substantive author clarification triggered an exact source recheck, and the public finding was narrowed accordingly; it remains Open and is not presented as human-verified."
+  }
+}

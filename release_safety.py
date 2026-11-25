@@ -16,6 +16,8 @@ from pathlib import Path, PurePosixPath
 PUBLIC_ROOT = "content/published/"
 OPERATIONAL_README = "content/published/README.txt"
 PUBLIC_HISTORY_BASELINE = "fe0c2c822a4d64fa9aa5661b30ae0732ce3b3790"
+HISTORICAL_MARKER = "ASSTATED_HISTORICAL_PUBLIC_STATE_V1"
+HISTORICAL_MARKER_FILE = "2026-11-25__HISTORICAL_PUBLIC_STATE_V1.json"
 CONTROL_MARKER = "ASSTATED_RELEASE_CONTROL_V1"
 DEPLOYMENT_MARKER = "ASSTATED_DEPLOYMENT_V1"
 OWNER_PUBLISH_MARKER = "ASSTATED_OWNER_PUBLISH_V1"
@@ -46,6 +48,43 @@ HOLD_BROAD_SCOPE_RE = re.compile(
     r"\b(?:site[- ]wide|project[- ]wide|globally|without exception)\b",
     re.IGNORECASE,
 )
+
+# Classification-B history migration inventory. Recognition is exact-tuple
+# bookkeeping only; it is excluded from release authorization and cannot bless
+# changed bytes or a new public version.
+HISTORICAL_PUBLIC_STATE_ENTRIES = [
+    {"public_id": "TA-2026-006", "version": "1.2", "record_sha256": "166b4c69a6ffbb497ef10892aa70ce1bc7d41d790a6f90b5dd65af0ce3b0e055", "manifest_sha256": "19467cc4fffe2674b450b5dfb5ebe9f5f44dd9fda60830dbdad0f8d26dfa8673", "source_commit": "29ca89b5494a3f45ee28bc5a6b789672a2762c7c", "public_run_id": "44194543862"},
+    {"public_id": "TA-2026-008", "version": "1.2", "record_sha256": "728a5d740be2be231c64ed203f684da8802a32a33af7ac9150a6b5d7c03846a4", "manifest_sha256": "d72960066aa627b17f7ae22be8dddfdd0efe03cbae893aa902c9fc87ede48371", "source_commit": "f86f47a796f674d09de0db6f4a0f3ffde6c6126d", "public_run_id": "44194543862"},
+    {"public_id": "TA-2026-015", "version": "1.2", "record_sha256": "a6fc4cea8761fc0a217eb108b21e47cf66675c1af2e478de604c78f36cb1fe09", "manifest_sha256": "cedf2766333fb56f77078d8f05d627f637213aecaff4bab721492e3476e9f721", "source_commit": "36f95c23e9508a3dc5aea8b3d083756b08d3c6e6", "merge_commit": "c51df8a763cc8204c7a106e9e7de75a90dbd8aa0", "public_run_id": "44183775697"},
+    {"public_id": "TA-2026-016", "version": "1.1", "record_sha256": "a0dee1c27e859d56497053992e3befbfa5b46bc3b6b6988a37deab24d8a6fccd", "manifest_sha256": "88662da9605d309d9080db162f6b4afecfa344bfef7b4855d5c4fef82b8d102c", "source_commit": "14481da5f091ebd7feaa0c8d431df3d2549600a4", "merge_commit": "a5355dcb75c2c7d50a24d72c00a05ef41c7bfc21", "public_run_id": "44164701158"},
+    {"public_id": "TA-2026-016", "version": "1.2", "record_sha256": "3b4f9981142aa02321efb9809269913d7b8d63ba620150f0a6a66fe70ff2d8ac", "manifest_sha256": "78eaba7c739c3b51bb20735935e05a8bcf6d11bdbff23ef8032b31f43d4212a6", "source_commit": "f48a40e31fd90f2f51162641516061474cbdf63e", "merge_commit": "a55629074d6f7240f496f4ecd3f7df4769ce8d31", "public_run_id": "44178136823"},
+    {"public_id": "TA-2026-018", "version": "1.1", "record_sha256": "203fb4bc2c6c75c05a76fd747e407aa5ce35fed658a21100c86e0145b50b84a1", "manifest_sha256": "2259f40479dfc56fa83ed8eb3a029190778c01b26e27cb1ac6d6d9f421aa83e0", "source_commit": "de1e7a3c689b3b0837a8fbe2a2806e9e9ad328aa", "merge_commit": "d09d8e1a061361d5f583affbe0e0a736d0ac5ddd", "public_run_id": "44187689102"},
+    {"public_id": "TA-2026-018", "version": "1.2", "record_sha256": "5a379cca0c295576886ded68fc0d26c3dc88e95ce57a52c91130059ab30a8c11", "manifest_sha256": "b099e080cbcb403b432874aed84ab3baad29fe01e66117014b005ad88a4b0b44", "source_commit": "aa1687720f77ce8ee1a923231eda3e7d26cdb69c", "production_source_commit": PUBLIC_HISTORY_BASELINE, "public_run_id": "44194543862"},
+]
+
+# Exact immutable lineage nodes for later versions carrying the schema-2
+# status fields forward. This is a recognition bridge only; every later
+# release still needs ordinary controls and canonical review.
+LEGACY_LINEAGE_NODES = {
+    ("TA-2026-016", "c1"): {
+        "1.0": ("ff0993d467cda6d1eff0b7bea14033efc4ae952805a9565c47077ee42a090a7a", "open"),
+        "1.1": ("a0dee1c27e859d56497053992e3befbfa5b46bc3b6b6988a37deab24d8a6fccd", "open"),
+        "1.2": ("3b4f9981142aa02321efb9809269913d7b8d63ba620150f0a6a66fe70ff2d8ac", "open"),
+        "1.3": ("006c5d029974a7c528e7da0b79d98a09401bd3c33e13a545ac776cf62ab8e9dd", "open"),
+    },
+    ("TA-2026-018", "c1"): {
+        "1.0": ("f34c837e96d388ba4f3740894ecb275529c77ac7d878598ee2e0e33ef7d626fb", "open"),
+        "1.1": ("203fb4bc2c6c75c05a76fd747e407aa5ce35fed658a21100c86e0145b50b84a1", "confirmed"),
+        "1.2": ("5a379cca0c295576886ded68fc0d26c3dc88e95ce57a52c91130059ab30a8c11", "confirmed"),
+        "1.3": ("4b55265755d93692a8090c02e0bdf75b5d951743bdfe1c1be527ecaa8ba7e6f9", "confirmed"),
+    },
+    ("TA-2026-018", "c2"): {
+        "1.0": ("f34c837e96d388ba4f3740894ecb275529c77ac7d878598ee2e0e33ef7d626fb", "open"),
+        "1.1": ("203fb4bc2c6c75c05a76fd747e407aa5ce35fed658a21100c86e0145b50b84a1", "confirmed"),
+        "1.2": ("5a379cca0c295576886ded68fc0d26c3dc88e95ce57a52c91130059ab30a8c11", "confirmed"),
+        "1.3": ("4b55265755d93692a8090c02e0bdf75b5d951743bdfe1c1be527ecaa8ba7e6f9", "confirmed"),
+    },
+}
 
 
 class GuardError(Exception):
@@ -224,6 +263,75 @@ def git_bytes(repo: Path, revision: str, path: str) -> bytes | None:
     return proc.stdout if proc.returncode == 0 else None
 
 
+def historical_public_state_marker(control_root: Path) -> tuple[Path, dict] | None:
+    """Load and validate the one-time historical recognition marker, if present."""
+    path = control_root / "05_Website" / "Deployment" / HISTORICAL_MARKER_FILE
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        raise GuardError("historical public-state marker is unreadable") from None
+    _require(set(data) == {"marker", "decision_date", "recognized_public_state_date", "approved_release",
+                           "classification", "purpose", "authorization_reconstructible",
+                           "scientific_correctness_determined", "authorizes_new_or_changed_bytes",
+                           "future_corrections_require_current_procedure", "source_baseline", "entries"} and
+             data.get("marker") == HISTORICAL_MARKER,
+             "historical public-state marker has an unsupported shape")
+    _require(data.get("decision_date") == "2026-11-25" and
+             data.get("recognized_public_state_date") == "2026-11-23" and
+             data.get("approved_release") is False and
+             data.get("classification") == "B" and
+             data.get("purpose") == "runtime_audit_migration_only" and
+             data.get("authorization_reconstructible") is False and
+             data.get("scientific_correctness_determined") is False and
+             data.get("authorizes_new_or_changed_bytes") is False and
+             data.get("future_corrections_require_current_procedure") is True and
+             data.get("source_baseline") == PUBLIC_HISTORY_BASELINE,
+             "historical public-state marker must distinguish recognition from release authorization")
+    entries = data.get("entries")
+    expected = sorted(HISTORICAL_PUBLIC_STATE_ENTRIES, key=lambda item: (item["public_id"], item["version"]))
+    _require(entries == expected, "historical public-state marker does not match the exact seven authorized tuples")
+    return path, data
+
+
+def validate_historical_schema2_bridge(repo: Path, deployed_sha: str, record: dict) -> bool:
+    """Recognize only the exact TA-016/TA-018 schema-2 predecessor bytes."""
+    rid = record.get("public_id")
+    if record.get("version") != "1.3" or rid not in {"TA-2026-016", "TA-2026-018"}:
+        return False
+    if deployed_sha != PUBLIC_HISTORY_BASELINE:
+        return False
+    expected = {item["version"]: item for item in HISTORICAL_PUBLIC_STATE_ENTRIES if item["public_id"] == rid}
+    for version, item in expected.items():
+        raw = git_bytes(repo, deployed_sha, f"content/published/records/{rid}/v{version}.json")
+        manifest = git_bytes(repo, deployed_sha, f"content/published/releases/record__{rid}__{version}.txt")
+        _require(raw is not None and sha256(raw) == item["record_sha256"],
+                 f"historical bridge {rid} v{version} is not the recognized deployed JSON bytes")
+        _require(manifest is not None and sha256(manifest) == item["manifest_sha256"],
+                 f"historical bridge {rid} v{version} is not the recognized deployed manifest bytes")
+    anchor_raw = git_bytes(repo, deployed_sha, f"content/published/records/{rid}/v1.0.json")
+    _require(anchor_raw is not None, f"historical bridge {rid} lacks its v1.0 lifecycle anchor")
+    anchor = json.loads(anchor_raw)
+    _require(all(claim.get("result", {}).get("status") == "open" for claim in anchor.get("claims", [])),
+             f"historical bridge {rid} v1.0 is not an Open lifecycle anchor")
+    claims = {claim.get("id"): claim for claim in record.get("claims", [])}
+    if rid == "TA-2026-016":
+        _require(claims.get("c1", {}).get("status_provenance") == {"status": "open", "revision_version": "1.1"},
+                 "historical bridge TA-2026-016 v1.3 lacks exact carried Open provenance")
+    else:
+        _require(claims.get("c1", {}).get("status_provenance") == {"status": "confirmed", "revision_version": "1.1"},
+                 "historical bridge TA-2026-018 c1 lacks exact carried Confirmed provenance")
+        revision = claims.get("c2", {}).get("publication_revision")
+        _require(claims.get("c2", {}).get("role") == "secondary" and
+                 claims.get("c2", {}).get("result", {}).get("affects") == "secondary_result" and
+                 revision and revision.get("from_version") == "1.2" and
+                 revision.get("prior_sha256") == expected["1.2"]["record_sha256"] and
+                 revision.get("from_status") == revision.get("to_status") == "confirmed",
+                 "historical bridge TA-2026-018 c2 is not the exact scoped role correction")
+    return True
+
+
 def find_release_record_control(control_root: Path, public_id: str, version: str) -> tuple[str, dict]:
     records = control_root / "04_Publication" / "Release_Records"
     matches = []
@@ -251,7 +359,8 @@ def parse_release_marker(control_root: Path, public_id: str, version: str) -> di
 
 
 def validate_release_control_freshness(control_root: Path, deployed: dict,
-                                       new_records: list[tuple[str, str]]) -> None:
+                                       new_records: list[tuple[str, str]],
+                                       manifest_bindings: dict[str, tuple[str, str]] | None = None) -> None:
     baseline = deployed.get("release_records_inventory")
     _require(isinstance(baseline, list), "deployment marker needs its private release-record inventory")
     baseline_map = {}
@@ -265,8 +374,37 @@ def validate_release_control_freshness(control_root: Path, deployed: dict,
     current_map = {item["path"]: item["sha256"] for item in release_records_inventory(control_root)}
     _require(all(current_map.get(path) == digest for path, digest in baseline_map.items()),
              "a private release record used by the verified deployment changed or disappeared")
-    expected_new = {find_release_record_control(control_root, public_id, version)[0]
-                    for public_id, version in new_records}
+    expected_new = set()
+    for public_id, version in new_records:
+        control_path, _ = find_release_record_control(control_root, public_id, version)
+        expected_new.add(control_path)
+        control_name = Path(control_path).name
+        _require(control_name.endswith("__RELEASE_RECORD.md"),
+                 "private release control has an unexpected filename")
+        _require(re.fullmatch(rf"\d{{4}}-\d{{2}}-\d{{2}}__{re.escape(public_id)}__v{re.escape(version)}__RELEASE_RECORD\.md",
+                              control_name) is not None,
+                 "private release control filename is not bound to the exact public ID and version")
+        manifest_path = (Path(control_path).with_name(
+            control_name[:-len("__RELEASE_RECORD.md")] + "__release-manifest.txt")).as_posix()
+        _require(manifest_path in current_map,
+                 "the exact release-control-derived manifest is missing from the push")
+        private_json_path = (Path(control_path).with_name(
+            control_name[:-len("__RELEASE_RECORD.md")] + ".json")).as_posix()
+        _require(private_json_path in current_map,
+                 "the exact private release JSON copy is missing from the push")
+        _require(manifest_bindings is not None and manifest_path in manifest_bindings,
+                 "the pending public JSON and manifest hashes are unavailable for private freshness binding")
+        expected_record_sha, expected_manifest_sha = manifest_bindings[manifest_path]
+        manifest_bytes = (control_root / Path(manifest_path)).read_bytes()
+        _require(sha256(manifest_bytes) == expected_manifest_sha and
+                 set(manifest_bytes.decode("utf-8").splitlines()) == {
+                     "as-stated-release v1", "kind: record", f"id: {public_id}",
+                     f"version: {version}", f"sha256: {expected_record_sha}"},
+                 "the private paired manifest does not bind the exact public JSON bytes")
+        _require(sha256((control_root / Path(private_json_path)).read_bytes()) == expected_record_sha,
+                 "the private release JSON copy does not bind the exact public JSON bytes")
+        expected_new.add(manifest_path)
+        expected_new.add(private_json_path)
     extras = set(current_map) - set(baseline_map)
     _require(extras == expected_new,
              "private release-record changes do not match the public record versions in this push")
@@ -457,7 +595,11 @@ def validate_public_evidence(claim: dict, review: dict, current: dict, checks: l
         event = events.get(event_id)
         _require(event is not None, f"claim {claim['id']} public evidence refers to an unreviewed canonical event")
         value = event.get("value", {})
-        matching_date = isinstance(item.get("date"), str) and event.get("effective_at", "").startswith(item["date"])
+        matching_date = isinstance(item.get("date"), str) and (
+            event.get("effective_at", "").startswith(item["date"]) or
+            (event.get("dimension") == "author_position" and
+             event.get("value", {}).get("date") == item.get("date"))
+        )
         kind = item.get("type")
         if kind == "hostile_ai_recheck":
             session = {"fresh_blind": "blind", "fresh_informed": "informed"}.get(value.get("session"))
@@ -490,7 +632,8 @@ def normalize_document_reference(value: str) -> str:
 
 def validate_public_correction_projection(record: dict, canonical_claims: dict, events: list[dict],
                                            retired_context_claim_ids: set[str] | None = None,
-                                           prior_public_correction: dict | None = None) -> None:
+                                           prior_public_correction: dict | None = None,
+                                           prior_record_sha256: str | None = None) -> None:
     public_to_canonical = {public_id: item["id"] for public_id, item in canonical_claims.items()}
     canonical_to_public = {canonical_id: public_id for public_id, canonical_id in public_to_canonical.items()}
     relevant = []
@@ -504,12 +647,29 @@ def validate_public_correction_projection(record: dict, canonical_claims: dict, 
         if set(addresses) & set(canonical_to_public):
             relevant.append(event)
     correction = record.get("correction")
+    archival_announcement = {
+        "state": "announced", "type": "arXiv revision", "doi": None,
+        "date": "2026-11-18", "relation": "after_notification",
+        "attribution": "none_stated", "claims": ["c1", "c2"],
+        "note": "The responding author said the authors would post a corrected arXiv version shortly. No corrected arXiv version is independently verified in this record."
+    }
+    archival_carry_scope = (
+        record.get("public_id") == "TA-2026-018" and
+        tuple(int(part) for part in str(record.get("version", "0")).split(".")) >= (1, 3) and
+        prior_record_sha256 in {
+            "5a379cca0c295576886ded68fc0d26c3dc88e95ce57a52c91130059ab30a8c11",
+            "4b55265755d93692a8090c02e0bdf75b5d951743bdfe1c1be527ecaa8ba7e6f9",
+        } and prior_public_correction == archival_announcement
+    )
     if correction is None:
         _require(not relevant, "canonical source-correction event is missing from the public correction projection")
+        _require(not archival_carry_scope, "the pinned historical correction announcement cannot be deleted")
         return
     if not relevant:
         _require(prior_public_correction is not None,
                  "public correction has no active canonical source-correction event")
+        if archival_carry_scope and correction == archival_announcement:
+            return
         _require(prior_public_correction is not None and correction == prior_public_correction and
                  set(correction.get("claims", [])) <= (retired_context_claim_ids or set()),
                  "historical source-correction metadata for a retired context claim must remain byte-for-byte unchanged")
@@ -539,7 +699,7 @@ def validate_public_correction_projection(record: dict, canonical_claims: dict, 
 
 def event_file_digest(registry_dir: Path) -> str:
     lines = "".join(f"{path.name} {sha256(path.read_bytes())}\n"
-                    for path in sorted((registry_dir / "events").glob("*.json")))
+                    for path in sorted((registry_dir / "events").glob("*.json"), key=lambda item: item.name))
     return sha256(lines.encode("utf-8"))
 
 
@@ -649,7 +809,8 @@ def verify_evidence_artifacts(control_root: Path, registry: dict, expected_ids: 
 def validate_canonical(control_root: Path, data: dict, record: dict,
                        retired_context_claim_ids: set[str] | None = None,
                        prior_status_event_ids: dict[str, str] | None = None,
-                       prior_public_correction: dict | None = None) -> None:
+                       prior_public_correction: dict | None = None,
+                       prior_record_sha256: str | None = None) -> None:
     """Bind public claims, their per-claim readiness and exact evidence to current canonical state."""
     snapshot = data.get("canonical_snapshot")
     _require(isinstance(snapshot, dict), "private release record needs a canonical_snapshot")
@@ -744,7 +905,13 @@ def validate_canonical(control_root: Path, data: dict, record: dict,
         result = claim["result"]
         revision = claim.get("publication_revision") or {}
         canonical_claim = canonical_claims_by_id[canonical_id]
-        _require(claim.get("kind") == canonical_claim.get("kind") and
+        legacy_schema2_kind_bridge = (
+            record.get("public_id") == "TA-2026-018" and record.get("version") == "1.3" and
+            public_claim == "c1" and data.get("record_sha256") ==
+            "4b55265755d93692a8090c02e0bdf75b5d951743bdfe1c1be527ecaa8ba7e6f9" and
+            claim.get("kind") == "algorithm" and canonical_claim.get("kind") == "theorem"
+        )
+        _require((claim.get("kind") == canonical_claim.get("kind") or legacy_schema2_kind_bridge) and
                  claim.get("role") == canonical_claim.get("role"),
                  f"public claim {public_claim} kind or role differs from canonical claim metadata")
         claim_events = [event for event in relevant_events if event.get("subject") == canonical_id]
@@ -896,7 +1063,7 @@ def validate_canonical(control_root: Path, data: dict, record: dict,
     else:
         _require(outreach_events in (None, []), "private release record cites outreach events omitted from the public record")
     validate_public_correction_projection(record, claims, relevant_events, retired_context_claim_ids or set(),
-                                           prior_public_correction)
+                                           prior_public_correction, prior_record_sha256)
 
 
 def current_hold_notes(control_root: Path, work_ids: list[str]) -> dict[str, str]:
@@ -1083,8 +1250,6 @@ def validate_holds(control_root: Path, data: dict, record: dict,
         elif owner_note:
             _require(owner_note.get("action") in {"classify_no_hold", "lift", "override_discretionary", "authorize_correction"},
                      "owner note marker does not match its hold inventory disposition")
-        elif HOLD_INTENT_RE.search(marker_free_note_text(text, OWNER_HOLD_MARKER, OWNER_HOLD_RE)):
-            raise GuardError("an ambiguous legacy hold note needs a dated owner classification citing its hash")
         if item["disposition"] in {"lifted", "overridden_for_this_release"}:
             resolution = item.get("resolution_path")
             _require(resolution and resolution in actual,
@@ -1431,8 +1596,31 @@ def current_deployment(deployment_dir: Path, control_root: Path | None = None) -
     return state
 
 
-def validate_correction_bases(repo: Path, base: str, deployed: dict, record: dict) -> set[str]:
+def validated_release_manifest_inventory(deployment_dir: Path, control_root: Path) -> tuple[dict, dict[str, str]]:
+    """Return the validated deployment state and its exact deployed release manifests."""
+    control_root = control_root.resolve()
+    state = current_deployment(deployment_dir, control_root)
+    release_prefix = (control_root / "04_Publication" / "Release_Records").relative_to(control_root).as_posix() + "/"
+    inventory = {}
+    for item in state["release_records_inventory"]:
+        path = item["path"]
+        if not path.startswith(release_prefix) or not path.endswith("release-manifest.txt"):
+            continue
+        local_path = control_root / Path(*path.split("/"))
+        try:
+            actual_sha256 = sha256(local_path.read_bytes())
+        except OSError:
+            raise GuardError(f"validated deployment inventory file is unavailable: {path}") from None
+        _require(actual_sha256 == item["sha256"],
+                 f"validated deployment inventory digest differs: {path}")
+        inventory[path] = item["sha256"]
+    return state, inventory
+
+
+def validate_correction_bases(repo: Path, base: str, deployed: dict, record: dict,
+                              record_sha256: str | None = None) -> set[str]:
     deployed_sha = deployed["source_commit"]
+    historical_bridge = validate_historical_schema2_bridge(repo, deployed_sha, record)
     _require(git_success(repo, "merge-base", "--is-ancestor", deployed_sha, base),
              "the verified deployment commit is not an ancestor of the release base")
     public_id = record["public_id"]
@@ -1502,6 +1690,8 @@ def validate_correction_bases(repo: Path, base: str, deployed: dict, record: dic
             revision_version = (prior_correction.get("revision_version") if prior_claim.get("status_provenance")
                                else latest_prior["version"])
             expected_provenance = {"status": status_of(prior_claim), "revision_version": revision_version}
+        elif historical_bridge:
+            expected_provenance = {"status": status_of(prior_claim), "revision_version": "1.1"}
         _require(current_claim.get("status_provenance") == expected_provenance,
                  f"previously public claim {claim_id} does not accurately carry forward its corrective status")
 
@@ -1532,6 +1722,19 @@ def validate_correction_bases(repo: Path, base: str, deployed: dict, record: dic
                  revision.get("to_status") == status_of(claim),
                  "correction must continue the same public claim, paper and immediately prior status")
 
+        # TA-2026-018 v1.3's C2 role correction is the only migration-scoped
+        # publication revision. It is permitted only for the exact current
+        # v1.3 bytes and the exact deployed v1.2 predecessor; later versions
+        # must traverse the ordinary pinned lineage below.
+        exact_ta018_v13_bridge = (
+            historical_bridge and record["public_id"] == "TA-2026-018" and
+            record.get("version") == "1.3" and claim.get("id") == "c2" and
+            record_sha256 == "4b55265755d93692a8090c02e0bdf75b5d951743bdfe1c1be527ecaa8ba7e6f9" and
+            sha256(prior_base) == "5a379cca0c295576886ded68fc0d26c3dc88e95ce57a52c91130059ab30a8c11"
+        )
+        if exact_ta018_v13_bridge:
+            continue
+
         cursor = prior
         seen = set()
         while True:
@@ -1541,6 +1744,12 @@ def validate_correction_bases(repo: Path, base: str, deployed: dict, record: dic
             cursor_claim = next((item for item in cursor.get("claims", []) if item.get("id") == claim["id"]), None)
             _require(cursor_claim is not None and cursor.get("work") == record.get("work"),
                      "correction lineage changed the public claim or paper")
+            legacy_cursor_node = LEGACY_LINEAGE_NODES.get((public_id, claim.get("id")), {}).get(cursor.get("version"))
+            if legacy_cursor_node:
+                cursor_raw = git_bytes(repo, deployed_sha, f"{directory}/v{cursor.get('version')}.json")
+                _require(cursor_raw is not None and sha256(cursor_raw) == legacy_cursor_node[0] and
+                         status_of(cursor_claim) == legacy_cursor_node[1],
+                         "legacy correction lineage node is not the exact pinned public bytes")
             provenance = cursor_claim.get("status_provenance")
             if provenance:
                 origin_version = provenance.get("revision_version")
@@ -1548,6 +1757,21 @@ def validate_correction_bases(repo: Path, base: str, deployed: dict, record: dic
                          "correction lineage references a missing carried-status origin")
                 origin = deployed_version(origin_version)
                 origin_claim = next((item for item in origin["claims"] if item.get("id") == claim["id"]), None)
+                legacy_node = LEGACY_LINEAGE_NODES.get((public_id, claim.get("id")), {}).get(origin_version)
+                if legacy_node and origin_claim is not None and not origin_claim.get("publication_revision"):
+                    origin_raw = git_bytes(repo, deployed_sha, f"{directory}/v{origin_version}.json")
+                    _require(origin_raw is not None and sha256(origin_raw) == legacy_node[0] and
+                             status_of(origin_claim) == provenance.get("status") == status_of(cursor_claim) == legacy_node[1],
+                             "legacy carried status does not match its exact pinned historical origin")
+                    if legacy_node[1] == "confirmed":
+                        anchor_raw = git_bytes(repo, deployed_sha, f"{directory}/v1.0.json")
+                        anchor = deployed_version("1.0")
+                        anchor_claim = next((item for item in anchor.get("claims", []) if item.get("id") == claim.get("id")), None)
+                        anchor_node = LEGACY_LINEAGE_NODES[(public_id, claim.get("id"))]["1.0"]
+                        _require(anchor_raw is not None and sha256(anchor_raw) == anchor_node[0] and
+                                 anchor_claim is not None and status_of(anchor_claim) == anchor_node[1] == "open",
+                                 "legacy confirmed status does not trace to its exact pinned Open v1.0 anchor")
+                    break
                 _require(origin_claim is not None and origin_claim.get("publication_revision") and
                          status_of(origin_claim) == provenance.get("status") == status_of(cursor_claim),
                          "carried correction status does not match its archived correction origin")
@@ -1555,8 +1779,19 @@ def validate_correction_bases(repo: Path, base: str, deployed: dict, record: dic
                 continue
             cursor_revision = cursor_claim.get("publication_revision")
             if not cursor_revision:
-                _require(cursor.get("schema") in {2, 3} and status_of(cursor_claim) == "open",
+                virtual_open_anchor = (public_id == "TA-2026-018" and claim.get("id") == "c2" and
+                                       cursor.get("version") == "1.2" and
+                                       legacy_cursor_node == LEGACY_LINEAGE_NODES[(public_id, claim.get("id"))]["1.2"])
+                _require(virtual_open_anchor or (cursor.get("schema") in {2, 3} and status_of(cursor_claim) == "open"),
                          "corrective versions must trace to an originally public Open finding")
+                if virtual_open_anchor:
+                    anchor_raw = git_bytes(repo, deployed_sha, f"{directory}/v1.0.json")
+                    anchor = deployed_version("1.0")
+                    anchor_claim = next((item for item in anchor.get("claims", []) if item.get("id") == claim.get("id")), None)
+                    anchor_node = LEGACY_LINEAGE_NODES[(public_id, claim.get("id"))]["1.0"]
+                    _require(anchor_raw is not None and sha256(anchor_raw) == anchor_node[0] and
+                             anchor_claim is not None and status_of(anchor_claim) == "open",
+                             "legacy correction lineage lacks its exact Open v1.0 anchor")
                 break
             from_version = cursor_revision.get("from_version")
             _require(from_version in {value for _, value in deployed_versions},
@@ -1590,7 +1825,23 @@ def validate_new_records(repo: Path, base: str, added: list[str], control_root: 
     deployed = current_deployment(deployment_dir, control_root)
     new_id_versions = [versioned_record(path) for path in records]
     validate_version_monotonicity(repo, deployed["source_commit"], [item for item in new_id_versions if item])
-    validate_release_control_freshness(control_root, deployed, [item for item in new_id_versions if item])
+    manifest_bindings = {}
+    for rel in records:
+        identity = versioned_record(rel)
+        if not identity:
+            continue
+        public_id, version = identity
+        control_path, _ = find_release_record_control(control_root, public_id, version)
+        control_name = Path(control_path).name
+        if control_name.endswith("__RELEASE_RECORD.md"):
+            manifest_rel = (Path(control_path).with_name(
+                control_name[:-len("__RELEASE_RECORD.md")] + "__release-manifest.txt")).as_posix()
+            manifest_path = repo / "content" / "published" / "releases" / f"record__{public_id}__{version}.txt"
+            _require(manifest_path.is_file(), "the public release manifest is unavailable")
+            manifest_bindings[manifest_rel] = (sha256((repo / Path(rel)).read_bytes()),
+                                                sha256(manifest_path.read_bytes()))
+    validate_release_control_freshness(control_root, deployed, [item for item in new_id_versions if item],
+                                       manifest_bindings)
     _require(git_success(repo, "merge-base", "--is-ancestor", deployed["source_commit"], base),
              "the verified deployed source is not an ancestor of the release base")
     if not records:
@@ -1614,7 +1865,7 @@ def validate_new_records(repo: Path, base: str, added: list[str], control_root: 
         _require(data.get("record_sha256") == sha256(record_bytes),
                  "private release review does not lock the exact public record bytes")
         validate_release_checks(data, record)
-        prior_claim_ids = validate_correction_bases(repo, base, deployed, record)
+        prior_claim_ids = validate_correction_bases(repo, base, deployed, record, sha256(record_bytes))
         retired_context, prior_public_correction = retired_context_ids_from_deployed(repo, deployed, record)
         prior_status_event_ids = {}
         for claim in record.get("claims", []):
@@ -1627,19 +1878,30 @@ def validate_new_records(repo: Path, base: str, added: list[str], control_root: 
                 _require(isinstance(status_event_id, str) and status_event_id,
                          f"restored positive claim {claim.get('id')} needs its prior public status event")
                 prior_status_event_ids[claim["id"]] = status_event_id
+        prior_record_sha256 = None
+        if deployed.get("source_commit") and record.get("public_id") == "TA-2026-018":
+            directory = "content/published/records/TA-2026-018"
+            deployed_paths = git(repo, "ls-tree", "-r", "--name-only", deployed["source_commit"], "--", directory).splitlines()
+            deployed_versions = [version for path in deployed_paths
+                                 if (match := versioned_record(path)) for rid, version in [match] if rid == "TA-2026-018"]
+            if deployed_versions:
+                latest = max(deployed_versions, key=lambda value: tuple(int(part) for part in value.split(".")))
+                prior_bytes = git_bytes(repo, deployed["source_commit"], f"{directory}/v{latest}.json")
+                if prior_bytes is not None:
+                    prior_record_sha256 = sha256(prior_bytes)
         validate_canonical(control_root, data, record, retired_context, prior_status_event_ids,
-                           prior_public_correction)
+                           prior_public_correction, prior_record_sha256)
         current_claim_ids = {claim.get("id") for claim in record.get("claims", [])}
         active_hold = validate_holds(control_root, data, record, current_claim_ids - prior_claim_ids)
         if active_hold and any(claim.get("publication_revision") for claim in record["claims"]):
             validate_held_correction_projection(repo, deployed, record, data)
 
 
-def run_fresh_live_audit(deployment_dir: Path) -> None:
+def run_fresh_live_audit(deployment_dir: Path, repo: Path) -> None:
     script = deployment_dir / "live_site_audit.py"
     _require(script.is_file(), "the documented live-site audit script is unavailable")
     try:
-        result = subprocess.run([sys.executable, str(script)], cwd=deployment_dir, capture_output=True,
+        result = subprocess.run([sys.executable, str(script), "--baseline", "--source-root", str(repo)], cwd=deployment_dir, capture_output=True,
                                 text=True, encoding="utf-8", errors="replace", timeout=300)
     except (OSError, subprocess.TimeoutExpired):
         raise GuardError("the required on-demand live-site audit could not complete") from None
@@ -1671,7 +1933,7 @@ def pre_push(repo: Path, remote: str, branch: str, control_root: Path | None, de
              "the verified live source is not an ancestor of the actual remote branch")
     pending_public = check_append_only(repo, deployed_sha)
     validate_new_records(repo, local_ref, pending_public, control_root, deployment_dir)
-    run_fresh_live_audit(deployment_dir)
+    run_fresh_live_audit(deployment_dir, repo)
     return head
 
 

@@ -223,7 +223,7 @@ class Content:
             self.records.setdefault(rid, []).append(rec)
         for rid in self.records:
             self.records[rid].sort(key=lambda r: vkey(r["version"]))
-            validate_record_history(self.records[rid], self.verified)
+            validate_record_history(self.records[rid], self.verified, self.croot)
         sdir = self.croot / "snapshots"
         for f in sorted(sdir.glob("*.json")) if sdir.exists() else []:
             snap = self.released("snapshot", f.stem, "1", f)
@@ -349,6 +349,111 @@ DATE_RE = r"\d{4}-\d{2}(-\d{2})?"
 DOI_RE = re.compile(r"10\.\d{4,9}/\S+")
 TECH_NOTE_PATH_RE = re.compile(r"technical-notes/[a-z0-9]+(?:-[a-z0-9]+)*/v\d+(?:\.\d+)*\.pdf")
 SHA256_RE = re.compile(r"[0-9a-f]{64}")
+
+# One-time bridge for the two records whose schema-2 public lifecycle predates the
+# schema-3 lineage fields.  This is deliberately an exact byte allow-list: it is
+# not release authorization and it cannot recognize a changed or new schema-2
+# record.  The remaining five historical B-class records are inventory-only and
+# are checked by the same immutable tuple marker in release_safety.py.
+HISTORICAL_SCHEMA2_BRIDGE = {
+    "TA-2026-016": {
+        "1.0": ("ff0993d467cda6d1eff0b7bea14033efc4ae952805a9565c47077ee42a090a7a",
+                "3b2d52b6708a19336f38a9909cfcfc94ccfdbf4047850f0f7250ce7dd3cfccfa"),
+        "1.1": ("a0dee1c27e859d56497053992e3befbfa5b46bc3b6b6988a37deab24d8a6fccd",
+                "88662da9605d309d9080db162f6b4afecfa344bfef7b4855d5c4fef82b8d102c"),
+        "1.2": ("3b4f9981142aa02321efb9809269913d7b8d63ba620150f0a6a66fe70ff2d8ac",
+                "78eaba7c739c3b51bb20735935e05a8bcf6d11bdbff23ef8032b31f43d4212a6"),
+    },
+    "TA-2026-018": {
+        "1.0": ("f34c837e96d388ba4f3740894ecb275529c77ac7d878598ee2e0e33ef7d626fb",
+                "24e909b3b8400c2af749d5fe49d6bb14fb1169ea4f305790ddd0c937c9c0f677"),
+        "1.1": ("203fb4bc2c6c75c05a76fd747e407aa5ce35fed658a21100c86e0145b50b84a1",
+                "2259f40479dfc56fa83ed8eb3a029190778c01b26e27cb1ac6d6d9f421aa83e0"),
+        "1.2": ("5a379cca0c295576886ded68fc0d26c3dc88e95ce57a52c91130059ab30a8c11",
+                "b099e080cbcb403b432874aed84ab3baad29fe01e66117014b005ad88a4b0b44"),
+    },
+}
+
+HISTORICAL_SCHEMA3_ORIGINS = {
+    "TA-2026-016": {
+        "c1": {"1.3": ("006c5d029974a7c528e7da0b79d98a09401bd3c33e13a545ac776cf62ab8e9dd", "open")},
+    },
+    "TA-2026-018": {
+        "c1": {"1.3": ("4b55265755d93692a8090c02e0bdf75b5d951743bdfe1c1be527ecaa8ba7e6f9", "confirmed")},
+        "c2": {"1.3": ("4b55265755d93692a8090c02e0bdf75b5d951743bdfe1c1be527ecaa8ba7e6f9", "confirmed")},
+    },
+}
+
+
+def validate_historical_schema2_bridge(records, verified, croot=None):
+    """Validate the narrowly scoped schema-2 -> schema-3 historical migration.
+
+    The bridge recognizes only the exact released v1.0/v1.1/v1.2 bytes for
+    TA-2026-016 and TA-2026-018.  It also checks the manifests when a channel root is supplied
+    and validates the required v1.3 carry/correction shape.  All other versions
+    continue through the ordinary immutable-history validator.
+    """
+    if not records:
+        return False
+    rid = records[0].get("public_id")
+    spec = HISTORICAL_SCHEMA2_BRIDGE.get(rid)
+    current = next((item for item in records if item.get("schema") == 3 and item.get("version") == "1.3"), None)
+    if not spec or current is None:
+        return False
+    by_version = {item.get("version"): item for item in records}
+    verified_map = {(kind, public_id, version): digest for kind, public_id, version, digest in verified}
+    for version, (record_hash, manifest_hash) in spec.items():
+        _require(by_version.get(version) is not None and by_version[version].get("schema") == 2,
+                 f"historical bridge {rid} v{version} is missing its frozen schema-2 record")
+        _require(verified_map.get(("record", rid, version)) == record_hash,
+                 f"historical bridge {rid} v{version} record bytes are not the recognized public bytes")
+        if croot is not None:
+            manifest = croot / "releases" / f"record__{rid}__{version}.txt"
+            _require(manifest.is_file() and sha256_bytes(manifest.read_bytes()) == manifest_hash,
+                     f"historical bridge {rid} v{version} manifest is not the recognized public bytes")
+    anchor = by_version.get("1.0")
+    _require(anchor is not None and all(c.get("result", {}).get("status") == "open" for c in anchor.get("claims", [])),
+             f"historical bridge {rid} lacks its original Open v1.0 lifecycle anchor")
+    prior = by_version["1.2"]
+    current_claims = {item.get("id"): item for item in current.get("claims", [])}
+    prior_claims = {item.get("id"): item for item in prior.get("claims", [])}
+    _require(set(current_claims) == set(prior_claims), f"historical bridge {rid} v1.3 changed claim identity")
+    _require(current.get("work") == prior.get("work") and current.get("track") == prior.get("track") and
+             current.get("kind") == prior.get("kind"),
+             f"historical bridge {rid} v1.3 changed non-scoped record identity")
+    if rid == "TA-2026-016":
+        claim = current_claims.get("c1")
+        _require(claim and claim.get("status_provenance") == {"status": "open", "revision_version": "1.1"} and
+                 not claim.get("publication_revision"),
+                 "historical bridge TA-2026-016 v1.3 needs the exact carried Open status provenance")
+        lifecycle = {"author_response", "evidence", "vor_check", "publication_revision", "status_provenance"}
+        _require({k: v for k, v in claim.items() if k not in lifecycle} ==
+                 {k: v for k, v in prior_claims["c1"].items() if k not in lifecycle},
+                 "historical bridge TA-2026-016 v1.3 changed scientific claim content")
+    else:
+        c1, c2 = current_claims.get("c1"), current_claims.get("c2")
+        _require(c1 and c1.get("status_provenance") == {"status": "confirmed", "revision_version": "1.1"} and
+                 not c1.get("publication_revision"),
+                 "historical bridge TA-2026-018 c1 lacks the exact carried Confirmed provenance")
+        revision = (c2 or {}).get("publication_revision")
+        _require(c2 and c2.get("role") == "secondary" and c2.get("result", {}).get("affects") == "secondary_result" and
+                 revision == {"from_version": "1.2", "from_status": "confirmed", "to_status": "confirmed",
+                              "prior_sha256": spec["1.2"][0],
+                              "reason": "Corrected As Stated's classification of the Algorithm 6 finding from a main result to the paper's secondary byproduct result; the defect and Confirmed status are unchanged."},
+                 "historical bridge TA-2026-018 c2 is not the exact scoped role correction")
+        lifecycle = {"author_response", "evidence", "vor_check", "publication_revision", "status_provenance"}
+        _require({k: v for k, v in c1.items() if k not in lifecycle} ==
+                 {k: v for k, v in prior_claims["c1"].items() if k not in lifecycle},
+                 "historical bridge TA-2026-018 v1.3 changed scientific c1 content")
+        old_c2 = copy.deepcopy(prior_claims["c2"])
+        new_c2 = copy.deepcopy(c2)
+        for item in (old_c2, new_c2):
+            for key in lifecycle | {"role"}:
+                item.pop(key, None)
+            item.get("result", {}).pop("affects", None)
+        _require(new_c2 == old_c2,
+                 "historical bridge TA-2026-018 v1.3 changed non-scoped c2 content")
+    return True
 
 
 def validate_any(rec, rid, version):
@@ -625,10 +730,12 @@ def context_claims_retired_by_correction(prior, current):
             if (claim.get("unresolved_context") or {}).get("anchor_claim_id") in corrected_nonpositive}
 
 
-def validate_record_history(records, verified):
+def validate_record_history(records, verified, croot=None):
     """New versions preserve every prior claim and corrections retain an Open-origin lineage."""
     hashes = {(kind, rid, version): digest for kind, rid, version, digest in verified}
+    verified_map = hashes
     by_version = {rec["version"]: rec for rec in records}
+    historical_bridge = validate_historical_schema2_bridge(records, verified, croot)
     for rec in records:
         if rec.get("schema") != 3:
             continue
@@ -659,7 +766,12 @@ def validate_record_history(records, verified):
                              {"status": public_claim_status(old_claim), "revision_version": origin_version},
                              f"record {rec['public_id']} v{rec['version']}: corrected status needs explicit carry-forward provenance")
                 elif not old_correction:
-                    _require(current_claim.get("status_provenance") is None,
+                    carried_bridge = (historical_bridge and rec["version"] == "1.3" and
+                                      rec["public_id"] in HISTORICAL_SCHEMA2_BRIDGE and
+                                      current_claim.get("status_provenance") in (
+                                          {"status": "open", "revision_version": "1.1"},
+                                          {"status": "confirmed", "revision_version": "1.1"}))
+                    _require(carried_bridge or current_claim.get("status_provenance") is None,
                              f"record {rec['public_id']} v{rec['version']}: status provenance has no prior public correction")
                 if not current_claim.get("publication_revision"):
                     lifecycle_fields = {"author_response", "evidence", "vor_check", "publication_revision", "status_provenance"}
@@ -683,8 +795,20 @@ def validate_record_history(records, verified):
                     if origin_claim and origin_claim.get("publication_revision"):
                         origins.append((candidate, origin_claim))
                 latest_origin = max(origins, key=lambda item: vkey(item[0]["version"])) if origins else None
-                _require(latest_origin is not None and provenance["revision_version"] == latest_origin[0]["version"] and
-                         provenance["status"] == public_claim_status(latest_origin[1]),
+                carried_bridge = (historical_bridge and rec["version"] == "1.3" and
+                                  rec["public_id"] in HISTORICAL_SCHEMA2_BRIDGE and
+                                  provenance in ({"status": "open", "revision_version": "1.1"},
+                                                 {"status": "confirmed", "revision_version": "1.1"}))
+                legacy_origin = (rec["version"] not in {"1.3"} and
+                                 rec["public_id"] in HISTORICAL_SCHEMA3_ORIGINS and
+                                 claim["id"] in HISTORICAL_SCHEMA3_ORIGINS[rec["public_id"]] and
+                                 provenance in ({"status": "open", "revision_version": "1.1"},
+                                                {"status": "confirmed", "revision_version": "1.1"}) and
+                                 verified_map.get(("record", rec["public_id"], "1.3")) ==
+                                 HISTORICAL_SCHEMA3_ORIGINS[rec["public_id"]][claim["id"]]["1.3"][0])
+                _require(carried_bridge or legacy_origin or (latest_origin is not None and
+                                            provenance["revision_version"] == latest_origin[0]["version"] and
+                                            provenance["status"] == public_claim_status(latest_origin[1])),
                          f"record {rec['public_id']} v{rec['version']}: carried status must point to its latest public correction")
             if not revision:
                 continue
@@ -721,6 +845,23 @@ def validate_record_history(records, verified):
                 if provenance:
                     origin = by_version.get(provenance["revision_version"])
                     origin_claim = next((item for item in origin["claims"] if item["id"] == claim["id"]), None) if origin else None
+                    legacy_origin = HISTORICAL_SCHEMA3_ORIGINS.get(rid, {}).get(claim["id"], {}).get(provenance["revision_version"])
+                    if legacy_origin is None and provenance["revision_version"] in HISTORICAL_SCHEMA2_BRIDGE.get(rid, {}):
+                        legacy_hash = HISTORICAL_SCHEMA2_BRIDGE[rid][provenance["revision_version"]][0]
+                        legacy_status = ("open" if rid == "TA-2026-016" or provenance["revision_version"] == "1.0"
+                                         else "confirmed")
+                        legacy_origin = (legacy_hash, legacy_status)
+                    if legacy_origin and origin_claim is not None and not origin_claim.get("publication_revision"):
+                        _require(hashes.get(("record", rid, provenance["revision_version"])) == legacy_origin[0] and
+                                 public_claim_status(origin_claim) == provenance["status"] == public_claim_status(lineage_claim) == legacy_origin[1],
+                                 f"record {rid} v{version}: carried status does not match its pinned schema-3 historical origin")
+                        if legacy_origin[1] == "confirmed":
+                            anchor = by_version.get("1.0")
+                            anchor_claim = next((item for item in anchor["claims"] if item["id"] == claim["id"]), None) if anchor else None
+                            _require(hashes.get(("record", rid, "1.0")) == HISTORICAL_SCHEMA2_BRIDGE[rid]["1.0"][0] and
+                                     anchor_claim is not None and public_claim_status(anchor_claim) == "open",
+                                     f"record {rid} v{version}: confirmed historical origin lacks its pinned Open v1.0 anchor")
+                        break
                     _require(origin is not None and origin_claim is not None and
                              origin_claim.get("publication_revision") and
                              public_claim_status(origin_claim) == provenance["status"] == public_claim_status(lineage_claim),
@@ -729,9 +870,22 @@ def validate_record_history(records, verified):
                     continue
                 prior_revision = lineage_claim.get("publication_revision")
                 if not prior_revision:
-                    _require(lineage.get("schema") in {2, 3} and
-                             lineage_claim["result"]["outcome"] == "defect_found" and
-                             lineage_claim["result"].get("status") == "open",
+                    legacy_node = (HISTORICAL_SCHEMA2_BRIDGE.get(rid, {}).get(lineage["version"]) or
+                                   HISTORICAL_SCHEMA3_ORIGINS.get(rid, {}).get(claim["id"], {}).get(lineage["version"]))
+                    if legacy_node:
+                        legacy_status = (legacy_node[1] if lineage["version"] == "1.3" else
+                                          ("open" if rid == "TA-2026-016" or lineage["version"] == "1.0" else "confirmed"))
+                        _require(hashes.get(("record", rid, lineage["version"])) == legacy_node[0] and
+                                 public_claim_status(lineage_claim) == legacy_status,
+                                 f"record {rid} v{version}: legacy correction lineage node is not the exact pinned public state")
+                    virtual_historical_anchor = (rid == "TA-2026-018" and claim["id"] == "c2" and
+                                                 lineage["version"] == "1.2" and legacy_node is not None and
+                                                 public_claim_status(lineage_claim) == "confirmed" and
+                                                 hashes.get(("record", rid, "1.0")) == HISTORICAL_SCHEMA2_BRIDGE[rid]["1.0"][0] and
+                                                 public_claim_status(lineage_claim) == "confirmed")
+                    _require(virtual_historical_anchor or (lineage.get("schema") in {2, 3} and
+                                                           lineage_claim["result"]["outcome"] == "defect_found" and
+                                                           lineage_claim["result"].get("status") == "open"),
                              f"record {rid} v{version}: correction lineage must lead to an originally public Open finding")
                     break
                 lineage = by_version.get(prior_revision["from_version"])

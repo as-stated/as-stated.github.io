@@ -1101,17 +1101,19 @@ class ProductionTests(unittest.TestCase):
 
     def test_breaking_barriers_latest_is_author_confirmed_with_correction_pending(self):
         rec = self.content.latest("TA-2026-018")
-        self.assertEqual(rec["version"], "1.2")
+        self.assertEqual(rec["version"], "1.3")
         self.assertEqual([c["result"]["status"] for c in rec["claims"]], ["confirmed", "confirmed"])
         self.assertTrue(all(c["author_response"]["position"] == "agrees" for c in rec["claims"]))
-        self.assertTrue(all(c["author_response"]["counts"] for c in rec["claims"]))
+        self.assertTrue(all(set(c["author_response"]) == {"position"} for c in rec["claims"]))
+        self.assertEqual(rec["claims"][1]["role"], "secondary")
+        self.assertEqual(rec["claims"][1]["result"]["affects"], "secondary_result")
         page = (self.out / "cases/TA-2026-018/index.html").read_text(encoding="utf-8")
         self.assertIn("Confirmed", page)
         self.assertEqual(rec["correction"]["state"], "announced")
         self.assertIn("Announced.", page)
         self.assertIn("corrected arXiv version", page)
         self.assertIn("independently verified", page)
-        self.assertIn("One author agrees.", page)
+        self.assertEqual(page.count(">Agrees.</p>"), 2)
 
     def test_correction_progress_is_separate_from_finding_status(self):
         supplied = self.content.latest("TA-2026-006")
@@ -1143,7 +1145,7 @@ class ProductionTests(unittest.TestCase):
         self.assertEqual(claim["result"]["status"], "open")
         page = (self.out / "cases/TA-2026-012/index.html").read_text(encoding="utf-8")
         self.assertIn("Missing assumption", page)
-        self.assertIn("partly agree", page)
+        self.assertIn("partly agrees.", page)
         self.assertIn("genuine null-removing transformation", page)
 
     def test_fiksel_latest_records_limited_author_agreement(self):
@@ -1200,7 +1202,7 @@ class ProductionTests(unittest.TestCase):
     def test_scop_latest_reflects_author_clarification(self):
         rec = self.content.latest("TA-2026-016")
         claim = rec["claims"][0]
-        self.assertEqual(rec["version"], "1.2")
+        self.assertEqual(rec["version"], "1.3")
         self.assertEqual(claim["result"]["defect_class"], "definition_defect")
         self.assertEqual(claim["author_response"]["position"], "partly_agrees")
         self.assertEqual(claim["result"]["status"], "open")
@@ -1208,7 +1210,7 @@ class ProductionTests(unittest.TestCase):
         page = (self.out / "cases/TA-2026-016/index.html").read_text(encoding="utf-8")
         self.assertIn("Definition defect", page)
         self.assertNotIn('<span class="fd fd-false"><i class="mk" aria-hidden="true"></i>False as stated</span>', page)
-        self.assertIn("partly agree", page)
+        self.assertIn("Partly agrees.", page)
         self.assertIn("probability-scale", page)
         self.assertIn("not refuted", page)
         self.assertGreaterEqual(page.count("<math"), 8)

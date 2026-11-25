@@ -859,6 +859,27 @@ class ReleaseControlTests(unittest.TestCase):
             release_safety.validate_public_correction_projection(
                 record, {"c1": {"id": "W-0001.C1"}}, [correction_event], {"c2"}, prior)
 
+    def test_ta018_archival_announcement_cannot_be_deleted_or_changed(self):
+        announcement = {
+            "state": "announced", "type": "arXiv revision", "doi": None,
+            "date": "2026-11-18", "relation": "after_notification",
+            "attribution": "none_stated", "claims": ["c1", "c2"],
+            "note": "The responding author said the authors would post a corrected arXiv version shortly. No corrected arXiv version is independently verified in this record."
+        }
+        kwargs = {
+            "canonical_claims": {}, "events": [], "retired_context_claim_ids": set(),
+            "prior_public_correction": announcement,
+            "prior_record_sha256": "5a379cca0c295576886ded68fc0d26c3dc88e95ce57a52c91130059ab30a8c11"
+        }
+        with self.assertRaisesRegex(release_safety.GuardError, "cannot be deleted"):
+            release_safety.validate_public_correction_projection(
+                {"public_id": "TA-2026-018", "version": "1.4"}, **kwargs)
+        changed = json.loads(json.dumps(announcement))
+        changed["claims"] = ["c1"]
+        with self.assertRaisesRegex(release_safety.GuardError, "byte-for-byte unchanged"):
+            release_safety.validate_public_correction_projection(
+                {"public_id": "TA-2026-018", "version": "1.4", "correction": changed}, **kwargs)
+
     def test_retired_claim_cannot_be_added_to_source_correction_projection(self):
         prior = {"claims": ["c1"]}
         correction = {"type": "corrigendum", "doi": "10.0000/correction", "date": "2026-11-20",
@@ -989,10 +1010,12 @@ class ReleaseControlTests(unittest.TestCase):
         self.data["record_version"] = record["version"]
         self.data["control_schema"] = 1
         self.data["record_sha256"] = release_safety.sha256(record_path.read_bytes())
-        private_path = self.control / "04_Publication" / "Release_Records" / "TST-2000-001.md"
+        private_path = self.control / "04_Publication" / "Release_Records" / "2026-11-23__TST-2000-001__v1.0__RELEASE_RECORD.md"
         private_path.parent.mkdir(parents=True)
         private_path.write_text("<!-- ASSTATED_RELEASE_CONTROL_V1\n" + json.dumps(self.data) +
                                 "\nASSTATED_RELEASE_CONTROL_V1 -->\n", encoding="utf-8")
+        (private_path.with_name("2026-11-23__TST-2000-001__v1.0__release-manifest.txt")).write_bytes(manifest.read_bytes())
+        (private_path.with_name("2026-11-23__TST-2000-001__v1.0.json")).write_bytes(record_path.read_bytes())
 
         release_safety.validate_new_records(
             self.repo, base,
@@ -1000,12 +1023,49 @@ class ReleaseControlTests(unittest.TestCase):
              "content/published/releases/record__TST-2000-001__1.0.txt"],
             self.control, deployment_dir)
 
+        private_manifest = private_path.with_name("2026-11-23__TST-2000-001__v1.0__release-manifest.txt")
+        private_json = private_path.with_name("2026-11-23__TST-2000-001__v1.0.json")
+        manifest_bytes = private_manifest.read_bytes()
+        private_manifest.write_bytes(manifest_bytes + b"tampered\n")
+        try:
+            with self.assertRaisesRegex(release_safety.GuardError, "private paired manifest"):
+                release_safety.validate_new_records(
+                    self.repo, base,
+                    ["content/published/records/TST-2000-001/v1.0.json",
+                     "content/published/releases/record__TST-2000-001__1.0.txt"],
+                    self.control, deployment_dir)
+        finally:
+            private_manifest.write_bytes(manifest_bytes)
+        json_bytes = private_json.read_bytes()
+        private_json.write_bytes(json_bytes + b"\n")
+        try:
+            with self.assertRaisesRegex(release_safety.GuardError, "private release JSON copy"):
+                release_safety.validate_new_records(
+                    self.repo, base,
+                    ["content/published/records/TST-2000-001/v1.0.json",
+                     "content/published/releases/record__TST-2000-001__1.0.txt"],
+                    self.control, deployment_dir)
+        finally:
+            private_json.write_bytes(json_bytes)
+
+        neutral_path = private_path.with_name("TST-2000-001.md")
+        private_path.rename(neutral_path)
+        try:
+            with self.assertRaisesRegex(release_safety.GuardError, "unexpected filename"):
+                release_safety.validate_new_records(
+                    self.repo, base,
+                    ["content/published/records/TST-2000-001/v1.0.json",
+                     "content/published/releases/record__TST-2000-001__1.0.txt"],
+                    self.control, deployment_dir)
+        finally:
+            neutral_path.rename(private_path)
+
         record["headline"] += " Edited after the release review."
         dump(record_path, record)
         manifest.write_text("\n".join(["as-stated-release v1", "kind: record", "id: TST-2000-001",
                                          "version: 1.0", f"sha256: {release_safety.sha256(record_path.read_bytes())}"]) + "\n",
                             encoding="utf-8")
-        with self.assertRaisesRegex(release_safety.GuardError, "does not lock the exact public record bytes"):
+        with self.assertRaisesRegex(release_safety.GuardError, "private paired manifest|does not lock the exact public record bytes"):
             release_safety.validate_new_records(
                 self.repo, base,
                 ["content/published/records/TST-2000-001/v1.0.json",
@@ -1235,6 +1295,35 @@ class ReleaseControlTests(unittest.TestCase):
         (deployment_dir / "deployment.md").write_text(body, encoding="utf-8")
         with self.assertRaisesRegex(release_safety.GuardError, "does not have a passing live-site audit"):
             release_safety.current_deployment(deployment_dir)
+
+    def test_validated_release_manifest_inventory_rejects_mismatched_digest(self):
+        deployment_dir = self.control / "05_Website" / "Deployment"
+        manifest = self.control / "04_Publication" / "Release_Records" / "2026-11-23__TA-TEST-001__v1.0__release-manifest.txt"
+        manifest.parent.mkdir(parents=True)
+        manifest.write_text("as-stated-release v1\nid: TA-TEST-001\nversion: 1.0\nsha256: " + "a" * 64 + "\n", encoding="utf-8")
+        relative = manifest.relative_to(self.control).as_posix()
+        original = release_safety.current_deployment
+        calls = []
+        release_safety.current_deployment = lambda selected, root: (
+            calls.append((selected, root)) or {"release_records_inventory": [{"path": relative, "sha256": "0" * 64}]})
+        try:
+            with self.assertRaisesRegex(release_safety.GuardError, "inventory digest differs"):
+                release_safety.validated_release_manifest_inventory(deployment_dir, self.control)
+        finally:
+            release_safety.current_deployment = original
+        self.assertEqual(calls, [(deployment_dir, self.control.resolve())])
+
+    def test_validated_release_manifest_inventory_rejects_unavailable_inventory_path(self):
+        deployment_dir = self.control / "05_Website" / "Deployment"
+        relative = "04_Publication/Release_Records/missing__release-manifest.txt"
+        original = release_safety.current_deployment
+        release_safety.current_deployment = lambda selected, root: {
+            "release_records_inventory": [{"path": relative, "sha256": "0" * 64}]}
+        try:
+            with self.assertRaisesRegex(release_safety.GuardError, "inventory file is unavailable"):
+                release_safety.validated_release_manifest_inventory(deployment_dir, self.control)
+        finally:
+            release_safety.current_deployment = original
 
     def test_deployment_evidence_must_use_the_selected_control_root(self):
         deployment_dir = self.control / "05_Website" / "Deployment"
@@ -1510,9 +1599,17 @@ class GitSafetyTests(unittest.TestCase):
         (deployment_dir / "deployment.md").write_text(
             marker_note(release_safety.DEPLOYMENT_MARKER, marker), encoding="utf-8")
         audit_script = deployment_dir / "live_site_audit.py"
-        audit_script.write_text("print('RESULT: PASS')\n", encoding="utf-8")
+        audit_args = deployment_dir / "audit-args.txt"
+        audit_script.write_text(
+            "from pathlib import Path\n"
+            "import sys\n"
+            f"Path({str(audit_args)!r}).write_text(' '.join(sys.argv[1:]), encoding='utf-8')\n"
+            "print('RESULT: PASS')\n", encoding="utf-8")
         try:
             self.assertEqual(release_safety.pre_push(self.repo, "origin", "main", control, deployment_dir), self.base)
+            self.assertEqual(audit_args.read_text(encoding="utf-8").split()[:2], ["--baseline", "--source-root"])
+            self.assertEqual(Path(audit_args.read_text(encoding="utf-8").split()[2]), self.repo)
+            audit_args.unlink()
             audit_script.write_text("print('RESULT: FAIL')\n", encoding="utf-8")
             with self.assertRaisesRegex(release_safety.GuardError, "on-demand live-site audit did not return"):
                 release_safety.pre_push(self.repo, "origin", "main", control, deployment_dir)
