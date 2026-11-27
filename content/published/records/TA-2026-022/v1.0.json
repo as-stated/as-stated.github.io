@@ -1,0 +1,134 @@
+{
+  "public_id": "TA-2026-022",
+  "version": "1.0",
+  "schema": 3,
+  "released": "2026-11-27",
+  "status": "published",
+  "sample": false,
+  "kind": "defect",
+  "track": "statistics",
+  "title": "On the Alignment between Fairness and Accuracy: from the Perspective of Adversarial Robustness",
+  "headline": "Open finding: under the universal ordinary-DP reading of Corollary 4.1, unequal label base rates refute its multiplicative comparison with equalized odds.",
+  "work": {
+    "authors": [
+      "Junyi Chai",
+      "Taeuk Jang",
+      "Jing Gao",
+      "Xiaoqian Wang"
+    ],
+    "title": "On the Alignment between Fairness and Accuracy: from the Perspective of Adversarial Robustness",
+    "venue": "Proceedings of the 42nd International Conference on Machine Learning (PMLR)",
+    "year": 2025,
+    "volume": "267",
+    "pages": "7107–7130",
+    "doi": null,
+    "source_url": "https://proceedings.mlr.press/v267/chai25c.html"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Corollary 4.1 quantitative demographic-parity/equalized-odds comparison",
+      "kind": "corollary",
+      "role": "secondary",
+      "page": "PMLR 267, printed pp. 4 and 14 (pp. 7110 and 7120)",
+      "gist": "Corollary 4.1 states an adversarial quantitative comparison of ordinary demographic-parity and equalized-odds disparities; its constants and dependence are not specified.",
+      "statement": "Under the natural universal reading that a positive multiplicative constant compares the ordinary demographic-parity and equalized-odds objectives for all admitted score configurations, Corollary 4.1 is false when group label base rates differ.",
+      "conditions": [
+        "The paper defines ordinary demographic parity as the absolute gap in groups' overall average scores.",
+        "Equalized odds is the sum of absolute within-label group-score gaps.",
+        "Corollary 4.1 states a multiplicative comparison without an equal-base-rate or balancing condition."
+      ],
+      "quantifiers": "The quantitative comparison is read as applying to all score configurations admitted by the paper; the eight-observation witness has all four cells nonempty and unequal label base rates.",
+      "result": {
+        "outcome": "defect_found",
+        "status": "open",
+        "defect_class": "statement_false",
+        "affects": "secondary_result",
+        "depth": "deep_audit",
+        "summary": "Unequal base rates yield ordinary DP equal to 0.5 while EOd is zero, including at the maximum of the stated DP attack under the natural universal reading.",
+        "witness": "Use eight observations with cell counts |S00|=3, |S10|=1, |S01|=1, |S11|=3, and assign score 0 to every Y=0 observation and 1 to every Y=1 observation. Then mu00=mu01=0, mu10=mu11=1, L_EOd=0, and L_DP=|3/4-1/4|=1/2. A smooth classifier with separated feature centers can keep these scores fixed under every allowed perturbation, so maximizing the stated DP objective still gives DP=1/2 and EOd=0.",
+        "argument": "For any positive constant c, the proposed universal inequality L_EOd >= c L_DP would require 0 >= c/2, which is false. All four cells are nonempty, with no threshold ties or zero-radius perturbation. Appendix D's label-balanced contrast remains distinct from the ordinary DP gap defined in Equation (1).",
+        "not_claimed": [
+          "The finding is conditional on the natural universal reading of the unspecified multiplicative constants.",
+          "The label-balanced Appendix D contrast and other paper results are not challenged.",
+          "No separate implication under additional saturation conventions is ruled out."
+        ],
+        "repair": "local_repair_proposed",
+        "repair_note": "State an equal-base-rate or other balancing condition, or formulate the bound for the label-balanced contrast controlled by Appendix D."
+      },
+      "vor_check": {
+        "level": "full",
+        "pages": "Equation (1) and Corollary 4.1, printed p. 4; Appendix D, printed p. 14",
+        "detail": "Equation (1), Corollary 4.1, and Appendix D were checked in the official rendered PMLR Version of Record PDF. The source level is full."
+      },
+      "evidence": [
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-11-27",
+          "session": "informed",
+          "detail": "A fresh hostile reconstruction checked the decisive witness against the source and recorded its scope and nonclaims."
+        },
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-11-27",
+          "session": "informed",
+          "detail": "An independent senior AI review in a separate read-only session confirmed the narrowly stated finding; this is not human verification."
+        }
+      ],
+      "novelty": "A bounded search found no correction or independent public identification of the precise Corollary 4.1 issue. On printed p. 9 (PMLR p. 7115), the paper separately notes in an accuracy-attack discussion that EOd can be zero while DP remains nonzero because of base-rate disparities; that related observation is not presented there as a correction to Corollary 4.1. OpenReview discussion could not be inspected because its forum endpoint returned an access challenge; unindexed discussion is not excluded."
+    }
+  ],
+  "correction": null,
+  "related": [],
+  "evidence": {
+    "package_doi": null,
+    "package_sha256": null,
+    "licence": "No public evidence package released.",
+    "files": []
+  },
+  "technical_notes": [
+    {
+      "creator": "As Stated",
+      "date": "2026-11-27",
+      "version": "1.1",
+      "pages": 2,
+      "sha256": "968f8ba74c0bfc808ef267f28d82bf4cb8f92564b075ae99c18a47c3289fed63",
+      "rights": "CC BY 4.0 for this note; third-party material remains under its own rights.",
+      "path": "technical-notes/fairness-accuracy-adversarial-robustness/v1.1.pdf"
+    }
+  ],
+  "history": [
+    {
+      "date": "2026-11-27",
+      "type": "audit",
+      "label": "A deep audit identified the scoped issue and preserved a reproducible counterexample."
+    },
+    {
+      "date": "2026-11-27",
+      "type": "source",
+      "label": "The primary source was checked at Equation (1) and Corollary 4.1, printed p. 4; Appendix D, printed p. 14; source level full."
+    },
+    {
+      "date": "2026-11-27",
+      "type": "release",
+      "label": "Prepared as an Open finding with the exact As Stated technical note; no author position or human verification is claimed."
+    },
+    {
+      "date": "2026-11-27",
+      "type": "source",
+      "label": "Printed p. 9 separately notes the base-rate DP/EOd mechanism in an accuracy-attack discussion; the technical note distinguishes it from Corollary 4.1's fairness-attack comparison."
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2026-11-27",
+      "change": "Initial Open finding with the exact As Stated technical note; no author agreement or human verification is claimed."
+    }
+  ],
+  "primary_claim_id": "c1",
+  "statements": {
+    "ai_use": "AI systems contributed to the audit and a separate-session hostile review. The finding is Open; no human verification, author agreement, or author position is claimed."
+  }
+}

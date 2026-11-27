@@ -1,0 +1,128 @@
+{
+  "public_id": "TA-2026-021",
+  "version": "1.0",
+  "schema": 3,
+  "released": "2026-11-27",
+  "status": "published",
+  "sample": false,
+  "kind": "defect",
+  "track": "statistics",
+  "title": "Stochastic Delay Modelling of Streptococcal Transmission: Stability Analysis and Dynamically Consistent Numerical Schemes",
+  "headline": "Open finding: under Equation (15)’s untruncated Gaussian increments, positivity and invariance of Gamma fail with positive probability.",
+  "work": {
+    "authors": [
+      "Ali Raza",
+      "Mansoor Alsulami",
+      "Emad Fadhal",
+      "Faridah Alruwaili"
+    ],
+    "title": "Stochastic Delay Modelling of Streptococcal Transmission: Stability Analysis and Dynamically Consistent Numerical Schemes",
+    "venue": "IET Systems Biology",
+    "year": 2026,
+    "volume": "20",
+    "pages": "e70086",
+    "doi": "10.1049/syb2.70086"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Equation (15) positivity and Theorems 10–11",
+      "kind": "theorem",
+      "role": "main",
+      "page": "NCBI JATS IDs syb270086-disp-0090, syb270086-mthst-0010, syb270086-mthst-0011 and syb270086-tbl-0001",
+      "gist": "Equation (15) and Theorems 10–11 claim nonnegative iterates and invariance of Gamma for the stated Gaussian Brownian increments.",
+      "statement": "For the scheme in Equation (15), Theorem 10 states nonnegativity for nonnegative initial values and Theorem 11 states invariance of Gamma. Under the paper's untruncated Gaussian law, both claims fail as stated.",
+      "conditions": [
+        "Brownian increments are independent N(0,h) variables as stated in the article.",
+        "The initial delayed history is nonnegative and satisfies the stated Gamma bound where that theorem applies.",
+        "Table 1 parameters include Lambda=mu=0.5, gamma_2=0.08, and sigma_1=0.05."
+      ],
+      "quantifiers": "Theorem 10 asserts positivity for nonnegative initial values and Theorem 11 asserts Gamma invariance for the stated scheme; the counterexamples use admissible constant histories at h=0.01 and, for the stochastic Gamma exit, at h=1.",
+      "result": {
+        "outcome": "defect_found",
+        "status": "open",
+        "defect_class": "statement_false",
+        "affects": "main_result",
+        "depth": "deep_audit",
+        "summary": "Equation (15) has a Gaussian denominator with positive probability of a negative susceptible update; a boundary history exits Gamma with positive probability.",
+        "witness": "With the constant nonnegative history (S,I,C,A)=(0,0,0,1) and Table 1 values Lambda=mu=0.5, gamma2=0.08, sigma1=0.05, Equation (15) gives S1=0.58h/(1+0.5h-0.05 DeltaB). For every h>0, the Gaussian event DeltaB>(1+0.5h)/0.05 has positive probability and makes S1<0. From the boundary history (1,0,0,0) in Gamma, S1=(1+0.5h)/(1+0.5h-0.05 DeltaB); positive increments below the pole give S1>1=Lambda/mu, so the trajectory leaves Gamma with positive probability (exactly 1/2 at h=1, ignoring the zero-probability pole).",
+        "argument": "A nondegenerate Gaussian increment has unbounded support and assigns positive probability to each nonempty upper tail. The first history therefore produces a negative state with positive probability, contradicting almost-sure positivity. Symmetry gives probability 1/2 of a positive increment at the boundary history, and any such increment before the pole raises S1 above the invariant bound. Arbitrarily small tail probabilities still refute the unqualified pathwise or almost-sure claims.",
+        "not_claimed": [
+          "The finding does not say every simulated path fails.",
+          "No modified or truncated-noise scheme is assessed.",
+          "The separate near-zero-increment population-bound check is not needed for the Gaussian counterexamples."
+        ],
+        "repair": "local_repair_proposed",
+        "repair_note": "A revised scheme would need bounded noise or updates that enforce positive denominators and the claimed invariant; no repaired theorem is assessed."
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "NCBI JATS IDs syb270086-disp-0090 (equation 15), syb270086-mthst-0010 and -0011 (Theorems 10–11), and Table 1",
+        "detail": "The full PMC article HTML/JATS text, including Equation (15), Theorems 10–11 and Table 1, was checked. PDF endpoints returned wrappers rather than a page-renderable article PDF, so rendered-page verification remains partial."
+      },
+      "evidence": [
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-11-27",
+          "session": "informed",
+          "detail": "A fresh hostile reconstruction checked the decisive witness against the source and recorded its scope and nonclaims."
+        },
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-11-27",
+          "session": "informed",
+          "detail": "An independent senior AI review in a separate read-only session confirmed the narrowly stated finding; this is not human verification."
+        }
+      ],
+      "novelty": "No correction or prior public identification of these precise equation/theorem failures surfaced in the bounded publisher, PMC/PubMed, DOI/title, and correction search on 2026-11-27. This does not exclude private or unindexed discussion."
+    }
+  ],
+  "correction": null,
+  "related": [],
+  "evidence": {
+    "package_doi": null,
+    "package_sha256": null,
+    "licence": "No public evidence package released.",
+    "files": []
+  },
+  "technical_notes": [
+    {
+      "creator": "As Stated",
+      "date": "2026-11-27",
+      "version": "1.0",
+      "pages": 2,
+      "sha256": "7a13e8f5ee12643210c4fbc060175ae95322ebbd20106eaf2125877efd8c724b",
+      "rights": "CC BY 4.0 for this note; third-party material remains under its own rights.",
+      "path": "technical-notes/stochastic-delay-transmission/v1.0.pdf"
+    }
+  ],
+  "history": [
+    {
+      "date": "2026-11-27",
+      "type": "audit",
+      "label": "A deep audit identified the scoped issue and preserved a reproducible counterexample."
+    },
+    {
+      "date": "2026-11-27",
+      "type": "source",
+      "label": "The primary source was checked at NCBI JATS IDs syb270086-disp-0090 (equation 15), syb270086-mthst-0010 and -0011 (Theorems 10–11), and Table 1; source level partial."
+    },
+    {
+      "date": "2026-11-27",
+      "type": "release",
+      "label": "Prepared as an Open finding with the exact As Stated technical note; no author position or human verification is claimed."
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2026-11-27",
+      "change": "Initial Open finding with the exact As Stated technical note; no author agreement or human verification is claimed."
+    }
+  ],
+  "primary_claim_id": "c1",
+  "statements": {
+    "ai_use": "AI systems contributed to the audit and a separate-session hostile review. The finding is Open; no human verification, author agreement, or author position is claimed."
+  }
+}

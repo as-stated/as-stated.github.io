@@ -29,6 +29,7 @@ import shutil
 import sys
 from datetime import date
 from pathlib import Path
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
@@ -316,7 +317,7 @@ def validate_record(rec, rid, version):
 
 RECORD_KEYS_V2 = (RECORD_KEYS - {"author_position"}) | {"schema", "related", "technical_notes"}
 CHANGELOG_KEYS_V2 = {"version", "date", "change", "our_correction"}
-WORK_KEYS_V2 = {"authors", "title", "venue", "year", "volume", "pages", "doi"}
+WORK_KEYS_V2 = {"authors", "title", "venue", "year", "volume", "pages", "doi", "source_url"}
 RESULT_KEYS_V2 = {
     "defect_found": {"outcome", "status", "defect_class", "affects", "depth", "summary", "witness", "argument",
                      "not_claimed", "repair", "repair_note", "previously_reported"},
@@ -487,6 +488,12 @@ def validate_record_v2(rec, rid, version, allow_unresolved_only_ids=None, allow_
     _require(rec["status"] in {"published", "withdrawn"}, f"{where}: bad status")
     _require(re.fullmatch(r"\d{4}-\d{2}-\d{2}", rec["released"]) is not None, f"{where}: bad release date")
     _keys(rec["work"], WORK_KEYS_V2, f"{where}: work")
+    source_url = rec["work"].get("source_url")
+    if source_url is not None:
+        parsed_source_url = urlsplit(source_url)
+        _require(parsed_source_url.scheme == "https" and parsed_source_url.netloc and
+                 not parsed_source_url.username and not parsed_source_url.password,
+                 f"{where}: work.source_url must be an absolute HTTPS publisher URL")
     _keys(rec["statements"], {"ai_use"}, f"{where}: statements")
     for h in rec["history"]:
         _keys(h, {"date", "type", "label"}, f"{where}: history item")
@@ -1309,6 +1316,14 @@ def doi_html(site, doi):
     return f'<a class="mono" href="https://doi.org/{E(doi)}">doi:{E(doi)}</a>'
 
 
+def source_html(site, work):
+    if work.get("doi"):
+        return doi_html(site, work["doi"])
+    if work.get("source_url"):
+        return f'<a class="mono" href="{E(work["source_url"])}">publisher version</a>'
+    return '<span class="mono">DOI not assigned</span>'
+
+
 
 def development(rec, c):
     view = claim_view(rec, c)
@@ -1814,7 +1829,7 @@ def render_record(site, rec, frozen=False):
 <header class="case-head">
   <p class="eyebrow">Case record · {E(TRACKS[rec['track']])}</p>
   <h1>{E(w['title'])}</h1>
-<p class="byline"><span class="source-kind">Original published paper</span><br>{E(author_list(w['authors']))} · {venue_line(w)} · {doi_html(site, w['doi'])}</p>
+<p class="byline"><span class="source-kind">Original published paper</span><br>{E(author_list(w['authors']))} · {venue_line(w)} · {source_html(site, w)}</p>
   <p class="lede">{rich(rec, rec['headline'], rid + ' headline')}</p>
   <ul class="case-facts">
     <li><span class="cf-k">Findings</span>{''.join(f'<i class="mk-dot fd-{f}" title="{E(FAMILY_LABEL[f])}"></i>' for f in fams)}<span class="cf-v">{n} claim{"s" if n != 1 else ""}</span></li>

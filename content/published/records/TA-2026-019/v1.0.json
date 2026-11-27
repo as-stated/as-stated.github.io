@@ -1,0 +1,125 @@
+{
+  "public_id": "TA-2026-019",
+  "version": "1.0",
+  "schema": 3,
+  "released": "2026-11-27",
+  "status": "published",
+  "sample": false,
+  "kind": "defect",
+  "track": "theoretical_computer_science",
+  "title": "A fixed-point theorem for generalized strictly nonexpansive mappings on bounded sets in complete metric spaces",
+  "headline": "Open finding: a complete bounded metric space can admit a strictly nonexpansive shift with no fixed point, and a unique fixed point need not attract every orbit.",
+  "work": {
+    "authors": [
+      "Jie Shi"
+    ],
+    "title": "A fixed-point theorem for generalized strictly nonexpansive mappings on bounded sets in complete metric spaces",
+    "venue": "AIMS Mathematics",
+    "year": 2026,
+    "volume": "11",
+    "pages": "7143–7154",
+    "doi": "10.3934/math.2026294"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Theorem 3.1 and Corollaries 3.2–3.4: fixed-point existence and global convergence",
+      "kind": "theorem",
+      "role": "main",
+      "page": "AIMS Mathematics 11(3), pp. 7145, 7149, 7151",
+      "gist": "Theorem 3.1 and Corollaries 3.2–3.4 assert fixed-point existence or global convergence under completeness, continuity, bounded-orbit, and strictness conditions.",
+      "statement": "Under the stated hypotheses, Theorem 3.1 concludes that a unique fixed point exists and every orbit converges to it; Corollaries 3.2–3.4 state corresponding convergence conclusions.",
+      "conditions": [
+        "The metric space is complete.",
+        "The self-map is continuous and satisfies the strict condition in definition (1.7) for every distinct pair.",
+        "Theorem 3.1 assumes at least one bounded orbit; Corollaries 3.2–3.4 have their stated fixed-point or bounded-closed-set hypotheses."
+      ],
+      "quantifiers": "The stated existence and global-convergence conclusions apply to every map and space satisfying the respective theorem or corollary hypotheses.",
+      "result": {
+        "outcome": "defect_found",
+        "status": "open",
+        "defect_class": "statement_false",
+        "affects": "main_result",
+        "depth": "deep_audit",
+        "summary": "The explicit complete bounded metric shift refutes the stated existence conclusion; adjoining a fixed point refutes global convergence while conditional uniqueness survives.",
+        "witness": "For positive integers n, let a(n)=1/n and d(u,v)=0 if u=v, otherwise 1+|a(u)-a(v)|. This is bounded and complete. T(n)=n+1 strictly reduces every distinct pair's distance but has no fixed point. Add p with a(p)=0, set T(p)=p, and keep T(n)=n+1. Then p is the unique fixed point while d(T^k n,p)=1+1/(n+k) tends to 1 instead of 0.",
+        "argument": "For n<m, d(Tn,Tm)=1+(m-n)/((n+1)(m+1)) < 1+(m-n)/(nm)=d(n,m). The shift satisfies the strictness assumption on the whole complete bounded space while failing existence. The adjoined-point construction preserves strictness and has a unique fixed point, but its orbit distances converge to 1. Conditional uniqueness remains valid.",
+        "not_claimed": [
+          "Conditional uniqueness of a fixed point remains valid.",
+          "The counterexamples do not establish that every result in the article is false.",
+          "No repaired theorem is claimed."
+        ],
+        "repair": "local_repair_proposed",
+        "repair_note": "Additional hypotheses would need to rule out bounded 1-separated orbits and justify the convergence step; a repaired theorem is not established here."
+      },
+      "vor_check": {
+        "level": "full",
+        "pages": "Definition (1.7), p. 7145; Theorem 3.1, p. 7149; Corollaries 3.2–3.4, p. 7151",
+        "detail": "Definition (1.7), Theorem 3.1, and Corollaries 3.2–3.4 were checked against the rendered AIMS Mathematics Version of Record PDF. The source level is full."
+      },
+      "evidence": [
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-11-27",
+          "session": "informed",
+          "detail": "A fresh hostile reconstruction checked the decisive witness against the source and recorded its scope and nonclaims."
+        },
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-11-27",
+          "session": "informed",
+          "detail": "An independent senior AI review in a separate read-only session confirmed the narrowly stated finding; this is not human verification."
+        }
+      ],
+      "novelty": "No correction or prior public identification of this precise issue surfaced in the bounded publisher, Crossref, title/DOI, and arXiv-version search on 2026-11-27. The later arXiv version changes the framework; unindexed or private discussion is not excluded."
+    }
+  ],
+  "correction": null,
+  "related": [],
+  "evidence": {
+    "package_doi": null,
+    "package_sha256": null,
+    "licence": "No public evidence package released.",
+    "files": []
+  },
+  "technical_notes": [
+    {
+      "creator": "As Stated",
+      "date": "2026-11-27",
+      "version": "1.0",
+      "pages": 1,
+      "sha256": "b42cdc5ff1b5578a0de46580838c9321719c7c511112f2dd6aa7d5b6ecadcb43",
+      "rights": "CC BY 4.0 for this note; third-party material remains under its own rights.",
+      "path": "technical-notes/shi-fixed-point-theorem/v1.0.pdf"
+    }
+  ],
+  "history": [
+    {
+      "date": "2026-11-27",
+      "type": "audit",
+      "label": "A deep audit identified the scoped issue and preserved a reproducible counterexample."
+    },
+    {
+      "date": "2026-11-27",
+      "type": "source",
+      "label": "The primary source was checked at Definition (1.7), p. 7145; Theorem 3.1, p. 7149; Corollaries 3.2–3.4, p. 7151; source level full."
+    },
+    {
+      "date": "2026-11-27",
+      "type": "release",
+      "label": "Prepared as an Open finding with the exact As Stated technical note; no author position or human verification is claimed."
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2026-11-27",
+      "change": "Initial Open finding with the exact As Stated technical note; no author agreement or human verification is claimed."
+    }
+  ],
+  "primary_claim_id": "c1",
+  "statements": {
+    "ai_use": "AI systems contributed to the audit and a separate-session hostile review. The finding is Open; no human verification, author agreement, or author position is claimed."
+  }
+}

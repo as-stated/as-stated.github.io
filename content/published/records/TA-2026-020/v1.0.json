@@ -1,0 +1,127 @@
+{
+  "public_id": "TA-2026-020",
+  "version": "1.0",
+  "schema": 3,
+  "released": "2026-11-27",
+  "status": "published",
+  "sample": false,
+  "kind": "defect",
+  "track": "operations_research",
+  "title": "Exact approaches for convex adjustable robust optimization",
+  "headline": "Open finding: Theorem 2’s equivalence result survives, but its convex MINLP classification fails for an allowed negative uncertainty set.",
+  "work": {
+    "authors": [
+      "Henri Lefebvre",
+      "Enrico Malaguti",
+      "Michele Monaci"
+    ],
+    "title": "Exact approaches for convex adjustable robust optimization",
+    "venue": "Mathematical Programming",
+    "year": 2026,
+    "volume": "218",
+    "pages": "439–476",
+    "doi": "10.1007/s10107-025-02311-3"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Theorem 2 convex-MINLP classification",
+      "kind": "theorem",
+      "role": "secondary",
+      "page": "Publisher VOR HTML lines 87–103 and 261–284",
+      "gist": "Theorem 2 adds that formulation (8) is a convex MINLP whenever X is a convex MINLP set, without requiring nonnegative uncertainty.",
+      "statement": "Under Assumptions 1–2, Theorem 2 states an equivalence and classifies formulation (8) as a convex MINLP whenever X is a convex MINLP set. The equivalence conclusion is supported; the classification fails under the assumptions as written.",
+      "conditions": [
+        "Assumption 1 requires the stated real-valued convex data functions.",
+        "Assumption 2 requires the stated Z-sets to be closed; Lemma 1 supplies it for the compact nonempty recourse sets in the witness.",
+        "The theorem does not require Xi to be componentwise nonnegative."
+      ],
+      "quantifiers": "Under Assumptions 1–2, for every permitted convex-MINLP first-stage set X and uncertainty set Xi, formulation (8) is claimed to be a convex MINLP; the witness uses Xi={−1}.",
+      "result": {
+        "outcome": "defect_found",
+        "status": "open",
+        "defect_class": "statement_false",
+        "affects": "secondary_result",
+        "depth": "deep_audit",
+        "summary": "A compact-recourse instance with Xi={-1} yields a nonconvex epigraph and a nonconvex semi-infinite cut under the stated assumptions; the equivalence conclusion survives.",
+        "witness": "Take X=[-1,1], Xi={-1}, f11(x)=x^2, g1(x,y)=y^2+1, and g0(x,y)=0. These functions are real-valued and convex. The recourse set is empty for |x|<1 and {0} at x=±1, so every nonempty recourse set is compact and the required closedness holds. For an admissible cut with lambda0=lambda1=alpha>0, the paper's sigma is alpha(1-x^2-x0). The cut contains (0,-1) and (0,1) but excludes their midpoint (0,0).",
+        "argument": "A convex MINLP feasible region must be convex in its continuous relaxation. The displayed cut is nonconvex, and the robust epigraph is {(x0,x): x0>=0, x in {-1,1}}, also nonconvex. Thus the classification fails under an allowed signed uncertainty set, while the separate equivalence statement remains supported.",
+        "not_claimed": [
+          "Theorem 2's equivalence formulation is supported.",
+          "The note does not challenge applications with nonnegative uncertainty or later fixed-x separation results.",
+          "No defect is claimed when an appropriate sign-compatibility condition is imposed."
+        ],
+        "repair": "local_repair_proposed",
+        "repair_note": "A nonnegative uncertainty set or another sign-compatibility condition may repair the convexity argument; the equivalence result is separate."
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "Springer VOR HTML lines 68–74, 87–103 and 261–284; theorem and proof passages captured in hashed extract",
+        "detail": "The complete Springer Version of Record HTML and decisive theorem/proof passages were checked and retained as a hashed extract. Direct PDF access returned challenge pages, so rendered-page verification remains partial."
+      },
+      "evidence": [
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-11-27",
+          "session": "informed",
+          "detail": "A fresh hostile reconstruction checked the decisive witness against the source and recorded its scope and nonclaims."
+        },
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-11-27",
+          "session": "informed",
+          "detail": "An independent senior AI review in a separate read-only session confirmed the narrowly stated finding; this is not human verification."
+        }
+      ],
+      "novelty": "No correction or prior public identification of this precise sign issue surfaced in the bounded Springer, DOI/title, and public scholarly search on 2026-11-27. This does not exclude private or unindexed discussion."
+    }
+  ],
+  "correction": null,
+  "related": [],
+  "evidence": {
+    "package_doi": null,
+    "package_sha256": null,
+    "licence": "No public evidence package released.",
+    "files": []
+  },
+  "technical_notes": [
+    {
+      "creator": "As Stated",
+      "date": "2026-11-27",
+      "version": "1.0",
+      "pages": 1,
+      "sha256": "12995763ae42854934162f7a5367cd8ecd4a5a5507fb96471afe850e59110a3e",
+      "rights": "CC BY 4.0 for this note; third-party material remains under its own rights.",
+      "path": "technical-notes/exact-approaches-convex-adjustable-robust-optimization/v1.0.pdf"
+    }
+  ],
+  "history": [
+    {
+      "date": "2026-11-27",
+      "type": "audit",
+      "label": "A deep audit identified the scoped issue and preserved a reproducible counterexample."
+    },
+    {
+      "date": "2026-11-27",
+      "type": "source",
+      "label": "The primary source was checked at Springer VOR HTML lines 68–74, 87–103 and 261–284; theorem and proof passages captured in hashed extract; source level partial."
+    },
+    {
+      "date": "2026-11-27",
+      "type": "release",
+      "label": "Prepared as an Open finding with the exact As Stated technical note; no author position or human verification is claimed."
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2026-11-27",
+      "change": "Initial Open finding with the exact As Stated technical note; no author agreement or human verification is claimed."
+    }
+  ],
+  "primary_claim_id": "c1",
+  "statements": {
+    "ai_use": "AI systems contributed to the audit and a separate-session hostile review. The finding is Open; no human verification, author agreement, or author position is claimed."
+  }
+}

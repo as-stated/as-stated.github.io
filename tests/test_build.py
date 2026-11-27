@@ -921,7 +921,7 @@ class LayoutTests(unittest.TestCase):
 
 class ProductionLayoutTests(LayoutTests):
     """Layout of the production build (published channel, optional pages off)."""
-    PAGES = ["", "cases/", "cases/TA-2026-001/", "cases/TA-2026-002/", "cases/TA-2026-003/", "cases/TA-2026-004/", "cases/TA-2026-005/", "cases/TA-2026-006/", "cases/TA-2026-007/", "cases/TA-2026-008/", "cases/TA-2026-010/", "cases/TA-2026-012/", "cases/TA-2026-013/", "cases/TA-2026-014/", "cases/TA-2026-015/", "cases/TA-2026-016/", "cases/TA-2026-017/", "cases/TA-2026-018/", "methodology/", "definitions/", "about/", "404.html"]
+    PAGES = ["", "cases/", "cases/TA-2026-001/", "cases/TA-2026-002/", "cases/TA-2026-003/", "cases/TA-2026-004/", "cases/TA-2026-005/", "cases/TA-2026-006/", "cases/TA-2026-007/", "cases/TA-2026-008/", "cases/TA-2026-010/", "cases/TA-2026-012/", "cases/TA-2026-013/", "cases/TA-2026-014/", "cases/TA-2026-015/", "cases/TA-2026-016/", "cases/TA-2026-017/", "cases/TA-2026-018/", "cases/TA-2026-019/", "cases/TA-2026-020/", "cases/TA-2026-021/", "cases/TA-2026-022/", "cases/TA-2026-023/", "methodology/", "definitions/", "about/", "404.html"]
 
     @classmethod
     def project_root(cls):
@@ -937,10 +937,10 @@ class ProductionLayoutTests(LayoutTests):
     def test_new_track_filters_return_their_claim_counts(self):
         self.assertIsNotNone(self.results, self.raw)
         by_track = {x["trackFilter"]: x for x in self.results if "trackFilter" in x}
-        self.assertEqual(by_track["operations_research"]["shown"], 1)
-        self.assertEqual(by_track["operations_research"]["count"], "1 of 22 claims, in 1 paper")
-        self.assertEqual(by_track["theoretical_computer_science"]["shown"], 2)
-        self.assertEqual(by_track["theoretical_computer_science"]["count"], "2 of 22 claims, in 1 paper")
+        self.assertEqual(by_track["operations_research"]["shown"], 2)
+        self.assertEqual(by_track["operations_research"]["count"], "2 of 27 claims, in 2 papers")
+        self.assertEqual(by_track["theoretical_computer_science"]["shown"], 3)
+        self.assertEqual(by_track["theoretical_computer_science"]["count"], "3 of 27 claims, in 2 papers")
 
 
 class ProductionTests(unittest.TestCase):
@@ -961,7 +961,7 @@ class ProductionTests(unittest.TestCase):
 
     def test_builds_from_the_published_channel_only(self):
         self.assertEqual(self.content.channel, "published")
-        self.assertEqual(set(self.content.records), {"TA-2026-001", "TA-2026-002", "TA-2026-003", "TA-2026-004", "TA-2026-005", "TA-2026-006", "TA-2026-007", "TA-2026-008", "TA-2026-009", "TA-2026-010", "TA-2026-011", "TA-2026-012", "TA-2026-013", "TA-2026-014", "TA-2026-015", "TA-2026-016", "TA-2026-017", "TA-2026-018"})
+        self.assertEqual(set(self.content.records), {"TA-2026-001", "TA-2026-002", "TA-2026-003", "TA-2026-004", "TA-2026-005", "TA-2026-006", "TA-2026-007", "TA-2026-008", "TA-2026-009", "TA-2026-010", "TA-2026-011", "TA-2026-012", "TA-2026-013", "TA-2026-014", "TA-2026-015", "TA-2026-016", "TA-2026-017", "TA-2026-018", "TA-2026-019", "TA-2026-020", "TA-2026-021", "TA-2026-022", "TA-2026-023"})
         for rid in self.content.records:
             self.assertTrue((self.out / f"data/records/{rid}/v1.0.json").exists())
 

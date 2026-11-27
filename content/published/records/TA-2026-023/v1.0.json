@@ -1,0 +1,129 @@
+{
+  "public_id": "TA-2026-023",
+  "version": "1.0",
+  "schema": 3,
+  "released": "2026-11-27",
+  "status": "published",
+  "sample": false,
+  "kind": "defect",
+  "track": "statistics",
+  "title": "Real-Time Trajectory Publishing in Mobile Crowdsensing Under Local Differential Privacy",
+  "headline": "Open finding: Equation (4) omits the nf_x term from the fixed-dataset OUE count-estimator variance.",
+  "work": {
+    "authors": [
+      "Hongyi Zhang",
+      "Liquan Chen",
+      "Huiyu Fang",
+      "Jianchang Lai",
+      "Xinyuan Sun"
+    ],
+    "title": "Real-Time Trajectory Publishing in Mobile Crowdsensing Under Local Differential Privacy",
+    "venue": "Entropy",
+    "year": 2026,
+    "volume": "28",
+    "pages": "1052",
+    "doi": "10.3390/e28101052"
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "label": "Equation (4) OUE count-estimator variance",
+      "kind": "theorem",
+      "role": "secondary",
+      "page": "Full PMC HTML/JATS article; equation identifiers retained in the source files",
+      "gist": "For the paper's OUE estimator and a fixed input dataset, Equation (4) omits the variance contribution from true-one reports.",
+      "statement": "Conditional on a fixed dataset, the OUE count estimator variance is n*4*exp(epsilon)/(exp(epsilon)-1)^2 + n*f_x; Equation (4) omits n*f_x.",
+      "conditions": [
+        "Each user's randomized bit is Bernoulli with p=1/2 for a true bit 1 and q=1/(e^epsilon+1) for a true bit 0.",
+        "The estimator is the unbiased count estimator in Equation (3), conditional on a fixed dataset and independent randomization.",
+        "Equation (4) states the variance without the true-bit count term."
+      ],
+      "quantifiers": "The displayed Equation (4) variance formula is asserted for the OUE estimator across the stated dataset sizes and frequencies; it is exact when the true count is zero but not in general.",
+      "result": {
+        "outcome": "defect_found",
+        "status": "open",
+        "defect_class": "statement_false",
+        "affects": "secondary_result",
+        "depth": "deep_audit",
+        "summary": "For one user at epsilon ln(3) and true frequency 1, the unbiased estimate has variance 4 while Equation (4) gives 3; the missing term is n*f_x.",
+        "witness": "Set n=1, epsilon=ln(3), and let the one user's true category be x. Then p=1/2, q=1/4, and the unbiased estimator is 4Y-1, taking values -1 and 3 with equal probability. Its mean is 1 and variance is 4, while Equation (4) gives 3.",
+        "argument": "For a fixed dataset with m=n*f_x true-one users, the aggregate is a sum of m Bernoulli(1/2) variables and n-m Bernoulli(1/(exp(epsilon)+1)) variables. Dividing the summed variance by (p-q)^2 gives m+n*4*exp(epsilon)/(exp(epsilon)-1)^2. The missing term is exactly n*f_x, and the normalized frequency variance also omits f_x/n.",
+        "not_claimed": [
+          "The correction does not invalidate the OUE local differential privacy guarantee.",
+          "The note does not establish that reported experiments are false.",
+          "Equation (9)'s scale argmin may remain unchanged when the omitted term is constant across candidate scales."
+        ],
+        "repair": "local_repair_proposed",
+        "repair_note": "Add the n*f_x term and recompute downstream variance expressions that use Equation (4); the scope is limited to the variance formulas."
+      },
+      "vor_check": {
+        "level": "partial",
+        "pages": "Equations (2)–(4), (8)–(9), and (11)–(15) in the full PMC article HTML/JATS",
+        "detail": "The full PMC article HTML/JATS text, including Equations (2)–(4), was checked. PDF endpoints returned wrappers rather than a page-renderable article PDF, so rendered-page verification remains partial."
+      },
+      "evidence": [
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-11-27",
+          "session": "informed",
+          "detail": "A fresh hostile reconstruction checked the decisive witness against the source and recorded its scope and nonclaims."
+        },
+        {
+          "type": "hostile_ai_recheck",
+          "date": "2026-11-27",
+          "session": "informed",
+          "detail": "An independent senior AI review in a separate read-only session confirmed the narrowly stated finding; this is not human verification."
+        }
+      ],
+      "novelty": "No correction or prior public identification of the precise variance omission surfaced in the bounded publisher/PMC, DOI/title, and correction searches on 2026-11-27. This does not exclude private or unindexed discussion."
+    }
+  ],
+  "correction": null,
+  "related": [],
+  "evidence": {
+    "package_doi": null,
+    "package_sha256": null,
+    "licence": "No public evidence package released.",
+    "files": []
+  },
+  "technical_notes": [
+    {
+      "creator": "As Stated",
+      "date": "2026-11-27",
+      "version": "1.0",
+      "pages": 2,
+      "sha256": "fff8d96b4d4f06047d959874383431611a84cdb0e10841f54757f284b8d7cb58",
+      "rights": "CC BY 4.0 for this note; third-party material remains under its own rights.",
+      "path": "technical-notes/real-time-trajectory-publishing/v1.0.pdf"
+    }
+  ],
+  "history": [
+    {
+      "date": "2026-11-27",
+      "type": "audit",
+      "label": "A deep audit identified the scoped issue and preserved a reproducible counterexample."
+    },
+    {
+      "date": "2026-11-27",
+      "type": "source",
+      "label": "The primary source was checked at Equations (2)–(4), (8)–(9), and (11)–(15) in the full PMC article HTML/JATS; source level partial."
+    },
+    {
+      "date": "2026-11-27",
+      "type": "release",
+      "label": "Prepared as an Open finding with the exact As Stated technical note; no author position or human verification is claimed."
+    }
+  ],
+  "challenges": [],
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2026-11-27",
+      "change": "Initial Open finding with the exact As Stated technical note; no author agreement or human verification is claimed."
+    }
+  ],
+  "primary_claim_id": "c1",
+  "statements": {
+    "ai_use": "AI systems contributed to the audit and a separate-session hostile review. The finding is Open; no human verification, author agreement, or author position is claimed."
+  }
+}
